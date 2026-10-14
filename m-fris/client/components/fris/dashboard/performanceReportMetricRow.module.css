@@ -1,0 +1,47 @@
+/**
+ * Performance report metric label — premium hover underline (left → right sweep).
+ * Uses transform-only animation; text colors stay untouched on the label node.
+ */
+
+.metricLabelUnderline {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+}
+
+.metricLabelUnderline::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -5px;
+  height: 2px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--dash-accent) 90%, transparent);
+  opacity: 0;
+  transform: scaleX(0);
+  transform-origin: left center;
+  /* ~30% slower than 280ms / 180ms baseline */
+  transition:
+    transform 364ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 234ms ease;
+  pointer-events: none;
+}
+
+.metricLabelUnderline:hover::after {
+  opacity: 1;
+  transform: scaleX(1);
+}
+
+/* Drill rows: underline when the metric button is keyboard-focused */
+button:focus-visible > .metricLabelUnderline::after {
+  opacity: 1;
+  transform: scaleX(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .metricLabelUnderline::after {
+    transition-duration: 0.01ms;
+  }
+}
+

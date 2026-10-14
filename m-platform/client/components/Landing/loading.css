@@ -1,0 +1,29 @@
+.glow-emerald {
+  text-shadow:
+    0 0 18px rgba(16, 185, 129, 0.45),
+    0 0 36px rgba(16, 185, 129, 0.22);
+}
+
+.landing-text-cursor {
+  animation: landing-cursor-blink 1s ease-in-out infinite;
+}
+
+@keyframes landing-cursor-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glow-emerald {
+    text-shadow: none;
+  }
+
+  .landing-text-cursor {
+    animation: none;
+  }
+}

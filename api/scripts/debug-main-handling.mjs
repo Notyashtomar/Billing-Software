@@ -1,0 +1,11 @@
+import mongoose from 'mongoose';
+import dotenv from 'dotenv';
+dotenv.config();
+await mongoose.connect(process.env.MONGO_URI);
+const main = mongoose.connection.db.collection('mainDetails');
+const samples = await main.find({ TypeofHandling: { $exists: true, $ne: '' } }).limit(5).project({ SerialNo: 1, TypeofHandling: 1 }).toArray();
+console.log('with TypeofHandling non-empty:', await main.countDocuments({ TypeofHandling: { $exists: true, $ne: '' } }));
+console.log('samples', samples);
+const m16616 = await main.findOne({ SerialNo: 16616 }, { projection: { TypeofHandling: 1 } });
+console.log('16616', m16616);
+await mongoose.disconnect();

@@ -1,0 +1,620 @@
+﻿  /** Free-text for scheduled mix: flight category fields + turnaround (e.g. Domestic-International). */
+  private static scheduledCategoryRawFromMainEmbed(
+    m: Record<string, unknown>,
+  ): string {
+    const parts = [
+      FhrCollectionService.firstString(
+        m['Cate_of_Flight'],
+        m['flightCategory'],
+        m['Cate_of Flight'],
+      ),
+      FhrCollectionService.firstString(
+        m['turnaroundStatus'],
+        m['turnaround_status'],
+        m['TurnaroundStatus'],
+      ),
+    ]
+      .map((s) => String(s ?? '').trim())
+      .filter(Boolean);
+    return parts.join(' ').trim();
+  }
+
+  /**
+   * Operating segment from `mainDetails` free-text (category + turnaround).
+   * Compound **domestic ΓÇª international** (e.g. `domestic-international`) ΓåÆ international.
+   * Compound **international ΓÇª domestic** ΓåÆ domestic (last-mentioned segment wins for I/D).
+   */
+  private static scheduledCategoryBaseFromMainText(
+    raw: string,
+  ): 'intl_pax' | 'dom_pax' | 'intl_freight' | 'dom_freight' | null {
+    const n = raw
+      .trim()
+      .toLowerCase()
+      .replace(/->/g, ' ')
+      .replace(/[-_/]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (!n) return null;
+
+    const hasFreight = n.includes('cargo') || n.includes('freighter');
+    const hasDom = n.includes('domestic');
+    const hasIntl = n.includes('international');
+
+    if (hasDom && hasIntl) {
+      const lastDom = n.lastIndexOf('domestic');
+      const lastIntl = n.lastIndexOf('international');
+      const useDomestic = lastDom > lastIntl;
+      if (hasFreight) return useDomestic ? 'dom_freight' : 'intl_freight';
+      return useDomestic ? 'dom_pax' : 'intl_pax';
+    }
+
+    if (hasFreight) {
+      if (hasDom) return 'dom_freight';
+      return 'intl_freight';
+    }
+    if (n.startsWith('domestic')) return 'dom_pax';
+    if (hasIntl) return 'intl_pax';
+    if (hasDom) return 'dom_pax';
+    return null;
+  }
+
+  /**
+   * NB/WB: prefer `advance-aircraft` match on `TypeCraft`; else main-details embed heuristics.
+   */
+  private isWideBodyForScheduledCategoryMix(
+    m: Record<string, unknown>,
+    catalog: Map<string, 'NB' | 'WB'>,
+  ): boolean {
+    const tc = String(m['TypeCraft'] ?? '').trim();
+    const hit = this.advanceAircraftService.matchCatalogAircraftBody(
+      catalog,
+      tc,
+    );
+    if (hit === 'WB') return true;
+    if (hit === 'NB') return false;
+    return FhrCollectionService.isWideBodyFromMainEmbed(m);
+  }
+
+  /** Narrow vs wide from `aircraftBody` / `TypeCraft` on the main-details embed. */
+  private static isWideBodyFromMainEmbed(m: Record<string, unknown>): boolean {
+    const ab = String(m['aircraftBody'] ?? m['AircraftBody'] ?? '')
+      .trim()
+      .toUpperCase();
+    if (ab === 'WB' || ab.includes('WIDE')) return true;
+    if (ab === 'NB' || ab.includes('NARROW')) return false;
+    const tc = String(m['TypeCraft'] ?? '')
+      .trim()
+      .toUpperCase();
+    if (/\b(777|787|747|380|350|330|340|359)\b/.test(tc)) return true;
+    return false;
+  }
+
+  private static schScheduledKey(
+    base: 'intl_pax' | 'dom_pax' | 'intl_freight' | 'dom_freight',
+    wide: boolean,
+  ):
+    | 'SCH-I-P-NB'
+    | 'SCH-I-P-WB'
+    | 'SCH-D-P-NB'
+    | 'SCH-D-P-WB'
+    | 'SCH-I-F-NB'
+    | 'SCH-I-F-WB'
+    | 'SCH-D-F-NB'
+    | 'SCH-D-F-WB'
+    | null {
+    if (base === 'intl_pax') return wide ? 'SCH-I-P-WB' : 'SCH-I-P-NB';
+    if (base === 'dom_pax') return wide ? 'SCH-D-P-WB' : 'SCH-D-P-NB';
+    if (base === 'intl_freight') return wide ? 'SCH-I-F-WB' : 'SCH-I-F-NB';
+    if (base === 'dom_freight') return wide ? 'SCH-D-F-WB' : 'SCH-D-F-NB';
+    return null;
+  }
+
+  /**
+   * SCH-*-*-* aircraft-analysis buckets count only **scheduled** handling rows from main details.
+   * Excludes **Additional** (and other non-scheduled labels); blank / unknown handling excluded.
+   */
+  private static isScheduledTypeOfHandlingForSchMixBuckets(
+    m: Record<string, unknown>,
+  ): boolean {
+    const raw = FhrCollectionService.nonEmpty(
+      m['TypeofHandling'],
+      m['typeofHandling'],
+      m['Type_of_Handling'],
+    ).trim();
+    if (!raw) return false;
+    const n = raw.toLowerCase().replace(/\s+/g, ' ');
+    if (n.includes('additional')) return false;
+    if (n.includes('non-scheduled') || n.includes('non scheduled'))
+      return false;
+    return n === 'scheduled' || n === 'sch';
+  }
+
+  /** Additional-flight mix buckets: main-details handling text contains ΓÇ£additionalΓÇ¥. */
+  private static isAdditionalTypeOfHandlingForAdditionalMixBuckets(
+    m: Record<string, unknown>,
+  ): boolean {
+    const raw = FhrCollectionService.nonEmpty(
+      m['TypeofHandling'],
+      m['typeofHandling'],
+      m['Type_of_Handling'],
+    ).trim();
+    if (!raw) return false;
+    const n = raw.toLowerCase().replace(/\s+/g, ' ');
+    return n.includes('additional');
+  }
+
+  private static emptyScheduledCategoryMixCounts(): {
+    'SCH-I-P-NB': number;
+    'SCH-I-P-WB': number;
+    'SCH-D-P-NB': number;
+    'SCH-D-P-WB': number;
+    'SCH-I-F-NB': number;
+    'SCH-I-F-WB': number;
+    'SCH-D-F-NB': number;
+    'SCH-D-F-WB': number;
+  } {
+    return {
+      'SCH-I-P-NB': 0,
+      'SCH-I-P-WB': 0,
+      'SCH-D-P-NB': 0,
+      'SCH-D-P-WB': 0,
+      'SCH-I-F-NB': 0,
+      'SCH-I-F-WB': 0,
+      'SCH-D-F-NB': 0,
+      'SCH-D-F-WB': 0,
+    };
+  }
+
+  private static finalizeScheduledCategoryBreakdown(
+    counts: ReturnType<
+      typeof FhrCollectionService.emptyScheduledCategoryMixCounts
+    >,
+    other: number,
+  ): {
+    SIP: number;
+    SIF: number;
+    SDP: number;
+    SDF: number;
+    'SCH-I-P-NB': number;
+    'SCH-I-P-WB': number;
+    'SCH-D-P-NB': number;
+    'SCH-D-P-WB': number;
+    'SCH-I-F-NB': number;
+    'SCH-I-F-WB': number;
+    'SCH-D-F-NB': number;
+    'SCH-D-F-WB': number;
+    other: number;
+    total: number;
+  } {
+    const sip = counts['SCH-I-P-NB'] + counts['SCH-I-P-WB'];
+    const sif = counts['SCH-I-F-NB'] + counts['SCH-I-F-WB'];
+    const sdp = counts['SCH-D-P-NB'] + counts['SCH-D-P-WB'];
+    const sdf = counts['SCH-D-F-NB'] + counts['SCH-D-F-WB'];
+    const total =
+      counts['SCH-I-P-NB'] +
+      counts['SCH-I-P-WB'] +
+      counts['SCH-D-P-NB'] +
+      counts['SCH-D-P-WB'] +
+      counts['SCH-I-F-NB'] +
+      counts['SCH-I-F-WB'] +
+      counts['SCH-D-F-NB'] +
+      counts['SCH-D-F-WB'] +
+      other;
+    return {
+      SIP: sip,
+      SIF: sif,
+      SDP: sdp,
+      SDF: sdf,
+      ...counts,
+      other,
+      total,
+    };
+  }
+
+  /**
+   * Scheduled and **Additional** flight category counts from `fhr_collection.mainDetails` plus NB/WB from
+   * `advance-aircraft` when `TypeCraft` matches the catalog (fallback: main embed heuristics).
+   * Same STA calendar-day window + cancel rules as {@link getHandledAndCancelledForStaYmdWindow}.
+   *
+   * **Scheduled** ΓÇö same rules as before: `TypeofHandling` is `Scheduled` or `SCH` (never Additional / non-scheduled).
+   * **Additional** ΓÇö `TypeofHandling` text includes ΓÇ£additionalΓÇ¥. Same I/D, P/F, NB/WB buckets as scheduled (SCH-* keys in JSON).
+   */
+  async getScheduledCategoryBreakdownForStaYmdWindow(
+    fromYmd: string,
+    toYmd: string,
+  ): Promise<{
+    scheduled: {
+      SIP: number;
+      SIF: number;
+      SDP: number;
+      SDF: number;
+      'SCH-I-P-NB': number;
+      'SCH-I-P-WB': number;
+      'SCH-D-P-NB': number;
+      'SCH-D-P-WB': number;
+      'SCH-I-F-NB': number;
+      'SCH-I-F-WB': number;
+      'SCH-D-F-NB': number;
+      'SCH-D-F-WB': number;
+      other: number;
+      total: number;
+    };
+    additional: {
+      SIP: number;
+      SIF: number;
+      SDP: number;
+      SDF: number;
+      'SCH-I-P-NB': number;
+      'SCH-I-P-WB': number;
+      'SCH-D-P-NB': number;
+      'SCH-D-P-WB': number;
+      'SCH-I-F-NB': number;
+      'SCH-I-F-WB': number;
+      'SCH-D-F-NB': number;
+      'SCH-D-F-WB': number;
+      other: number;
+      total: number;
+    };
+  }> {
+    const z = (): {
+      scheduled: ReturnType<
+        typeof FhrCollectionService.finalizeScheduledCategoryBreakdown
+      >;
+      additional: ReturnType<
+        typeof FhrCollectionService.finalizeScheduledCategoryBreakdown
+      >;
+    } => ({
+      scheduled: FhrCollectionService.finalizeScheduledCategoryBreakdown(
+        FhrCollectionService.emptyScheduledCategoryMixCounts(),
+        0,
+      ),
+      additional: FhrCollectionService.finalizeScheduledCategoryBreakdown(
+        FhrCollectionService.emptyScheduledCategoryMixCounts(),
+        0,
+      ),
+    });
+
+    const f = String(fromYmd ?? '').trim();
+    const t = String(toYmd ?? '').trim();
+    if (!f || !t || f > t) {
+      return z();
+    }
+
+    const dateStrings = FhrCollectionService.ymdRangeToDdMmYyyyList(f, t);
+    const rows = await this.findAllLeanForScheduledTableMerge(dateStrings);
+    const bodyCatalog =
+      await this.advanceAircraftService.getActiveAircraftBodyMap();
+    return this.getScheduledCategoryBreakdownFromLeanRows(
+      rows,
+      f,
+      t,
+      bodyCatalog,
+    );
+  }
+
+  getScheduledCategoryBreakdownFromLeanRows(
+    rows: Array<{
+      mainDetails?: Record<string, unknown> | null;
+      terminalDetails?: Record<string, unknown> | null;
+      rampDetails1?: Record<string, unknown> | null;
+      rampDetails3?: Record<string, unknown> | null;
+    }>,
+    fromYmd: string,
+    toYmd: string,
+    bodyCatalog: Map<string, 'NB' | 'WB'>,
+  ): {
+    scheduled: ReturnType<
+      typeof FhrCollectionService.finalizeScheduledCategoryBreakdown
+    >;
+    additional: ReturnType<
+      typeof FhrCollectionService.finalizeScheduledCategoryBreakdown
+    >;
+  } {
+    const f = String(fromYmd ?? '').trim();
+    const t = String(toYmd ?? '').trim();
+    const z = (): {
+      scheduled: ReturnType<
+        typeof FhrCollectionService.finalizeScheduledCategoryBreakdown
+      >;
+      additional: ReturnType<
+        typeof FhrCollectionService.finalizeScheduledCategoryBreakdown
+      >;
+    } => ({
+      scheduled: FhrCollectionService.finalizeScheduledCategoryBreakdown(
+        FhrCollectionService.emptyScheduledCategoryMixCounts(),
+        0,
+      ),
+      additional: FhrCollectionService.finalizeScheduledCategoryBreakdown(
+        FhrCollectionService.emptyScheduledCategoryMixCounts(),
+        0,
+      ),
+    });
+    if (!f || !t || f > t) {
+      return z();
+    }
+
+    const schedCounts = FhrCollectionService.emptyScheduledCategoryMixCounts();
+    let schedOther = 0;
+    const addCounts = FhrCollectionService.emptyScheduledCategoryMixCounts();
+    let addOther = 0;
+
+    for (const doc of rows) {
+      const d = doc as Record<string, unknown>;
+      const m = d.mainDetails as Record<string, unknown> | null | undefined;
+      const td = d.terminalDetails as
+        | Record<string, unknown>
+        | null
+        | undefined;
+      const r1 = d.rampDetails1 as Record<string, unknown> | null | undefined;
+      const r3 = d.rampDetails3 as Record<string, unknown> | null | undefined;
+
+      const staYmd = FhrCollectionService.fhrDocumentStaYmd(
+        m ?? undefined,
+        td ?? undefined,
+        r1,
+        r3,
+      );
+      if (!staYmd || staYmd < f || staYmd > t) continue;
+      if (FhrCollectionService.fhrLeanDocIsCancelled(d)) continue;
+
+      if (!m || typeof m !== 'object' || Array.isArray(m)) {
+        schedOther += 1;
+        continue;
+      }
+
+      const isSched =
+        FhrCollectionService.isScheduledTypeOfHandlingForSchMixBuckets(m);
+      const isAdd =
+        FhrCollectionService.isAdditionalTypeOfHandlingForAdditionalMixBuckets(
+          m,
+        );
+
+      type Track = 'scheduled' | 'additional';
+      let track: Track | null = null;
+      if (isSched) track = 'scheduled';
+      else if (isAdd) track = 'additional';
+      else continue;
+
+      const catRaw = FhrCollectionService.scheduledCategoryRawFromMainEmbed(m);
+      const base =
+        FhrCollectionService.scheduledCategoryBaseFromMainText(catRaw);
+      if (!base) {
+        if (track === 'scheduled') schedOther += 1;
+        else addOther += 1;
+        continue;
+      }
+      const wide = this.isWideBodyForScheduledCategoryMix(m, bodyCatalog);
+      const key = FhrCollectionService.schScheduledKey(base, wide);
+      if (key) {
+        if (track === 'scheduled') schedCounts[key] += 1;
+        else addCounts[key] += 1;
+      } else {
+        if (track === 'scheduled') schedOther += 1;
+        else addOther += 1;
+      }
+    }
+
+    return {
+      scheduled: FhrCollectionService.finalizeScheduledCategoryBreakdown(
+        schedCounts,
+        schedOther,
+      ),
+      additional: FhrCollectionService.finalizeScheduledCategoryBreakdown(
+        addCounts,
+        addOther,
+      ),
+    };
+  }
+
+  /** Display flight no for scheduled-mix export rows (main arr/dep, else terminal/ramp FlightNo). */
+  private static mixCountedFlightNoForExport(
+    m: Record<string, unknown>,
+    td?: Record<string, unknown> | null,
+    r1?: Record<string, unknown> | null,
+    r3?: Record<string, unknown> | null,
+  ): string {
+    const arr = FhrCollectionService.nonEmpty(
+      m['ArrivalFltNo'],
+      m['arrivalFltNo'],
+    );
+    const dep = FhrCollectionService.nonEmpty(
+      m['DepartureFltNo'],
+      m['departureFltNo'],
+    );
+    const t0 = td ?? {};
+    const r1o = r1 ?? {};
+    const r3o = r3 ?? {};
+    const tFn = FhrCollectionService.nonEmpty(
+      t0['FlightNo'],
+      t0['flightNo'],
+      r1o['FlightNo'],
+      r1o['flightNo'],
+      r3o['FlightNo'],
+      '',
+    );
+    return FhrCollectionService.nonEmpty(
+      FhrCollectionService.flightNoFromMainArrivalDeparture(arr, dep),
+      tFn,
+      m['FlightNo'],
+      m['Flt_No'],
+    );
+  }
+
+  /**
+   * Flights that receive an SCH-*-*-* bucket in {@link getScheduledCategoryBreakdownForStaYmdWindow}
+   * (STA window, non-cancelled, **mainDetails.TypeofHandling** scheduled only ΓÇö excludes Additional, etc.).
+   */
+  async listScheduledMixCountedFlightsForStaYmdWindow(
+    fromYmd: string,
+    toYmd: string,
+  ): Promise<ScheduledMixCountedFlightRow[]> {
+    const f = String(fromYmd ?? '').trim();
+    const t = String(toYmd ?? '').trim();
+    if (!f || !t || f > t) {
+      return [];
+    }
+
+    const dateStrings = FhrCollectionService.ymdRangeToDdMmYyyyList(f, t);
+    const rows = await this.findAllLeanForScheduledTableMerge(dateStrings);
+    const bodyCatalog =
+      await this.advanceAircraftService.getActiveAircraftBodyMap();
+    const out: ScheduledMixCountedFlightRow[] = [];
+
+    for (const doc of rows) {
+      const d = doc as Record<string, unknown>;
+      const m = d.mainDetails as Record<string, unknown> | null | undefined;
+      const td = d.terminalDetails as
+        | Record<string, unknown>
+        | null
+        | undefined;
+      const r1 = d.rampDetails1 as Record<string, unknown> | null | undefined;
+      const r3 = d.rampDetails3 as Record<string, unknown> | null | undefined;
+
+      const staYmd = FhrCollectionService.fhrDocumentStaYmd(
+        m ?? undefined,
+        td ?? undefined,
+        r1,
+        r3,
+      );
+      if (!staYmd || staYmd < f || staYmd > t) {
+        continue;
+      }
+      if (FhrCollectionService.fhrLeanDocIsCancelled(d)) {
+        continue;
+      }
+      if (!m || typeof m !== 'object' || Array.isArray(m)) {
+        continue;
+      }
+
+      if (!FhrCollectionService.isScheduledTypeOfHandlingForSchMixBuckets(m)) {
+        continue;
+      }
+
+      const catRaw = FhrCollectionService.scheduledCategoryRawFromMainEmbed(m);
+      const base =
+        FhrCollectionService.scheduledCategoryBaseFromMainText(catRaw);
+      if (!base) {
+        continue;
+      }
+      const wide = this.isWideBodyForScheduledCategoryMix(m, bodyCatalog);
+      const mixCategory = FhrCollectionService.schScheduledKey(base, wide);
+      if (!mixCategory) {
+        continue;
+      }
+
+      const segment: 'I' | 'D' =
+        base === 'intl_pax' || base === 'intl_freight' ? 'I' : 'D';
+      const passengerOrFreighter: 'P' | 'F' =
+        base === 'intl_pax' || base === 'dom_pax' ? 'P' : 'F';
+      const aircraftBody: 'NB' | 'WB' = wide ? 'WB' : 'NB';
+
+      out.push({
+        serialNo: FhrCollectionService.leanDocInstanceSerial(
+          d as { SerialNo?: unknown; flightSerialNumber?: unknown },
+        ),
+        flightNo: FhrCollectionService.mixCountedFlightNoForExport(
+          m,
+          td,
+          r1,
+          r3,
+        ),
+        staYmd,
+        mixCategory,
+        typeofHandling: String(m['TypeofHandling'] ?? '').trim(),
+        cateOfFlight: String(catRaw).trim(),
+        typeCraftRaw: String(m['TypeCraft'] ?? '').trim(),
+        segment,
+        passengerOrFreighter,
+        aircraftBody,
+      });
+    }
+
+    out.sort((a, b) => {
+      const ak = `${a.staYmd}\0${a.serialNo ?? 0}\0${a.flightNo}`;
+      const bk = `${b.staYmd}\0${b.serialNo ?? 0}\0${b.flightNo}`;
+      return ak.localeCompare(bk);
+    });
+    return out;
+  }
+
+  /**
+   * Performance report KPIs from `fhr_collection` only (same STA-day window + cancel rules as
+   * {@link getHandledAndCancelledForStaYmdWindow}). Denominator for all percentages =
+   * operated (non-cancelled) flights in range. Sub-counts skip legs missing required timestamps.
+   */
+  async getPerformanceReportForStaYmdWindow(
+    fromYmd: string,
+    toYmd: string,
+  ): Promise<FhrPerformanceReportDto> {
+    const f = String(fromYmd ?? '').trim();
+    const t = String(toYmd ?? '').trim();
+
+    const pct = (value: number, totalOperated: number): string =>
+      totalOperated === 0 ? '0.0' : ((value / totalOperated) * 100).toFixed(1);
+
+    const empty = (): FhrPerformanceReportDto => ({
+      range: { fromYmd: f, toYmd: t },
+      onTime: { count: 0, percentage: '0.0' },
+      cancelled: { count: 0, percentage: '0.0' },
+      offSkd: { count: 0, percentage: '0.0' },
+      groundTimeSaved: { count: 0, percentage: '0.0' },
+      departedBeforeStd: { count: 0, percentage: '0.0' },
+      agtGtSgt: { count: 0, percentage: '0.0' },
+      totalFlights: { count: 0, percentage: '0.0' },
+    });
+
+    if (!f || !t || f > t) {
+      return empty();
+    }
+
+    const dateStrings = FhrCollectionService.ymdRangeToDdMmYyyyList(f, t);
+    const rows = await this.findAllLeanForScheduledTableMerge(dateStrings);
+
+    let cancelledCount = 0;
+    let operatedCount = 0;
+    let onTimeCount = 0;
+    let groundTimeSaved = 0;
+    let departedOnOrBeforeStd = 0;
+    let agtGreaterSgt = 0;
+    let skippedStaOutOfBand = 0;
+
+    for (const doc of rows) {
+      const d = doc as Record<string, unknown>;
+      const m = d.mainDetails as Record<string, unknown> | null | undefined;
+      const td = d.terminalDetails as
+        | Record<string, unknown>
+        | null
+        | undefined;
+      const r1 = d.rampDetails1 as Record<string, unknown> | null | undefined;
+      const r3 = d.rampDetails3 as Record<string, unknown> | null | undefined;
+
+      const staYmd = FhrCollectionService.fhrDocumentStaYmd(
+        m ?? undefined,
+        td ?? undefined,
+        r1,
+        r3,
+      );
+      if (!staYmd || staYmd < f || staYmd > t) {
+        skippedStaOutOfBand += 1;
+        continue;
+      }
+
+      if (FhrCollectionService.fhrLeanDocIsCancelled(d)) {
+        cancelledCount += 1;
+        continue;
+      }
+      operatedCount += 1;
+
+      const lc = d.loadControlDetails as
+        | Record<string, unknown>
+        | null
+        | undefined;
+      const fullTimings = FhrCollectionService.performanceTimingMsFromFhrEmbeds(
+        m ?? undefined,
+        lc ?? undefined,
+      );
+      if (fullTimings) {
+        const { ataMs, staMs, atdMs, stdMs } = fullTimings;
+        if (ataMs === staMs && atdMs === stdMs) {
+          onTimeCount += 1;
+        }

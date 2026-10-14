@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "baseUrl": ".",
+    "paths": {
+      "src/*": ["src/*"]
+    }
+  },
+  "include": [
+    "scripts/**/*.ts",
+    "migrations/**/*.ts",
+    "src/common/station/station.constants.ts",
+    "src/fhr-collection/utils/sta-dates.util.ts"
+  ]
+}

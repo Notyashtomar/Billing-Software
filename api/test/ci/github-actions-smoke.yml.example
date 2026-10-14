@@ -1,0 +1,69 @@
+# Example GitHub Actions workflow — copy to .github/workflows/protection-smoke.yml
+name: Protection Smoke Tests
+
+on:
+  pull_request:
+    paths:
+      - 'server/src/protection/**'
+      - 'server/test/**'
+  push:
+    branches: [main, develop]
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Unit tests (protection)
+        run: npm test -- --testPathPatterns=src/protection
+
+      - name: Enterprise smoke (harness e2e)
+        run: npm run test:smoke
+        env:
+          NODE_ENV: test
+          ENABLE_RATE_LIMITING: 'false'
+
+  smoke-live-staging:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      - name: Live smoke against staging
+        run: npm run test:smoke:live
+        env:
+          RUN_LIVE_SMOKE: '1'
+          SMOKE_BASE_URL: ${{ secrets.SMOKE_BASE_URL }}
+          SMOKE_JWT: ${{ secrets.SMOKE_JWT }}
+
+  k6-staging:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: grafana/k6-action@v0.3.1
+        with:
+          filename: server/test/k6/shared-ip-dashboard.js
+        env:
+          BASE_URL: ${{ secrets.SMOKE_BASE_URL }}
+          JWT: ${{ secrets.SMOKE_JWT }}

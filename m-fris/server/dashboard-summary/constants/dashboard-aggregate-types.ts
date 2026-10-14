@@ -1,0 +1,24 @@
+/** Daily aggregate types — align with dashboard card keys. */
+export const DASHBOARD_AGGREGATE_TYPES = {
+  AIRLINE_REMARKS: 'airlineRemarks',
+  AIRCRAFT_ANALYSIS: 'aircraftAnalysis',
+  EQUIPMENT_UTILIZATION: 'equipmentUtilization',
+  PERFORMANCE_REPORT: 'performanceReport',
+  GHA_IMPROVEMENT: 'ghaImprovement',
+  ON_TIME_PERFORMANCE: 'onTimePerformance',
+  KPI_STRIP: 'kpiStrip',
+} as const;
+
+export type DashboardAggregateType =
+  (typeof DASHBOARD_AGGREGATE_TYPES)[keyof typeof DASHBOARD_AGGREGATE_TYPES];
+
+export const ALL_DASHBOARD_AGGREGATE_TYPES: readonly DashboardAggregateType[] =
+  [
+    DASHBOARD_AGGREGATE_TYPES.AIRLINE_REMARKS,
+    DASHBOARD_AGGREGATE_TYPES.AIRCRAFT_ANALYSIS,
+    DASHBOARD_AGGREGATE_TYPES.EQUIPMENT_UTILIZATION,
+    DASHBOARD_AGGREGATE_TYPES.PERFORMANCE_REPORT,
+    DASHBOARD_AGGREGATE_TYPES.GHA_IMPROVEMENT,
+    DASHBOARD_AGGREGATE_TYPES.ON_TIME_PERFORMANCE,
+    DASHBOARD_AGGREGATE_TYPES.KPI_STRIP,
+  ];

@@ -1,0 +1,980 @@
+@import "tailwindcss";
+@config "../tailwind.config.js";
+@source "../../../modules/m-bill-receivables/client";
+
+/** Phone landscape stays on mobile nav (wide but short viewport). */
+@custom-variant nav-desktop (@media (min-width: 1024px) and (min-height: 500px));
+
+/* Dashboard notification system + custom cursor theme */
+:root {
+  --accent: #ff6b00;
+  --accent-light: #ff8c42;
+  --duration: 0.25s;
+  --ease: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --blur: 20px;
+
+  /* Bird dashboard — light (also used as fallbacks outside dark mode) */
+  --dash-bg-primary: #f7f8fa;
+  --dash-surface: #f8fafc;
+  --dash-card: #ffffff;
+  --dash-card-elevated: #ffffff;
+  --dash-text: #111827;
+  --dash-text-strong: #022c22;
+  --dash-text-muted: #047857;
+  --dash-text-soft: #059669;
+  --dash-border: #e5e7eb;
+  --dash-border-subtle: #e5e7eb;
+  --dash-hover-surface: #ecfdf5;
+  --dash-ring: rgba(16, 185, 129, 0.22);
+  --dash-accent: #059669;
+  --dash-accent-surface: rgba(236, 253, 245, 0.55);
+  --dash-gradient-mid: rgba(236, 253, 245, 0.78);
+  --dash-warm: #ffb808;
+  --dash-warm-muted: #8a6800;
+  --dash-warm-text: #8a6800;
+  --dash-warm-caption: #a87400;
+  --dash-shadow-card: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --dash-shadow-overlay: 0 20px 40px -12px rgba(15, 23, 42, 0.18);
+  --dash-table-header: rgba(236, 253, 245, 0.85);
+  --dash-row-hover: #f1f5f9;
+  --dash-table-border: rgba(229, 231, 235, 0.95);
+  --dash-positive: #16a34a;
+  --dash-negative: #dc2626;
+  --dash-warning: #d97706;
+  --dash-amber-text: #92400e;
+  --rdp-accent-color: #059669;
+  --rdp-accent-background-color: #d1fae5;
+  --dash-kpi-tile-1-bg: #a8d5ba;
+  --dash-kpi-tile-2-bg: #a8d5ba;
+  --dash-kpi-tile-3-bg: #e6b8a2;
+  --dash-kpi-tile-4-bg: #f5c2c7;
+  --dash-kpi-tile-border: rgba(6, 95, 70, 0.22);
+  --dash-kpi-label: #047857;
+  --dash-kpi-value: #022c22;
+  --dash-kpi-strip-bg: rgba(236, 253, 245, 0.45);
+  --dash-chart-well: rgba(236, 253, 245, 0.35);
+  --dash-progress-track: #d1fae5;
+  --dash-progress-fill: #10b981;
+  --dash-cancellation-row-bg: rgba(254, 226, 226, 0.55);
+  --dash-cancellation-row-hover: rgba(252, 165, 165, 0.45);
+
+  /* Body + portaled UI inheritance (dialogs/sheets) */
+  --foreground-rgb: 17, 24, 39;
+  --background-start-rgb: 247, 248, 250;
+  --background-end-rgb: 247, 248, 250;
+}
+
+html.dark {
+  --dash-bg-primary: #0f1115;
+  --dash-surface: #0f1115;
+  --dash-card: #1c1f26;
+  --dash-card-elevated: #232730;
+  --dash-text: #e8eaed;
+  --dash-text-strong: #ffffff;
+  --dash-text-muted: #a0a7b1;
+  --dash-text-soft: #8b95a5;
+  --dash-border: #2a2f3a;
+  --dash-border-subtle: #2a2f3a;
+  --dash-hover-surface: #2a2f3a;
+  --dash-ring: rgba(52, 211, 153, 0.28);
+  --dash-accent: #34d399;
+  --dash-accent-surface: rgba(31, 61, 43, 0.5);
+  --dash-gradient-mid: rgba(31, 61, 43, 0.55);
+  --dash-warm: #e5a84a;
+  --dash-warm-muted: rgba(229, 168, 74, 0.35);
+  --dash-warm-text: #f5e6c8;
+  --dash-warm-caption: #d4b896;
+  --dash-shadow-card: 0 6px 16px rgba(0, 0, 0, 0.4);
+  --dash-shadow-overlay: 0 24px 48px rgba(0, 0, 0, 0.55);
+  --dash-table-header: #232730;
+  --dash-row-hover: #2a2f3a;
+  --dash-table-border: #2a2f3a;
+  --dash-positive: #22c55e;
+  --dash-negative: #ef4444;
+  --dash-warning: #f59e0b;
+  --dash-amber-text: #fbbf24;
+  --rdp-accent-color: #34d399;
+  --rdp-accent-background-color: #1f3d2b;
+  --dash-kpi-tile-1-bg: #1f3d2b;
+  --dash-kpi-tile-2-bg: #1f3d2b;
+  --dash-kpi-tile-3-bg: #4a2c2a;
+  --dash-kpi-tile-4-bg: #3d2528;
+  --dash-kpi-tile-border: rgba(255, 255, 255, 0.12);
+  --dash-kpi-label: #b8d4c4;
+  --dash-kpi-value: #ffffff;
+  --dash-kpi-strip-bg: rgba(28, 31, 38, 0.65);
+  --dash-chart-well: rgba(28, 31, 38, 0.55);
+  --dash-progress-track: #2a2f3a;
+  --dash-progress-fill: #22c55e;
+  --dash-cancellation-row-bg: rgba(239, 68, 68, 0.14);
+  --dash-cancellation-row-hover: rgba(239, 68, 68, 0.24);
+
+  /* Class-based dark (dashboard): OS may still be light — drive body + Radix portals */
+  --foreground-rgb: 232, 234, 237;
+  --background-start-rgb: 15, 17, 21;
+  --background-end-rgb: 15, 17, 21;
+
+  /* Tailwind v4 semantic colors — Dialog/Sheet `bg-background`, `text-foreground`, close button */
+  --color-background: #1c1f26;
+  --color-foreground: #e8eaed;
+  --color-muted-foreground: #a0a7b1;
+  --color-ring: #34d399;
+  --color-accent: #2a2f3a;
+  --color-accent-foreground: #e8eaed;
+  --color-secondary: #232730;
+  --color-border: #2a2f3a;
+}
+
+/* Dialog / sheet surfaces: ensure close control + description read on dashboard dark */
+html.dark [role="dialog"] {
+  color: var(--dash-text);
+}
+
+html.dark [role="dialog"] .text-muted-foreground {
+  color: var(--dash-text-muted);
+}
+
+html.dark [role="dialog"] thead th {
+  color: var(--dash-text-strong);
+}
+
+/* Premium dashboard shells — Performance, Staff, Equipment, Airline Remarks, Aircraft (Bird Delhi) */
+.dash-premium-performance {
+  border: 1px solid hsl(216 22% 90%);
+  background: linear-gradient(
+    165deg,
+    hsl(210 38% 98.8%) 0%,
+    hsl(215 32% 97%) 45%,
+    hsl(213 26% 99.6%) 100%
+  );
+  box-shadow:
+    var(--dash-shadow-card),
+    inset 0 1px 0 hsl(0 0% 100% / 0.92),
+    inset 0 -1px 0 hsl(215 25% 94% / 0.5);
+}
+
+@media (min-width: 768px) {
+  .dash-premium-performance:hover {
+    z-index: 30;
+    border-color: rgb(52 211 153 / 0.8);
+    box-shadow:
+      0 12px 34px -10px rgba(0, 0, 0, 0.062),
+      0 16px 40px -17px rgba(16, 185, 129, 0.18),
+      0 0 52px -16px rgba(255, 184, 8, 0.098),
+      inset 0 1px 0 hsl(0 0% 100% / 0.92),
+      inset 0 -1px 0 hsl(215 25% 94% / 0.5);
+  }
+}
+
+.dash-premium-staff {
+  border: 1px solid hsl(160 24% 88%);
+  background: linear-gradient(
+    155deg,
+    hsl(158 38% 98.2%) 0%,
+    hsl(156 32% 96.8%) 48%,
+    hsl(162 28% 99%) 100%
+  );
+  box-shadow:
+    var(--dash-shadow-card),
+    inset 0 1px 0 hsl(0 0% 100% / 0.9),
+    inset 0 -1px 0 hsl(158 26% 92% / 0.55);
+}
+
+.dash-premium-equipment {
+  border: 1px solid hsl(152 22% 88%);
+  background: linear-gradient(
+    152deg,
+    hsl(154 36% 98.5%) 0%,
+    hsl(152 28% 97%) 50%,
+    hsl(156 34% 99.5%) 100%
+  );
+  box-shadow:
+    var(--dash-shadow-card),
+    inset 0 1px 0 hsl(0 0% 100% / 0.92),
+    inset 0 -1px 0 hsl(152 24% 91% / 0.5);
+}
+
+.dash-premium-airline {
+  border: 1px solid hsl(38 22% 88%);
+  background: linear-gradient(
+    168deg,
+    hsl(42 45% 98.5%) 0%,
+    hsl(36 32% 97%) 50%,
+    hsl(40 28% 99.5%) 100%
+  );
+  box-shadow:
+    var(--dash-shadow-card),
+    inset 0 1px 0 hsl(0 0% 100% / 0.94),
+    inset 0 -1px 0 hsl(38 30% 92% / 0.45);
+}
+
+.dash-premium-aircraft {
+  border: 1px solid hsl(224 20% 90%);
+  background: linear-gradient(
+    155deg,
+    hsl(226 36% 99%) 0%,
+    hsl(220 28% 97.2%) 50%,
+    hsl(218 32% 99.4%) 100%
+  );
+  box-shadow:
+    var(--dash-shadow-card),
+    inset 0 1px 0 hsl(0 0% 100% / 0.93),
+    inset 0 -1px 0 hsl(220 24% 93% / 0.48);
+}
+
+html.dark .dash-premium-performance {
+  border-color: hsl(220 16% 24%);
+  background: linear-gradient(
+    168deg,
+    hsl(220 16% 11%) 0%,
+    hsl(218 14% 15%) 50%,
+    hsl(224 13% 9%) 100%
+  );
+  box-shadow:
+    var(--dash-shadow-card),
+    inset 0 1px 0 hsl(0 0% 100% / 0.06),
+    inset 0 -1px 0 hsl(0 0% 0% / 0.35);
+}
+
+@media (min-width: 768px) {
+  html.dark .dash-premium-performance:hover {
+    z-index: 30;
+    border-color: rgb(52 211 153 / 0.65);
+    box-shadow:
+      0 14px 40px -12px rgba(0, 0, 0, 0.38),
+      0 18px 46px -19px rgba(16, 185, 129, 0.148),
+      0 0 56px -18px rgba(52, 211, 153, 0.098),
+      inset 0 1px 0 hsl(0 0% 100% / 0.06),
+      inset 0 -1px 0 hsl(0 0% 0% / 0.35);
+  }
+}
+
+html.dark .dash-premium-staff {
+  border-color: hsl(158 14% 22%);
+  background: linear-gradient(
+    160deg,
+    hsl(156 14% 11%) 0%,
+    hsl(154 11% 15%) 50%,
+    hsl(160 10% 10%) 100%
+  );
+  box-shadow:
+    var(--dash-shadow-card),
+    inset 0 1px 0 hsl(160 70% 50% / 0.065),
+    inset 0 -1px 0 hsl(0 0% 0% / 0.4);
+}
+
+html.dark .dash-premium-equipment {
+  border-color: hsl(152 16% 23%);
+  background: linear-gradient(
+    158deg,
+    hsl(154 16% 10.5%) 0%,
+    hsl(150 13% 14.5%) 50%,
+    hsl(158 12% 9%) 100%
+  );
+  box-shadow:
+    var(--dash-shadow-card),
+    inset 0 1px 0 hsl(150 65% 45% / 0.075),
+    inset 0 -1px 0 hsl(0 0% 0% / 0.38);
+}
+
+html.dark .dash-premium-airline {
+  border-color: hsl(38 12% 24%);
+  background: linear-gradient(
+    168deg,
+    hsl(35 13% 11%) 0%,
+    hsl(40 11% 15%) 50%,
+    hsl(32 9% 9.5%) 100%
+  );
+  box-shadow:
+    var(--dash-shadow-card),
+    inset 0 1px 0 hsl(40 85% 60% / 0.065),
+    inset 0 -1px 0 hsl(0 0% 0% / 0.4);
+}
+
+html.dark .dash-premium-aircraft {
+  border-color: hsl(224 14% 24%);
+  background: linear-gradient(
+    158deg,
+    hsl(226 14% 11%) 0%,
+    hsl(220 12% 15%) 52%,
+    hsl(228 11% 9%) 100%
+  );
+  box-shadow:
+    var(--dash-shadow-card),
+    inset 0 1px 0 hsl(215 85% 70% / 0.058),
+    inset 0 -1px 0 hsl(0 0% 0% / 0.38);
+}
+
+@keyframes dashboardNotifEnter {
+  from {
+    opacity: 0;
+    transform: translateX(12px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+/* Cancellation history: row highlight after opening from dashboard notification */
+@keyframes cancellationHighlightGlow {
+  0% {
+    box-shadow:
+      0 0 0 0 rgba(255, 107, 0, 0),
+      inset 0 0 0 0 rgba(255, 107, 0, 0);
+  }
+  15% {
+    box-shadow:
+      0 0 28px 8px rgba(255, 107, 0, 0.55),
+      0 0 56px 16px rgba(255, 184, 8, 0.22),
+      inset 0 0 20px rgba(255, 107, 0, 0.08);
+  }
+  50% {
+    box-shadow:
+      0 0 32px 10px rgba(255, 107, 0, 0.5),
+      0 0 64px 20px rgba(255, 184, 8, 0.2),
+      inset 0 0 24px rgba(255, 107, 0, 0.1);
+  }
+  100% {
+    box-shadow:
+      0 0 0 0 rgba(255, 107, 0, 0),
+      inset 0 0 0 0 rgba(255, 107, 0, 0);
+  }
+}
+
+.cancellation-row-highlight {
+  animation: cancellationHighlightGlow 5s ease-in-out forwards;
+  position: relative;
+  z-index: 1;
+  outline: 2px solid rgba(255, 107, 0, 0.65);
+  outline-offset: 2px;
+}
+
+@theme {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  --color-ring: #10b981;
+  --color-input: #e5e7eb;
+  --color-background: #ffffff;
+  --color-foreground: #111827;
+  --color-border: #e5e7eb;
+  --color-primary: #10b981;
+  --color-primary-foreground: #ffffff;
+  --color-muted-foreground: #6b7280;
+  --color-accent: #f3f4f6;
+  --color-accent-foreground: #111827;
+  --color-secondary: #f9fafb;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #111827;
+}
+
+@import 'react-day-picker/style.css';
+
+/* Form controls — no browser outline or black ring-offset gap on focus */
+@layer base {
+  :where(
+      input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='hidden']):not([type='submit']):not([type='button']):not([type='reset']):not([type='color']),
+      textarea,
+      select
+    ):focus,
+  :where(
+      input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='hidden']):not([type='submit']):not([type='button']):not([type='reset']):not([type='color']),
+      textarea,
+      select
+    ):focus-visible {
+    outline: none;
+  }
+}
+
+input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='hidden']):not([type='submit']):not([type='button']):not([type='reset']):not([type='color']):focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+[role='combobox']:focus-visible {
+  --tw-ring-offset-width: 0px;
+  --tw-ring-offset-shadow: 0 0 #0000;
+}
+
+.map-label {
+  color: #111;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  white-space: nowrap;
+  pointer-events: none;
+  text-shadow: 0 0 4px rgba(255, 255, 255, 0.85);
+}
+/* OS dark preference — admin/auth only; FRIS sets data-fris-light-lock on <html> */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-fris-light-lock]) {
+    --foreground-rgb: 255, 255, 255;
+    --background-start-rgb: 0, 0, 0;
+    --background-end-rgb: 0, 0, 0;
+  }
+}
+
+/* FRIS app shell — force light tokens (Advance, Reports, Flights, etc.) */
+html[data-fris-light-lock] {
+  color-scheme: light;
+  --foreground-rgb: 17, 24, 39;
+  --background-start-rgb: 247, 248, 250;
+  --background-end-rgb: 247, 248, 250;
+  --color-background: #ffffff;
+  --color-foreground: #111827;
+  --color-muted-foreground: #6b7280;
+  --color-border: #e5e7eb;
+  --color-ring: #059669;
+  --color-accent: #f3f4f6;
+  --color-accent-foreground: #111827;
+  --color-secondary: #f9fafb;
+}
+
+html[data-fris-light-lock] body {
+  color: rgb(var(--foreground-rgb));
+  background: rgb(var(--background-start-rgb));
+}
+
+body {
+  font-family: var(--font-sans);
+  font-family: var(--font-sans);
+  color: rgb(var(--foreground-rgb));
+  background: linear-gradient(
+      to bottom,
+      transparent,
+      rgb(var(--background-end-rgb))
+    )
+    rgb(var(--background-start-rgb));
+}
+
+html,
+body {
+  scroll-behavior: smooth;
+}
+
+/* Global horizontal-overflow safety net — kills page-level horizontal scroll on
+   every route without breaking position: sticky or inner scroll regions
+   (overflow-x: clip, unlike hidden, does not turn the element into a y-axis
+   scroll container). Tables/charts keep their own `overflow-x-auto` regions. */
+html,
+body {
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+html.dark ::-webkit-scrollbar-track {
+  background: #1c1f26;
+}
+
+html.dark ::-webkit-scrollbar-thumb {
+  background: #3d4450;
+}
+
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: #5c6574;
+}
+
+/* Admin auth forms — dark scrollbar even when the page is not `html.dark` */
+.admin-auth-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(16, 185, 129, 0.45) rgba(255, 255, 255, 0.06);
+  overscroll-behavior: contain;
+}
+
+.admin-auth-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.admin-auth-scroll::-webkit-scrollbar-track {
+  margin-block: 8px;
+  background: rgba(15, 23, 42, 0.55);
+  border-radius: 999px;
+}
+
+.admin-auth-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.4);
+  border: 2px solid rgba(15, 23, 42, 0.4);
+  background-clip: padding-box;
+}
+
+.admin-auth-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(52, 211, 153, 0.55);
+  border: 2px solid rgba(15, 23, 42, 0.35);
+  background-clip: padding-box;
+}
+
+/* Admin panel — emerald scrollbars (theme via data-admin-theme on shell root) */
+.admin-scroll {
+  scrollbar-width: thin;
+  overscroll-behavior: auto;
+  overflow-anchor: none;
+  scrollbar-gutter: stable;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-color: rgba(16, 185, 129, 0.5) rgba(16, 185, 129, 0.1);
+}
+
+/* Nested panes (ticket list, dialogs) — contain scroll without chaining to parent */
+.admin-scroll--nested {
+  overscroll-behavior: contain;
+  min-height: 0;
+}
+
+.admin-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.admin-scroll::-webkit-scrollbar-track {
+  margin-block: 4px;
+  background: rgba(16, 185, 129, 0.1);
+  border-radius: 999px;
+}
+
+.admin-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.45);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.admin-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(5, 150, 105, 0.7);
+  background-clip: padding-box;
+}
+
+.admin-scroll::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+[data-admin-theme='dark'] .admin-scroll {
+  scrollbar-color: rgba(52, 211, 153, 0.45) rgba(255, 255, 255, 0.06);
+}
+
+[data-admin-theme='dark'] .admin-scroll::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+[data-admin-theme='dark'] .admin-scroll::-webkit-scrollbar-thumb {
+  background: rgba(16, 185, 129, 0.42);
+  border: 2px solid rgba(15, 23, 42, 0.35);
+  background-clip: padding-box;
+}
+
+[data-admin-theme='dark'] .admin-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(52, 211, 153, 0.58);
+  border: 2px solid rgba(15, 23, 42, 0.3);
+  background-clip: padding-box;
+}
+
+/* react-day-picker (dashboard popovers) — readable on dark card */
+html.dark .rdp-root {
+  color: var(--dash-text);
+  --rdp-outside-text-color: var(--dash-text-muted);
+}
+
+/* Smooth transitions */
+* {
+  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+/* Chart tooltip animations */
+.recharts-wrapper:focus,
+.recharts-wrapper:focus-visible,
+.recharts-surface:focus,
+.recharts-surface:focus-visible,
+.recharts-layer:focus,
+.recharts-layer:focus-visible,
+.recharts-sector:focus,
+.recharts-sector:focus-visible,
+.recharts-rectangle:focus,
+.recharts-rectangle:focus-visible,
+.recharts-dot:focus,
+.recharts-dot:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.recharts-tooltip-wrapper {
+  animation: tooltipFadeIn 0.15s ease-out;
+}
+
+@keyframes tooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Loading animations */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Gradient text */
+.gradient-text {
+  @apply bg-clip-text text-transparent bg-gradient-to-r from-emerald-500 to-emerald-700;
+}
+
+/* Glass effect */
+.glass {
+  @apply backdrop-blur-md bg-white/80 border border-white/20;
+}
+
+/* Hover effects */
+.hover-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+/* Shimmer effect for loading */
+.shimmer {
+  background: linear-gradient(90deg, 
+    rgba(255, 255, 255, 0) 0%, 
+    rgba(255, 255, 255, 0.3) 50%, 
+    rgba(255, 255, 255, 0) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Subtle float / bounce — baggage OTP card */
+@keyframes dashSoftFloatBounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-otp-card-bounce {
+    animation: none !important;
+  }
+}
+
+.animate-otp-card-bounce {
+  animation: dashSoftFloatBounce 1.6s ease-in-out infinite;
+  animation-delay: 0.4s;
+}
+
+@keyframes airlineMarquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.airline-marquee-track {
+  animation: airlineMarquee 50s linear infinite;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .airline-marquee-track {
+    animation: none !important;
+  }
+}
+
+/* Admin dashboard — KPI, tiles, charts */
+.admin-dashboard {
+  --em: #059669;
+  --tl: #10b981;
+  --amb: #34d399;
+  --red: #047857;
+  --pur: #065f46;
+  --blue: #6ee7b7;
+}
+
+@keyframes adminDashboardFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes adminDashboardSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes adminDashboardCountUp {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes adminDashboardBarGrow {
+  from {
+    width: 0;
+  }
+  to {
+    width: var(--w, 100%);
+  }
+}
+
+@keyframes adminDashboardRowIn {
+  from {
+    opacity: 0;
+    transform: translateX(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.admin-dashboard-section {
+  animation: adminDashboardFadeUp 0.45s ease both;
+}
+
+.admin-dashboard-kpi,
+.admin-dashboard-tile,
+.admin-dashboard-chart-card {
+  animation: adminDashboardSlideIn 0.4s ease both;
+}
+
+.admin-dashboard-count-up {
+  animation: adminDashboardCountUp 0.4s ease both;
+}
+
+.admin-dashboard-bar {
+  animation: adminDashboardBarGrow 0.7s ease both;
+}
+
+.admin-dashboard-row {
+  animation: adminDashboardRowIn 0.35s ease both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-dashboard-section,
+  .admin-dashboard-kpi,
+  .admin-dashboard-tile,
+  .admin-dashboard-chart-card,
+  .admin-dashboard-count-up,
+  .admin-dashboard-bar,
+  .admin-dashboard-row {
+    animation: none !important;
+  }
+}
+
+/* ===========================================================================
+   Enterprise responsive utilities (additive, opt-in)
+   - WCAG 2.5.5 touch targets, auto-fit card grids, accessible focus rings.
+   =========================================================================== */
+
+/* WCAG 2.5.5 — minimum 44x44px interactive target on touch / coarse pointers */
+@media (pointer: coarse) {
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Auto-fit responsive card grid: 1 col on small phones, fills available width.
+   Cards keep equal heights via the implicit grid row stretch. */
+.admin-card-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr));
+  align-items: stretch;
+}
+
+@media (min-width: 768px) {
+  .admin-card-grid {
+    gap: 1.25rem;
+  }
+}
+
+@media (min-width: 1536px) {
+  .admin-card-grid {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr));
+  }
+}
+
+/* KPI grid — denser, scales 1 → 2 → 3 → 4+ columns by viewport */
+.admin-kpi-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
+}
+
+@media (min-width: 768px) {
+  .admin-kpi-grid {
+    gap: 1rem;
+  }
+}
+
+/* Shared accessible focus ring — visible only for keyboard users */
+.focus-ring:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--dash-bg-primary, #fff),
+    0 0 0 4px var(--dash-accent, #10b981);
+  border-radius: inherit;
+}
+
+/* Prevent body scroll when an off-canvas drawer / full-screen sheet is open */
+body.no-scroll {
+  overflow: hidden;
+  touch-action: none;
+}
+
+/* Mobile data rows rendered as cards: hide on >= md where the table shows */
+@media (min-width: 768px) {
+  .data-card-list {
+    display: none;
+  }
+}
+
+/* WYSIWYG (RichTextEditor) content formatting — Tailwind preflight resets these */
+.rte-content ul {
+  list-style: disc;
+  margin: 0.25rem 0;
+  padding-left: 1.5rem;
+}
+.rte-content ol {
+  list-style: decimal;
+  margin: 0.25rem 0;
+  padding-left: 1.5rem;
+}
+.rte-content li {
+  margin: 0.125rem 0;
+}
+.rte-content a {
+  color: #059669;
+  text-decoration: underline;
+}
+.rte-content:focus {
+  outline: none;
+}
+
+/* FRIS PDF-style report previews (FHR / GSE / team) — match jsPDF Times */
+.fris-report-preview {
+  font-family: "Times New Roman", Times, serif;
+  line-height: 1.15;
+  color: #111827;
+}
+.fris-report-preview * {
+  font-family: inherit;
+}
+.fris-report-preview .fhr-kv-stack {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  column-gap: 4px;
+  align-items: baseline;
+}
+.fris-report-preview .fhr-kv-inline {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: baseline;
+  column-gap: 4px;
+  min-width: 0;
+}
+.fris-report-preview .fhr-kv-inline > .font-bold {
+  flex: 0 0 auto;
+}
+.fris-report-preview .fhr-kv-inline > :last-child {
+  min-width: 0;
+}
+.fris-report-preview p {
+  margin: 0;
+  line-height: 1.15;
+}
+.fris-report-preview table {
+  border-collapse: collapse;
+  line-height: 1.15;
+}
+.fris-report-preview th,
+.fris-report-preview td {
+  vertical-align: top !important;
+}
+.fris-report-preview .grid {
+  align-items: start;
+}
+.fris-report-preview .report-cell {
+  padding: 2px 4px;
+}
+.fris-report-preview .report-row-tight {
+  line-height: 1.15;
+}
+.fris-report-preview table th,
+.fris-report-preview table td {
+  padding: 2px 4px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+

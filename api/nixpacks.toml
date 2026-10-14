@@ -1,0 +1,8 @@
+# NODE_ENV=production makes Nixpacks run `npm ci --omit=dev`; override for nest build
+[variables]
+NIXPACKS_INSTALL_CMD = "npm ci"
+NIXPACKS_NODE_VERSION = "20.19"
+
+# BHS MIS Excel export uses openpyxl to preserve template formulas
+[phases.setup]
+aptPkgs = ["python3", "python3-openpyxl"]

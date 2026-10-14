@@ -1,0 +1,22 @@
+{
+  "extends": "../../tsconfig.server.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "rootDirs": [
+      "./src",
+      "../../m-platform/server",
+      "../../m-fris/server",
+      "../../m-admin/server"
+    ],
+    "paths": {
+      "src/*": [
+        "./src/*",
+        "../../m-platform/server/*",
+        "../../m-fris/server/*",
+        "../../m-admin/server/*",
+        "../../../apps/api/src/*"
+      ]
+    }
+  },
+  "include": ["src/**/*.ts"]
+}

@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Duty Allocation</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 24px; background: #f5f5f5; color: #333; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+    h1 { margin: 0; font-size: 1.75rem; font-weight: 700; color: #000; }
+    .btn-back { padding: 10px 20px; background: #7dd3fc; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem; }
+    .btn-back:hover { background: #38bdf8; }
+    .panel { background: #fff; border-radius: 8px; padding: 20px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .panel-title { font-size: 0.9rem; font-weight: 600; margin-bottom: 16px; color: #374151; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px 32px; }
+    .field { display: flex; flex-direction: column; gap: 4px; }
+    .field label { font-weight: 600; font-size: 0.85rem; color: #374151; }
+    .field .value { font-size: 0.95rem; color: #000; min-height: 20px; }
+    .field input[readonly] { background: #f9fafb; border: 1px solid #e5e7eb; padding: 8px 10px; border-radius: 6px; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 16px; align-items: end; margin-bottom: 16px; }
+    .form-grid.row2 { grid-template-columns: 1fr 1fr 2fr; }
+    .form-field { display: flex; flex-direction: column; gap: 6px; }
+    .form-field label { font-weight: 600; font-size: 0.85rem; color: #374151; }
+    .form-field input, .form-field select, .form-field textarea { padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem; }
+    .form-field textarea { min-height: 80px; resize: vertical; }
+    .btn-add { width: 40px; height: 40px; border-radius: 50%; background: #3b82f6; color: #fff; border: none; cursor: pointer; font-size: 1.25rem; line-height: 1; flex-shrink: 0; }
+    .btn-add:hover { background: #2563eb; }
+    .btn-save { padding: 12px 24px; background: #22c55e; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem; font-weight: 500; }
+    .btn-save:hover { background: #16a34a; }
+    .form-actions { display: flex; justify-content: flex-end; margin-top: 16px; }
+    .message { background: #f3f4f6; border-radius: 8px; padding: 16px; margin-top: 16px; color: #6b7280; font-size: 0.95rem; }
+    .records-list { margin-top: 16px; }
+    .record-item { padding: 12px; background: #f9fafb; border-radius: 6px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+    .record-item span { font-size: 0.9rem; }
+    .error { color: #dc2626; font-size: 0.85rem; margin-top: 8px; }
+    .success { color: #16a34a; font-size: 0.85rem; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Duty Allocation</h1>
+    <button type="button" class="btn-back" onclick="window.history.back()">Back</button>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Duty Allocation Details</div>
+    <div class="grid-3">
+      <div class="field"><label>Serial No:</label><div class="value" id="disp-serialNo">—</div></div>
+      <div class="field"><label>Aircraft:</label><div class="value" id="disp-aircraft">—</div></div>
+      <div class="field"><label>STA Time:</label><div class="value" id="disp-staTime">—</div></div>
+      <div class="field"><label>Routing:</label><div class="value" id="disp-routing">—</div></div>
+      <div class="field"><label>ATD Date:</label><div class="value" id="disp-atdDate">—</div></div>
+      <div class="field"><label>Airline:</label><div class="value" id="disp-airline">—</div></div>
+      <div class="field"><label>Operation:</label><div class="value" id="disp-operation">—</div></div>
+      <div class="field"><label>STD Date:</label><div class="value" id="disp-stdDate">—</div></div>
+      <div class="field"><label>ATA Date:</label><div class="value" id="disp-ataDate">—</div></div>
+      <div class="field"><label>ATD Time:</label><div class="value" id="disp-atdTime">—</div></div>
+      <div class="field"><label>Flight No.:</label><div class="value" id="disp-flightNo">—</div></div>
+      <div class="field"><label>STA Date:</label><div class="value" id="disp-staDate">—</div></div>
+      <div class="field"><label>STD Time:</label><div class="value" id="disp-stdTime">—</div></div>
+      <div class="field"><label>ATA Time:</label><div class="value" id="disp-ataTime">—</div></div>
+    </div>
+    <div style="margin-top:12px">
+      <label style="font-weight:600;font-size:0.85rem;">Serial No (for new entry):</label>
+      <input type="number" id="input-serialNo" placeholder="e.g. 198120" style="margin-left:8px;padding:8px;width:120px" />
+      <button type="button" class="btn-back" style="margin-left:8px;padding:8px 16px" onclick="loadFlightInfo()">Load flight info</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Add New Details</div>
+    <form id="form" onsubmit="return saveDuty(event)">
+      <div class="form-grid">
+        <div class="form-field">
+          <label for="chooseEmployee">Choose Employee</label>
+          <input type="text" id="chooseEmployee" name="chooseEmployee" placeholder="Employee id or search" />
+        </div>
+        <div class="form-field">
+          <label for="name">Name</label>
+          <input type="text" id="name" name="name" placeholder="Name" />
+        </div>
+        <div class="form-field" style="display:flex;flex-direction:row;align-items:flex-end;gap:8px">
+          <div style="flex:1">
+            <label for="area">Area</label>
+            <select id="area" name="area">
+              <option value="">— Select —</option>
+              <option value="Ramp">Ramp</option>
+              <option value="Terminal">Terminal</option>
+              <option value="Load Control">Load Control</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <button type="button" class="btn-add" title="Add area">+</button>
+        </div>
+      </div>
+      <div class="form-grid row2">
+        <div class="form-field" style="display:flex;flex-direction:row;align-items:flex-end;gap:8px">
+          <div style="flex:1">
+            <label for="dutyAllocation">Duty Allocation</label>
+            <select id="dutyAllocation" name="dutyAllocation">
+              <option value="">— Select —</option>
+              <option value="Supervisor">Supervisor</option>
+              <option value="Lead">Lead</option>
+              <option value="Agent">Agent</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <button type="button" class="btn-add" title="Add duty type">+</button>
+        </div>
+        <div class="form-field" style="grid-column: span 2">
+          <label for="remarks">Remarks</label>
+          <textarea id="remarks" name="remarks" placeholder="Remarks"></textarea>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn-save">Save</button>
+      </div>
+    </form>
+    <div id="formMessage"></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Saved duty allocations</div>
+    <div id="recordsMessage" class="message">There are no records found !!</div>
+    <div id="recordsList" class="records-list"></div>
+  </div>
+
+  <script>
+    const API = ''; // same origin
+
+    function getSerialNo() {
+      const url = new URL(window.location.href);
+      const q = url.searchParams.get('serialNo');
+      if (q) return parseInt(q, 10);
+      const input = document.getElementById('input-serialNo');
+      return input.value ? parseInt(input.value, 10) : null;
+    }
+
+    function setDisplay(id, value) {
+      const el = document.getElementById(id);
+      if (el) el.textContent = value != null && value !== '' ? value : '—';
+    }
+
+    async function loadFlightInfo() {
+      const serialNo = document.getElementById('input-serialNo').value;
+      if (!serialNo) {
+        setFormMessage('Enter Serial No and click Load flight info.', 'error');
+        return;
+      }
+      try {
+        const r = await fetch(API + '/main-details/by-serial/' + serialNo);
+        if (!r.ok) throw new Error('Flight not found');
+        const data = await r.json();
+        setDisplay('disp-serialNo', data.flightSerialNumber ?? serialNo);
+        setDisplay('disp-aircraft', data.aircraftType);
+        setDisplay('disp-staTime', data.ataTime || data.sta);
+        setDisplay('disp-routing', data.route);
+        setDisplay('disp-atdDate', data.atdDate);
+        setDisplay('disp-airline', data.airlineName);
+        setDisplay('disp-operation', data.ops);
+        setDisplay('disp-stdDate', data.stdDate || data.etdDate);
+        setDisplay('disp-ataDate', data.ataDate);
+        setDisplay('disp-atdTime', data.atdTime);
+        setDisplay('disp-flightNo', data.flightCode);
+        setDisplay('disp-staDate', data.staDate);
+        setDisplay('disp-stdTime', data.std);
+        setDisplay('disp-ataTime', data.ataTime || data.ata);
+        setFormMessage('Flight info loaded.', 'success');
+      } catch (e) {
+        setFormMessage('Could not load flight. Use Serial No ' + serialNo + ' and fill Add New Details.', 'error');
+        setDisplay('disp-serialNo', serialNo);
+      }
+      loadRecords();
+    }
+
+    function setFormMessage(text, type) {
+      const el = document.getElementById('formMessage');
+      el.textContent = text;
+      el.className = type || '';
+    }
+
+    async function saveDuty(e) {
+      e.preventDefault();
+      const serialNo = getSerialNo();
+      if (!serialNo) {
+        setFormMessage('Enter Serial No (top panel) and try again.', 'error');
+        return;
+      }
+      const payload = {
+        serialNo,
+        chooseEmployee: document.getElementById('chooseEmployee').value.trim(),
+        name: document.getElementById('name').value.trim(),
+        area: document.getElementById('area').value,
+        dutyAllocation: document.getElementById('dutyAllocation').value,
+        remarks: document.getElementById('remarks').value.trim(),
+        aircraft: document.getElementById('disp-aircraft').textContent.replace('—', ''),
+        staTime: document.getElementById('disp-staTime').textContent.replace('—', ''),
+        routing: document.getElementById('disp-routing').textContent.replace('—', ''),
+        atdDate: document.getElementById('disp-atdDate').textContent.replace('—', ''),
+        airline: document.getElementById('disp-airline').textContent.replace('—', ''),
+        operation: document.getElementById('disp-operation').textContent.replace('—', ''),
+        stdDate: document.getElementById('disp-stdDate').textContent.replace('—', ''),
+        ataDate: document.getElementById('disp-ataDate').textContent.replace('—', ''),
+        atdTime: document.getElementById('disp-atdTime').textContent.replace('—', ''),
+        flightNo: document.getElementById('disp-flightNo').textContent.replace('—', ''),
+        staDate: document.getElementById('disp-staDate').textContent.replace('—', ''),
+        stdTime: document.getElementById('disp-stdTime').textContent.replace('—', ''),
+        ataTime: document.getElementById('disp-ataTime').textContent.replace('—', ''),
+      };
+      try {
+        const r = await fetch(API + '/ramp-details-2', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(data.message || r.statusText);
+        setFormMessage('Saved successfully.', 'success');
+        document.getElementById('chooseEmployee').value = '';
+        document.getElementById('name').value = '';
+        document.getElementById('area').value = '';
+        document.getElementById('dutyAllocation').value = '';
+        document.getElementById('remarks').value = '';
+        loadRecords();
+      } catch (err) {
+        setFormMessage(err.message || 'Save failed.', 'error');
+      }
+    }
+
+    async function loadRecords() {
+      const serialNo = getSerialNo();
+      const msgEl = document.getElementById('recordsMessage');
+      const listEl = document.getElementById('recordsList');
+      if (!serialNo) {
+        msgEl.textContent = 'Enter Serial No and click Load flight info to see records.';
+        msgEl.style.display = 'block';
+        listEl.innerHTML = '';
+        return;
+      }
+      try {
+        const r = await fetch(API + '/ramp-details-2/by-serial/' + serialNo);
+        const list = await r.ok ? r.json() : [];
+        listEl.innerHTML = '';
+        if (!list.length) {
+          msgEl.textContent = 'There are no records found !!';
+          msgEl.style.display = 'block';
+        } else {
+          msgEl.style.display = 'none';
+          list.forEach(rec => {
+            const div = document.createElement('div');
+            div.className = 'record-item';
+            div.innerHTML = '<span>' + (rec.name || rec.chooseEmployee || '—') + ' · ' + (rec.area || '—') + ' · ' + (rec.dutyAllocation || '—') + '</span>';
+            listEl.appendChild(div);
+          });
+        }
+      } catch {
+        msgEl.textContent = 'There are no records found !!';
+        msgEl.style.display = 'block';
+        listEl.innerHTML = '';
+      }
+    }
+
+    (function init() {
+      const serialNo = new URLSearchParams(window.location.search).get('serialNo');
+      if (serialNo) {
+        document.getElementById('input-serialNo').value = serialNo;
+        loadFlightInfo();
+      }
+    })();
+  </script>
+</body>
+</html>

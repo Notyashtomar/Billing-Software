@@ -1,0 +1,111 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "account_id": "700978853fa3bc5a00bbb067d5352216",
+  "main": ".open-next/worker.js",
+  "name": "fris",
+  "compatibility_date": "2026-06-17",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  // Minify Worker upload while keeping production upload efficient.
+  "minify": true,
+  "workers_dev": true,
+  "preview_urls": false,
+  "vars": {
+    "API_BACKEND_URL": "https://fris-production.up.railway.app",
+    "NEXT_PUBLIC_API_URL": "https://fris-production.up.railway.app"
+  },
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "services": [
+    {
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "fris"
+    }
+  ],
+  // Operational modules — Cloudflare D1 at the edge.
+  // Placeholder UUIDs (00000000-…) are replaced at deploy by
+  // scripts/ensure-cloudflare-d1.mjs (create/reuse real DBs on this account).
+  // Prefer committing real database_id values after the first successful deploy.
+  "d1_databases": [
+    {
+      "binding": "SAFETY_DB",
+      "database_name": "fris-safety-incident",
+      "database_id": "d9fa5671-980d-4a70-8ef8-cfb910054cd1",
+      "migrations_dir": "../../modules/m-safetyandincident/domain/d1/migrations"
+    },
+    {
+      "binding": "AMS_DB",
+      "database_name": "fris-ams",
+      "database_id": "f321b512-8ce8-4eee-895e-1b342ed4b910",
+      "migrations_dir": "../../modules/m-ams/domain/d1/migrations"
+    },
+    {
+      "binding": "CMS_DB",
+      "database_name": "fris-cms",
+      "database_id": "7280b488-5fd0-4699-b6cd-503e5627b5ee",
+      "migrations_dir": "../../modules/m-cms/domain/d1/migrations"
+    },
+
+    {
+      "binding": "CHR_DB",
+      "database_name": "fris-chr",
+      "database_id": "084c9ccb-4efa-40a6-b58d-76f054ffc8f9",
+      "migrations_dir": "../../modules/m-chr/domain/d1/migrations"
+    },
+    {
+      "binding": "ULD_DB",
+      "database_name": "fris-uld",
+      "database_id": "96bbca3b-2796-4f57-ac45-deebceff304f",
+      "migrations_dir": "../../modules/m-uld/domain/d1/migrations"
+    },
+    {
+      "binding": "GEMM_DB",
+      "database_name": "fris-gemm",
+      "database_id": "79caed30-6f9c-4dc8-a515-06396d396436",
+      "migrations_dir": "../../modules/m-gemm/domain/d1/migrations"
+    },
+    {
+      "binding": "BATTEST_DB",
+      "database_name": "fris-batest",
+      "database_id": "80ae6a62-910b-41e3-99c5-aeb1be173bc0",
+      "migrations_dir": "../../modules/m-batest/domain/d1/migrations"
+    },
+    {
+      "binding": "HR_DB",
+      "database_name": "fris-hr",
+      "database_id": "f8140a84-8c91-469e-aa58-af155366be72",
+      "migrations_dir": "../../modules/m-hr/domain/d1/migrations"
+    },
+    {
+      "binding": "TRP_DB",
+      "database_name": "fris-trp",
+      "database_id": "d5810cd4-c997-40be-b44c-9e286c083507",
+      "migrations_dir": "../../modules/m-trp/domain/d1/migrations"
+    },
+    {
+      "binding": "MANUALS_DB",
+      "database_name": "fris-manuals",
+      "database_id": "0e906909-b3aa-4fe4-9439-6f28b791f4a9",
+      "migrations_dir": "../../modules/m-manuals/domain/d1/migrations"
+    },
+    {
+      "binding": "COMPLIANCE_DB",
+      "database_name": "fris-compliance",
+      "database_id": "f6557df2-ecad-4189-938d-2b98f8ab988a",
+      "migrations_dir": "../../modules/m-compliance/domain/d1/migrations"
+    },
+    {
+      "binding": "OPS_DB",
+      "database_name": "fris-ops",
+      "database_id": "5b6ce7ae-4ad4-4240-9523-e7afd089b79e",
+      "migrations_dir": "../../modules/m-ops/domain/d1/migrations"
+    },
+    {
+      "binding": "RECEIVABLES_DB",
+      "database_name": "fris-bill-receivables",
+      "database_id": "7b59a654-8bd0-4303-9921-36768ef56a0f",
+      "migrations_dir": "../../modules/m-bill-receivables/domain/d1/migrations"
+    }
+  ]
+}

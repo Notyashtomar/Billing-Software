@@ -1,0 +1,24 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "types": ["jest", "node"],
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "resolvePackageJsonExports": false,
+    "rootDir": "../../..",
+    "baseUrl": "../",
+    "paths": {
+      "src/*": ["src/*"]
+    },
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "esModuleInterop": true,
+    "isolatedModules": false,
+    "incremental": false,
+    "noEmit": true
+  },
+  "include": [
+    "../src/**/*.ts",
+    "../../modules/**/*.ts"
+  ]
+}

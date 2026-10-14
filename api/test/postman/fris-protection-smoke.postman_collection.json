@@ -1,0 +1,118 @@
+{
+  "info": {
+    "name": "FRIS Protection Smoke",
+    "description": "Manual/staging smoke for rate limits, auth, dashboard polling, and imports.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://127.0.0.1:8080" },
+    { "key": "jwt", "value": "" },
+    { "key": "sharedIp", "value": "203.0.113.50" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Forwarded-For", "value": "{{sharedIp}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userid\": \"{{userid}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/login"
+          }
+        },
+        {
+          "name": "Forgot password",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/forgot-password"
+          }
+        },
+        {
+          "name": "Session",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwt}}" }
+            ],
+            "url": "{{baseUrl}}/auth/session"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dashboard polling",
+      "item": [
+        {
+          "name": "Dashboard summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwt}}" },
+              { "key": "X-Forwarded-For", "value": "{{sharedIp}}" }
+            ],
+            "url": "{{baseUrl}}/dashboard-summary"
+          }
+        },
+        {
+          "name": "Dashboard latest",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwt}}" }
+            ],
+            "url": "{{baseUrl}}/dashboard-summary/latest"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reports",
+      "item": [
+        {
+          "name": "Quality scheduled table",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwt}}" }
+            ],
+            "url": "{{baseUrl}}/reports/quality-scheduled-table"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Import",
+      "item": [
+        {
+          "name": "MAA March import",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{jwt}}" }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "file", "type": "file", "src": "" }
+              ]
+            },
+            "url": "{{baseUrl}}/import/maa-march?dryRun=true"
+          }
+        }
+      ]
+    }
+  ]
+}

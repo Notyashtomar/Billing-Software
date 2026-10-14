@@ -1,0 +1,16 @@
+{
+  "name": "@bird/m-billing",
+  "version": "0.1.0",
+  "private": true,
+  "description": "BWMS module m-billing — domain/web/api for native FRIS billing (BC replacement)",
+  "scripts": {
+    "migrate:revenue": "node scripts/migrate-bhs-revenue-master.mjs",
+    "migrate:revenue:dry": "node scripts/migrate-bhs-revenue-master.mjs --dry-run --station=HYD",
+    "backfill:preparation": "node scripts/backfill-preparation.mjs",
+    "backfill:preparation:dry": "node scripts/backfill-preparation.mjs --dry-run",
+    "import:bc-baseline": "node scripts/import-bc-baseline-csv.mjs",
+    "sync:customers": "node scripts/sync-customers-from-advance.mjs",
+    "capture:parallel-week": "node scripts/capture-parallel-week.mjs",
+    "verify:decommission": "node scripts/verify-decommission-readiness.mjs"
+  }
+}

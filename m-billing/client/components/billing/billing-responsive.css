@@ -1,0 +1,164 @@
+/**
+ * Billing — mobile / tablet responsive baseline (all /billing routes).
+ * Scoped to .billing-app; dialogs use body:has(.billing-app) (portals).
+ */
+
+.billing-app {
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+/*
+ * FrisScrollLock hides document scroll — billing-shell-main is the only vertical scroll surface.
+ * Never set height: 100% on .billing-app or .billing-page-content (content must grow scrollHeight).
+ */
+.billing-app .billing-shell-main {
+  overflow-anchor: auto;
+}
+
+.billing-app .billing-page-content {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.billing-app .billing-table-scroll {
+  overflow-x: auto;
+  /* clip is not a scrollport, so vertical wheel/trackpad reaches billing-shell-main. */
+  overflow-y: clip;
+  overscroll-behavior-x: contain;
+  overscroll-behavior-y: auto;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
+  max-height: none;
+}
+
+.billing-app .billing-table-scroll-hint {
+  display: none;
+  margin-bottom: 0.5rem;
+  font-size: 0.75rem;
+  line-height: 1.25rem;
+  color: var(--billing-text-muted);
+}
+
+@media (max-width: 767px) {
+  .billing-app .billing-table-scroll-hint {
+    display: block;
+  }
+
+  .billing-app .billing-table thead th,
+  .billing-app .billing-table tbody td {
+    padding-left: 0.625rem;
+    padding-right: 0.625rem;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+    font-size: 0.8125rem;
+    vertical-align: top;
+  }
+
+  .billing-app .billing-table thead th {
+    font-size: 0.6875rem;
+    letter-spacing: 0.04em;
+  }
+
+  /* Filter / toolbar rows — stack full-width fields */
+  .billing-app .billing-filter-toolbar,
+  .billing-app .billing-page-content .flex.flex-wrap.items-end.gap-3,
+  .billing-app .billing-page-content .flex.flex-wrap.items-end.gap-4 {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .billing-app .billing-filter-toolbar > label,
+  .billing-app .billing-filter-toolbar > .billing-filter-field,
+  .billing-app .billing-page-content .flex.flex-wrap.items-end.gap-3 > label,
+  .billing-app .billing-page-content .flex.flex-wrap.items-end.gap-4 > label {
+    min-width: 0 !important;
+    width: 100%;
+    max-width: none !important;
+    flex: 1 1 auto;
+  }
+
+  .billing-app .billing-filter-toolbar input,
+  .billing-app .billing-filter-toolbar select,
+  .billing-app .billing-page-content .flex.flex-wrap.items-end.gap-3 input,
+  .billing-app .billing-page-content .flex.flex-wrap.items-end.gap-3 select {
+    width: 100%;
+    max-width: 100%;
+    min-height: 2.75rem;
+  }
+
+  .billing-app .billing-page-header-actions {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .billing-app .billing-page-header-actions > button,
+  .billing-app .billing-page-header-actions > a {
+    width: 100%;
+    justify-content: center;
+    min-height: 2.75rem;
+  }
+
+  .billing-app .contract-toolbar .flex.flex-wrap.items-center.gap-2 {
+    width: 100%;
+  }
+
+  .billing-app .contract-toolbar button,
+  .billing-app .contract-toolbar select,
+  .billing-app .contract-toolbar input[type='search'] {
+    min-height: 2.75rem;
+  }
+
+  /* Workspaces that use inner scroll on desktop — flow with page on small screens */
+  .billing-app .contract-workspace,
+  .billing-app .preparation-workspace,
+  .billing-app .concessions-workspace {
+    overflow: visible !important;
+    flex: none;
+    min-height: auto;
+    height: auto;
+  }
+
+  .billing-app .contract-workspace .overflow-y-auto.md\:hidden {
+    overflow: visible;
+    flex: none;
+    max-height: none;
+  }
+
+  .billing-app .billing-page-content img,
+  .billing-app .billing-page-content video,
+  .billing-app .billing-page-content svg {
+    max-width: 100%;
+    height: auto;
+  }
+
+  .billing-app .billing-page-content pre,
+  .billing-app .billing-page-content code {
+    overflow-x: auto;
+    max-width: 100%;
+    word-break: break-word;
+  }
+}
+
+@media (max-width: 767px) {
+  body:has(.billing-app) [role='dialog']:not(.change-station-dialog) {
+    max-width: calc(100vw - 1rem) !important;
+    width: calc(100vw - 1rem) !important;
+    max-height: min(92dvh, 100%) !important;
+    margin: 0.5rem;
+  }
+
+  body:has(.billing-app) [role='dialog'] > button.absolute {
+    min-height: 2.75rem;
+    min-width: 2.75rem;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .billing-app .billing-table thead th,
+  .billing-app .billing-table tbody td {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+}

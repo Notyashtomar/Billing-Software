@@ -1,0 +1,688 @@
+/**
+ * Billing Design System — Calm Ledger Light
+ * Palette anchors: #1C0770 (navy) · #261CC1 (royal) · #3A9AFF (sky) · #F1FF5E (lemon accent)
+ * Contrast: white surfaces, navy headings, dark body text; lemon reserved for highlights/CTAs.
+ * Scoped to .billing-app — does not alter FRIS outside /billing.
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700&display=swap');
+
+/*
+ * Radix dialogs portal to document.body, outside .billing-app.
+ * Tokens live on :root so portaled Save buttons keep navy fill.
+ * Visual styles below stay scoped to .billing-app.
+ */
+:root {
+  /* ── Brand primaries (Color Hunt) ── */
+  --billing-primary: #1c0770;
+  --billing-primary-hover: #150558;
+  --billing-primary-soft: rgba(28, 7, 112, 0.06);
+  --billing-blue: var(--billing-info);
+
+  --billing-secondary: #261cc1;
+  --billing-secondary-hover: #3d32e0;
+  --billing-secondary-soft: rgba(38, 28, 193, 0.08);
+
+  --billing-accent: #f1ff5e;
+  --billing-accent-hover: #dce948;
+  --billing-accent-strong: #1c0770;
+  --billing-accent-soft: rgba(241, 255, 94, 0.35);
+  --billing-accent-border: rgba(28, 7, 112, 0.18);
+  --billing-accent-muted: rgba(28, 7, 112, 0.55);
+
+  /* ── Semantic (readable on white) ── */
+  --billing-success: #15803d;
+  --billing-success-soft: rgba(22, 163, 74, 0.1);
+  --billing-success-border: rgba(22, 163, 74, 0.32);
+
+  --billing-warning: #b45309;
+  --billing-warning-soft: rgba(245, 158, 11, 0.12);
+  --billing-warning-border: rgba(180, 83, 9, 0.32);
+
+  --billing-danger: #dc2626;
+  --billing-danger-hover: #b91c1c;
+  --billing-danger-soft: rgba(220, 38, 38, 0.08);
+  --billing-danger-border: rgba(220, 38, 38, 0.28);
+
+  --billing-info: #2563eb;
+  --billing-info-soft: rgba(58, 154, 255, 0.1);
+  --billing-info-border: rgba(37, 99, 235, 0.28);
+
+  /* ── Surfaces (white / cool gray) ── */
+  --billing-bg: #f6f7fb;
+  --billing-surface: #ffffff;
+  --billing-surface-muted: #f1f3f9;
+  --billing-surface-elevated: #ffffff;
+  --billing-border: rgba(28, 7, 112, 0.1);
+  --billing-border-strong: rgba(28, 7, 112, 0.16);
+
+  /* ── Text (dark hierarchy on light) ── */
+  --billing-text: #1a1f36;
+  --billing-text-secondary: #3d4563;
+  --billing-text-muted: #6b7289;
+  --billing-text-inverse: #ffffff;
+  --billing-heading: #1c0770;
+
+  /* ── Elevation (soft, airy) ── */
+  --billing-shadow-sm: 0 1px 2px rgba(28, 7, 112, 0.06);
+  --billing-shadow-md: 0 4px 16px -4px rgba(28, 7, 112, 0.1);
+  --billing-shadow-lg: 0 16px 36px -12px rgba(28, 7, 112, 0.14);
+
+  /* ── Radius / motion ── */
+  --billing-radius-sm: 0.375rem;
+  --billing-radius: 0.5rem;
+  --billing-radius-lg: 0.75rem;
+  --billing-radius-xl: 0.875rem;
+  --billing-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --billing-duration: 150ms;
+
+  /* ── Spacing scale (4px base) ── */
+  --billing-space-1: 0.25rem;
+  --billing-space-2: 0.5rem;
+  --billing-space-3: 0.75rem;
+  --billing-space-4: 1rem;
+  --billing-space-5: 1.25rem;
+  --billing-space-6: 1.5rem;
+  --billing-space-8: 2rem;
+}
+
+.billing-app {
+  color: var(--billing-text);
+  background-color: var(--billing-bg);
+  color-scheme: light;
+  font-family: 'Source Sans 3', 'Segoe UI', sans-serif;
+  font-feature-settings: 'kern' 1, 'liga' 1;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Scrollbar — calm, thin */
+.billing-app,
+.billing-app * {
+  scrollbar-width: thin;
+  scrollbar-color: var(--billing-border-strong) transparent;
+}
+
+.billing-app::-webkit-scrollbar,
+.billing-app *::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.billing-app::-webkit-scrollbar-thumb,
+.billing-app *::-webkit-scrollbar-thumb {
+  background: var(--billing-border-strong);
+  border-radius: 999px;
+}
+
+.billing-app::-webkit-scrollbar-thumb:hover,
+.billing-app *::-webkit-scrollbar-thumb:hover {
+  background: var(--billing-secondary);
+}
+
+/* Focus ring utility for native controls inside billing */
+.billing-app :focus-visible {
+  outline: 2px solid var(--billing-info);
+  outline-offset: 2px;
+}
+
+/* Table selection / checkbox accent */
+.billing-app input[type='checkbox'],
+.billing-app input[type='radio'] {
+  accent-color: var(--billing-primary);
+}
+
+/* Sticky table headers inside billing */
+.billing-app .billing-table {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: max-content;
+  min-width: 100%;
+}
+
+.billing-app .billing-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--billing-surface-muted);
+  color: var(--billing-heading);
+  border-bottom: 1px solid var(--billing-border-strong);
+  box-shadow: 0 1px 0 var(--billing-border-strong);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.billing-app .billing-table tbody tr {
+  transition: background-color var(--billing-duration) var(--billing-ease);
+}
+
+.billing-app .billing-table tbody tr:hover {
+  background: var(--billing-primary-soft);
+}
+
+.billing-app .billing-table tbody tr:nth-child(even) {
+  background: color-mix(in srgb, var(--billing-surface-muted) 65%, var(--billing-surface));
+}
+
+.billing-app .billing-table tbody tr:nth-child(even):hover {
+  background: var(--billing-primary-soft);
+}
+
+/*
+ * Legacy Tailwind gray utilities inside billing — map to Calm Ledger tokens
+ * so older pages stay coherent without per-file edits.
+ */
+.billing-app :where(.text-gray-900),
+.billing-app :where(.text-gray-800),
+.billing-app :where(.text-gray-700) {
+  color: var(--billing-text) !important;
+}
+
+.billing-app :where(.text-gray-600),
+.billing-app :where(.text-gray-500),
+.billing-app :where(.text-gray-400) {
+  color: var(--billing-text-muted) !important;
+}
+
+.billing-app :where(.border-gray-100),
+.billing-app :where(.border-gray-200),
+.billing-app :where(.border-gray-300),
+.billing-app :where(.border-t-gray-100),
+.billing-app :where(.divide-gray-100) > :not([hidden]) ~ :not([hidden]),
+.billing-app :where(.divide-gray-200) > :not([hidden]) ~ :not([hidden]) {
+  border-color: var(--billing-border) !important;
+}
+
+.billing-app :where(.ring-offset-white),
+.billing-app :where(.focus-visible\:ring-offset-2) {
+  --tw-ring-offset-color: var(--billing-bg);
+}
+
+/*
+ * Billing navbar chrome — white bar with Color Hunt accents.
+ * Navbar lives inside BillingDesignRoot (.billing-app) on /billing/* routes.
+ */
+.billing-app nav.billing-nav-chrome {
+  background-color: color-mix(in srgb, #ffffff 94%, var(--billing-surface-muted)) !important;
+  border-bottom: 1px solid var(--billing-border-strong);
+  box-shadow: var(--billing-shadow-sm);
+  backdrop-filter: blur(12px);
+}
+
+.billing-app nav.billing-nav-chrome .billing-nav-item-active,
+.billing-app nav.billing-nav-chrome .billing-nav-item-active:hover {
+  background-color: var(--billing-primary-soft) !important;
+  color: var(--billing-primary) !important;
+}
+
+.billing-app nav.billing-nav-chrome .billing-nav-item-idle {
+  color: var(--billing-text-secondary) !important;
+}
+
+.billing-app nav.billing-nav-chrome .billing-nav-item-idle:hover {
+  background-color: var(--billing-info-soft) !important;
+  color: var(--billing-secondary) !important;
+}
+
+.billing-app nav.billing-nav-chrome .billing-nav-icon-active {
+  color: var(--billing-primary) !important;
+}
+
+.billing-app nav.billing-nav-chrome .billing-nav-active-bar {
+  background-color: var(--billing-accent) !important;
+}
+
+.billing-app nav.billing-nav-chrome .billing-nav-link-active {
+  background-color: var(--billing-accent-soft) !important;
+  color: var(--billing-primary) !important;
+}
+
+.billing-app nav.billing-nav-chrome [class*='bg-emerald'],
+.billing-app nav.billing-nav-chrome [class*='hover:bg-emerald']:hover {
+  background-color: var(--billing-primary-soft) !important;
+  color: var(--billing-primary) !important;
+}
+
+.billing-app nav.billing-nav-chrome [class*='text-emerald'],
+.billing-app nav.billing-nav-chrome [class*='hover:text-emerald']:hover {
+  color: var(--billing-secondary) !important;
+}
+
+.billing-app nav.billing-nav-chrome [class*='border-emerald'] {
+  border-color: var(--billing-info-border) !important;
+}
+
+.billing-app nav.billing-nav-chrome [class*='bg-yellow-50'],
+.billing-app nav.billing-nav-chrome [class*='bg-yellow-100'] {
+  background-color: var(--billing-accent-soft) !important;
+  color: var(--billing-primary) !important;
+}
+
+.billing-app nav.billing-nav-chrome [class*='text-yellow'] {
+  color: var(--billing-primary) !important;
+}
+
+.billing-app nav.billing-nav-chrome .billing-nav-soft-hover:hover,
+.billing-app nav.billing-nav-chrome .billing-nav-soft-focus:focus,
+.billing-app nav.billing-nav-chrome .billing-nav-soft-focus:focus-visible,
+.billing-app nav.billing-nav-chrome .billing-nav-nested-open,
+.billing-app nav.billing-nav-chrome .billing-nav-mobile-role,
+.billing-app nav.billing-nav-chrome .billing-nav-avatar-open {
+  background-color: var(--billing-surface-muted) !important;
+  color: var(--billing-heading) !important;
+}
+
+.billing-app nav.billing-nav-chrome .billing-nav-nested-open-icon,
+.billing-app nav.billing-nav-chrome .billing-nav-link-active-icon,
+.billing-app nav.billing-nav-chrome .billing-nav-avatar-chevron {
+  color: var(--billing-primary) !important;
+}
+
+.billing-app nav.billing-nav-chrome .billing-nav-icon-idle,
+.billing-app nav.billing-nav-chrome .billing-nav-link-hover-icon {
+  color: var(--billing-text-muted) !important;
+}
+
+.billing-app nav.billing-nav-chrome .billing-nav-dropdown {
+  background-color: var(--billing-surface-elevated) !important;
+  border-color: var(--billing-border-strong) !important;
+  box-shadow: var(--billing-shadow-lg) !important;
+  color: var(--billing-text) !important;
+}
+
+.billing-app nav.billing-nav-chrome .billing-nav-profile-header {
+  --tw-gradient-from: var(--billing-surface-muted) !important;
+  --tw-gradient-to: var(--billing-info-soft) !important;
+}
+
+/*
+ * Logo plate — subtle border on white navbar so dark logo art stays crisp.
+ */
+.billing-logo-plate {
+  background-color: #ffffff !important;
+  border: 1px solid var(--billing-border);
+  border-radius: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+}
+
+nav.billing-nav-chrome .billing-logo-plate {
+  border-radius: 0.375rem;
+  padding: 0.125rem 0.5rem;
+  max-height: calc(100% - 4px);
+}
+
+nav.billing-nav-chrome .billing-logo-plate img {
+  height: 2.25rem;
+  max-height: 2.25rem;
+  width: auto;
+  object-fit: contain;
+}
+
+/*
+ * Insights tiles — soft sky tint to differentiate KPI panels from page background.
+ */
+.billing-app .billing-insights-tile {
+  --billing-surface: #eef4ff;
+  --billing-surface-muted: #e3edff;
+  --billing-surface-elevated: #f5f9ff;
+  --billing-border: rgba(28, 7, 112, 0.12);
+  --billing-border-strong: rgba(38, 28, 193, 0.2);
+  --billing-text: #1a1f36;
+  --billing-text-secondary: #2d3560;
+  --billing-text-muted: #5c668a;
+  --billing-heading: #1c0770;
+  --billing-shadow-sm: 0 1px 2px rgba(28, 7, 112, 0.08);
+  --billing-shadow-md: 0 4px 16px -4px rgba(58, 154, 255, 0.18);
+
+  --billing-success: #15803d;
+  --billing-success-soft: rgba(22, 163, 74, 0.12);
+  --billing-success-border: rgba(22, 163, 74, 0.32);
+  --billing-warning: #b45309;
+  --billing-warning-soft: rgba(245, 158, 11, 0.14);
+  --billing-warning-border: rgba(180, 83, 9, 0.32);
+  --billing-danger: #dc2626;
+  --billing-danger-hover: #b91c1c;
+  --billing-danger-soft: rgba(220, 38, 38, 0.1);
+  --billing-danger-border: rgba(220, 38, 38, 0.28);
+  --billing-info: #1d6fd4;
+  --billing-info-soft: rgba(58, 154, 255, 0.14);
+  --billing-info-border: rgba(29, 111, 212, 0.32);
+  --billing-secondary-soft: rgba(38, 28, 193, 0.08);
+  --billing-accent-soft: rgba(241, 255, 94, 0.45);
+  --billing-accent-border: rgba(28, 7, 112, 0.16);
+  --billing-primary-soft: rgba(58, 154, 255, 0.12);
+
+  color: var(--billing-text);
+  color-scheme: light;
+  background-color: var(--billing-surface);
+  border-color: var(--billing-border);
+}
+
+/* Funnel stages — distinct light tints, navy ink */
+.billing-app .billing-insights-funnel {
+  --billing-insights-funnel-ink: #1c0770;
+  color: var(--billing-insights-funnel-ink);
+  border: 1px solid rgba(28, 7, 112, 0.12);
+  box-shadow: var(--billing-shadow-sm);
+}
+
+.billing-app .billing-insights-funnel--navy {
+  background: linear-gradient(135deg, #e8f0ff 0%, #f0f5ff 100%);
+}
+
+.billing-app .billing-insights-funnel--lemon {
+  background: linear-gradient(135deg, #f7fac8 0%, #fcfce8 100%);
+}
+
+.billing-app .billing-insights-funnel--royal {
+  background: linear-gradient(135deg, #ebe9ff 0%, #f3f2ff 100%);
+}
+
+.billing-app .billing-insights-funnel--sky {
+  background: linear-gradient(135deg, #dbeafe 0%, #eff6ff 100%);
+}
+
+/*
+ * Insights / Payables tiles — hover glow tuned for light surfaces.
+ */
+.billing-app .billing-tile-glow {
+  transition:
+    transform var(--billing-duration) var(--billing-ease),
+    box-shadow 220ms var(--billing-ease),
+    border-color 220ms var(--billing-ease);
+}
+
+.billing-app a.billing-tile-glow:hover,
+.billing-app button.billing-tile-glow:hover,
+.billing-app .billing-tile-glow:hover {
+  border-color: color-mix(in srgb, #3a9aff 45%, var(--billing-border));
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, #3a9aff 28%, transparent),
+    0 4px 18px -4px color-mix(in srgb, #3a9aff 22%, transparent),
+    0 0 0 0 color-mix(in srgb, #f1ff5e 0%, transparent);
+  transform: translateY(-1px);
+}
+
+.billing-app a.billing-tile-glow:active,
+.billing-app button.billing-tile-glow:active {
+  transform: translateY(0) scale(0.99);
+}
+
+.billing-app .billing-tile-enter {
+  animation: billing-tile-in 520ms var(--billing-ease) both;
+}
+
+.billing-app .billing-tile-enter-delay-1 {
+  animation-delay: 60ms;
+}
+.billing-app .billing-tile-enter-delay-2 {
+  animation-delay: 140ms;
+}
+.billing-app .billing-tile-enter-delay-3 {
+  animation-delay: 220ms;
+}
+.billing-app .billing-tile-enter-delay-4 {
+  animation-delay: 300ms;
+}
+
+.billing-app .billing-tile-enter-delay-5 {
+  animation-delay: 380ms;
+}
+.billing-app .billing-tile-enter-delay-6 {
+  animation-delay: 460ms;
+}
+
+@keyframes billing-tile-in {
+  from {
+    opacity: 0;
+    transform: translateY(36px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.billing-app .insights-kpi-value {
+  animation: billing-kpi-pop 700ms var(--billing-ease) both;
+  transform-origin: bottom right;
+}
+
+@keyframes billing-kpi-pop {
+  from {
+    opacity: 0.35;
+    transform: scale(0.72);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .billing-app .billing-tile-enter,
+  .billing-app .billing-tile-enter-delay-1,
+  .billing-app .billing-tile-enter-delay-2,
+  .billing-app .billing-tile-enter-delay-3,
+  .billing-app .billing-tile-enter-delay-4,
+  .billing-app .billing-tile-enter-delay-5,
+  .billing-app .billing-tile-enter-delay-6 {
+    animation: none;
+  }
+
+  .billing-app .insights-kpi-value {
+    animation: none;
+  }
+
+  .billing-app a.billing-tile-glow:hover,
+  .billing-app button.billing-tile-glow:hover,
+  .billing-app .billing-tile-glow:hover,
+  .billing-app a.billing-tile-glow:active,
+  .billing-app button.billing-tile-glow:active {
+    transform: none;
+  }
+}
+
+/*
+ * Contracts workspace — Safety layout shape, Calm Ledger billing colors.
+ * .contract-dialog portals outside .billing-app — must define brand tokens here.
+ */
+.contract-dialog {
+  --billing-primary: #1c0770;
+  --billing-primary-hover: #150558;
+  --billing-primary-soft: rgba(28, 7, 112, 0.06);
+  --billing-secondary: #261cc1;
+  --billing-secondary-hover: #3d32e0;
+  --billing-secondary-soft: rgba(38, 28, 193, 0.08);
+  --billing-accent: #f1ff5e;
+  --billing-accent-hover: #dce948;
+  --billing-accent-strong: #1c0770;
+  --billing-accent-soft: rgba(241, 255, 94, 0.35);
+  --billing-accent-border: rgba(28, 7, 112, 0.18);
+  --billing-accent-muted: rgba(28, 7, 112, 0.55);
+  --billing-info: #2563eb;
+  --billing-info-soft: rgba(58, 154, 255, 0.1);
+  --billing-info-border: rgba(37, 99, 235, 0.28);
+  --billing-heading: #1c0770;
+  --billing-text: #1a1f36;
+  --billing-text-secondary: #3d4563;
+  --billing-text-muted: #6b7289;
+  --billing-text-inverse: #ffffff;
+  --billing-border: rgba(28, 7, 112, 0.1);
+  --billing-border-strong: rgba(28, 7, 112, 0.16);
+  --billing-surface: #ffffff;
+  --billing-surface-muted: #f1f3f9;
+  --billing-bg: #f6f7fb;
+  --billing-shadow-sm: 0 1px 2px rgba(28, 7, 112, 0.06);
+  --billing-shadow-md: 0 4px 16px -4px rgba(28, 7, 112, 0.1);
+  --billing-shadow-lg: 0 16px 36px -12px rgba(28, 7, 112, 0.14);
+  --billing-success: #15803d;
+  --billing-success-soft: rgba(22, 163, 74, 0.1);
+  --billing-success-border: rgba(22, 163, 74, 0.32);
+  --billing-warning: #b45309;
+  --billing-warning-soft: rgba(245, 158, 11, 0.12);
+  --billing-warning-border: rgba(180, 83, 9, 0.32);
+  --billing-danger: #dc2626;
+  --billing-danger-hover: #b91c1c;
+  --billing-danger-soft: rgba(220, 38, 38, 0.08);
+  --billing-danger-border: rgba(220, 38, 38, 0.28);
+}
+
+.contract-workspace .contract-hero,
+.contract-dialog .contract-hero {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+}
+
+.contract-toolbar {
+  background: color-mix(in srgb, var(--billing-surface) 80%, transparent);
+}
+
+.contract-panel {
+  overflow: hidden;
+  background: var(--billing-surface);
+}
+
+.contract-dialog {
+  background: #ffffff !important;
+  color: var(--billing-text);
+}
+
+.contract-dialog > button.absolute {
+  color: #ffffff !important;
+  opacity: 0.85;
+}
+
+.contract-dialog > button.absolute:hover {
+  opacity: 1;
+  background: rgba(241, 255, 94, 0.35) !important;
+  color: #1c0770 !important;
+}
+
+.contract-dialog-header {
+  background: #1c0770 !important;
+  border-color: #1c0770 !important;
+  color: #ffffff;
+}
+
+.contract-dialog-header [data-slot='dialog-title'],
+.contract-dialog-header h2,
+.contract-dialog-header .text-white {
+  color: #ffffff !important;
+}
+
+.contract-dialog [data-radix-scroll-area-viewport],
+.contract-dialog form {
+  background: #ffffff;
+}
+
+/* Section bands inside form / view (navy + lemon) */
+.contract-dialog .contract-section > header,
+.contract-dialog section > header.border-b {
+  background: #1c0770 !important;
+  border-color: #1c0770 !important;
+}
+
+.contract-row-card {
+  background: var(--billing-surface);
+  border-radius: 1rem;
+  transition:
+    border-color 150ms ease,
+    background-color 150ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .contract-row-card:hover {
+    border-color: color-mix(in srgb, #1c0770 35%, var(--billing-border));
+    background: rgba(28, 7, 112, 0.06);
+    box-shadow: none;
+    transform: none;
+  }
+}
+
+.contract-row-card:active {
+  transform: none;
+}
+
+/* Contracts list table — slightly larger type for scanability */
+.contract-workspace .billing-table {
+  font-size: 0.9375rem; /* 15px */
+}
+
+.contract-workspace .billing-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: color-mix(in srgb, var(--billing-surface-muted) 90%, rgba(28, 7, 112, 0.06));
+  letter-spacing: 0.06em;
+  color: var(--billing-text-muted);
+  font-size: 0.8125rem; /* 13px */
+  padding-top: 0.875rem;
+  padding-bottom: 0.875rem;
+  box-shadow: 0 1px 0 var(--billing-border-strong);
+}
+
+.contract-workspace .billing-table tbody td {
+  padding-top: 0.875rem;
+  padding-bottom: 0.875rem;
+  font-size: 0.9375rem;
+  vertical-align: top;
+}
+
+.contract-workspace .billing-table tbody tr {
+  border-left: 3px solid transparent;
+}
+
+.contract-workspace .billing-table tbody tr:hover {
+  border-left-color: #1c0770;
+  background: rgba(28, 7, 112, 0.06);
+}
+
+.contract-workspace .billing-table tbody tr.contract-row-expired {
+  border-left-color: #dc2626;
+  background: rgba(220, 38, 38, 0.06);
+}
+
+.contract-workspace .billing-table tbody tr.contract-row-expired:hover {
+  border-left-color: #dc2626;
+  background: rgba(220, 38, 38, 0.1);
+}
+
+.contract-row-card.contract-row-expired {
+  border-color: rgba(220, 38, 38, 0.35);
+  background: rgba(220, 38, 38, 0.05);
+}
+
+.contract-handling-tile {
+  background: #ffffff;
+  border-radius: 1rem;
+  transition:
+    border-color 150ms ease,
+    background-color 150ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .contract-handling-tile:hover {
+    border-color: color-mix(in srgb, #1c0770 35%, var(--billing-border));
+    background: rgba(241, 255, 94, 0.25);
+    box-shadow: none;
+    transform: none;
+  }
+}
+
+.contract-handling-tile:active {
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .contract-row-card,
+  .contract-handling-tile {
+    transition: none;
+  }
+}

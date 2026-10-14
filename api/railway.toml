@@ -1,0 +1,13 @@
+# FRIS NestJS API — Railway config
+# Manual deploy: service Root Directory = repo root (`.`) — see docs/MANUAL_DEPLOYMENT.md
+# GitHub CI deploy may use BWMS/apps/api root; manual/agent path uses `.` for module junctions.
+[build]
+builder = "NIXPACKS"
+buildCommand = "node scripts/ensure-module-mounts.mjs && (python3 -m pip install --user openpyxl || pip3 install --user openpyxl || true) && npm ci --prefix BWMS/apps/api --allow-remote=root --include=dev && npm --prefix BWMS/apps/api run build"
+
+[deploy]
+startCommand = "npm --prefix BWMS/apps/api run start:prod"
+healthcheckPath = "/health"
+healthcheckTimeout = 300
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
