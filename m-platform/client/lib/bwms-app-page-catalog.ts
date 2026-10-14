@@ -36,6 +36,8 @@ const BILLING_PAGES: BwmsAppPageDef[] = [
   { id: 'rate-cards', label: 'Rate Cards', href: '/billing/rate-cards' },
   { id: 'conversion-rates', label: 'Conversion Rates', href: '/billing/conversion-rates' },
   { id: 'settings', label: 'Airport Setup', href: '/billing/settings' },
+  { id: 'royalty-setup', label: 'Royalty Setup', href: '/billing/royalty-setup' },
+  { id: 'aircraft-master', label: 'Aircraft Master', href: '/billing/aircraft-master' },
   { id: 'prep-dashboard', label: 'Workflow dashboard', href: '/billing/prep-dashboard' },
   { id: 'preparation', label: 'Preparation', href: '/billing/preparation' },
   { id: 'invoice-drafts', label: 'Invoice drafts', href: '/billing/invoice-drafts' },

@@ -65,6 +65,13 @@ export function BillingPageAccessGate({ children }: { children: ReactNode }) {
           clientMayUseBwmsAppPage('billing-finance', 'prep-dashboard')
         );
       }
+      if (path === '/billing/royalty-setup' || path === '/billing/aircraft-master') {
+        const pageId = billingPageIdFromHref(path);
+        return (
+          (pageId != null && clientMayUseBwmsAppPage('billing-finance', pageId)) ||
+          clientMayUseBwmsAppPage('billing-finance', 'settings')
+        );
+      }
       const pageId = billingPageIdFromHref(path);
       if (!pageId) {
         return pagesForApp('billing-finance').some((p) =>

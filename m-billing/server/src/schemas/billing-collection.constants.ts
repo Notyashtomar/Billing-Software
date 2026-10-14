@@ -25,6 +25,7 @@ export const BillingDocType = {
   ParallelRunSnapshot: 'parallel_run_snapshot',
   BcDecommissionRecord: 'bc_decommission_record',
   KycCase: 'kyc_case',
+  AircraftMaster: 'aircraft_master',
 } as const;
 
 export type BillingDocTypeValue = (typeof BillingDocType)[keyof typeof BillingDocType];

@@ -114,24 +114,13 @@ const BROWSER_ONLY_SERVER_ALIASES: Record<string, string> = Object.fromEntries(
  * Uses the generated bindings-only config: the proxy's workerd process would
  * otherwise hold `.open-next/assets` open and break a local OpenNext build.
  */
-if (process.env.NODE_ENV === 'development') {
-  void (async () => {
-    const { writeWranglerDevConfig } = await import(
-      '../../../scripts/wrangler-dev-config.mjs'
-    );
-    const { initOpenNextCloudflareForDev } = await import('@opennextjs/cloudflare');
-    await initOpenNextCloudflareForDev({
-      configPath: writeWranglerDevConfig(),
-    } as Parameters<typeof initOpenNextCloudflareForDev>[0]);
-  })().catch((err: unknown) => {
-    console.warn(
-      '[next.config] Cloudflare dev bindings unavailable — operational modules fall back to in-memory storage:',
-      err instanceof Error ? err.message : err,
-    );
-  });
-}
+// Billing reads Mongo through the Nest API (api/.env MONGO_URI). This checkout
+// does not include the BWMS wrangler dev-config script, so local `next dev`
+// does not bind Cloudflare D1. Operational modules that need D1 fall back to
+// in-memory storage; billing does not.
 
 const nextConfig: NextConfig = {
+  agentRules: false,
   /**
    * Production deploy ships latest merged code from `main`.
    * Keep ignoreBuildErrors until the remaining ~50 pre-existing module TS errors

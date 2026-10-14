@@ -141,6 +141,13 @@ function mayUseBillingHref(href: string): boolean {
       clientMayUseBwmsAppPage('billing-finance', 'prep-dashboard')
     );
   }
+  if (path === '/billing/royalty-setup' || path === '/billing/aircraft-master') {
+    const pageId = billingPageIdFromHref(path);
+    return (
+      (pageId != null && clientMayUseBwmsAppPage('billing-finance', pageId)) ||
+      clientMayUseBwmsAppPage('billing-finance', 'settings')
+    );
+  }
   const pageId = billingPageIdFromHref(href);
   if (!pageId) return false;
   return clientMayUseBwmsAppPage('billing-finance', pageId);
@@ -197,6 +204,10 @@ function billingDropdownIcon(href: string): React.ReactNode {
       return <ArrowLeftRight className={cls} />;
     case '/billing/settings':
       return <Settings className={cls} />;
+    case '/billing/royalty-setup':
+      return <Percent className={cls} />;
+    case '/billing/aircraft-master':
+      return <Plane className={cls} />;
     case '/billing/preparation':
       return <ClipboardList className={cls} />;
     case '/billing/invoice-drafts':

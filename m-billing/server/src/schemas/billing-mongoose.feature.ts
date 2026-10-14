@@ -46,6 +46,10 @@ import {
   BillingTaxRuleSchema,
 } from './billing.schemas';
 import { BillingRoot, BillingRootSchema } from './billing-root.schema';
+import {
+  BillingAircraftMaster,
+  BillingAircraftMasterSchema,
+} from './billing-aircraft-master.schema';
 
 /** Registers all billing entities as discriminators on the single `billing` collection. */
 export const billingMongooseFeature = {
@@ -125,6 +129,11 @@ export const billingMongooseFeature = {
       name: BillingKycCase.name,
       schema: BillingKycCaseSchema,
       value: BillingDocType.KycCase,
+    },
+    {
+      name: BillingAircraftMaster.name,
+      schema: BillingAircraftMasterSchema,
+      value: BillingDocType.AircraftMaster,
     },
   ],
 };

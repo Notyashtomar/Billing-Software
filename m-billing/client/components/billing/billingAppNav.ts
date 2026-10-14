@@ -9,6 +9,8 @@ export type BillingAppNavLink = {
 
 export const BILLING_MASTER_NAV: readonly BillingAppNavLink[] = [
   { href: '/billing/settings', label: 'Airport Setup' },
+  { href: '/billing/royalty-setup', label: 'Royalty Setup' },
+  { href: '/billing/aircraft-master', label: 'Aircraft Master' },
   { href: '/billing/customers', label: 'Customers' },
   { href: '/billing/contracts', label: 'Contracts' },
   { href: '/billing/rate-cards', label: 'Rate cards' },

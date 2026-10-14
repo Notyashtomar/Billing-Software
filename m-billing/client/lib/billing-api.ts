@@ -410,6 +410,18 @@ export function createBillingApi({ getApiBase, fetch }: BillingApiConfig) {
     deleteAllCustomers: () =>
       request('/billing/customers/delete-all', { method: 'POST' }).then((r) => parseJson(r)),
 
+    listAircraftMaster: () =>
+      request('/billing/aircraft-master').then((r) =>
+        parseJson<{ data: Array<Record<string, unknown>> }>(r),
+      ),
+
+    importAircraftMaster: (body: { headers: string[]; rows: Array<Record<string, string>> }) =>
+      request('/billing/aircraft-master/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      }).then((r) => parseJson<{ data: Array<Record<string, unknown>> }>(r)),
+
     listServiceCatalog: (params?: { category?: string; search?: string }) => {
       const qs = new URLSearchParams();
       if (params?.category) qs.set('category', params.category);
