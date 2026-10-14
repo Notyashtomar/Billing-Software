@@ -1,0 +1,124 @@
+{
+  "GF": {
+    "airline": "Gulf Air",
+    "files": [
+      {
+        "file": "SIMA327000770.pdf",
+        "title": "Equipment Annexure"
+      }
+    ]
+  },
+  "IX": {
+    "airline": "Air India Express",
+    "files": [
+      {
+        "file": "SIMA327000847.pdf",
+        "title": "Ambulift"
+      },
+      {
+        "file": "SIMA327000858.pdf",
+        "title": "GPU + ACU + ASU"
+      },
+      {
+        "file": "SIMA327000859.pdf",
+        "title": "Deep Cleaning + Cleaning"
+      }
+    ]
+  },
+  "BG": {
+    "airline": "Biman Bangladesh",
+    "files": [
+      {
+        "file": "SIMA327000848.pdf",
+        "title": "Wheelchair"
+      }
+    ]
+  },
+  "EK": {
+    "airline": "Emirates",
+    "files": [
+      {
+        "file": "SIMA327000849.pdf",
+        "title": "Ambulift + GPU + ACU"
+      }
+    ]
+  },
+  "BI": {
+    "airline": "Royal Brunei",
+    "files": [
+      {
+        "file": "SIMA327000850.pdf",
+        "title": "Wheelchair"
+      },
+      {
+        "file": "SIMA327000851.pdf",
+        "title": "Equipment Annexure"
+      },
+      {
+        "file": "SIMA327000852.pdf",
+        "title": "ISTNB"
+      }
+    ]
+  },
+  "BS": {
+    "airline": "Us Bangla",
+    "files": [
+      {
+        "file": "SIMA327000853.pdf",
+        "title": "Wheelchair + ACU"
+      },
+      {
+        "file": "SIMA327000860.pdf",
+        "title": "Equipment Annexure"
+      }
+    ]
+  },
+  "SG": {
+    "airline": "Spicejet",
+    "files": [
+      {
+        "file": "SIMA327000854.pdf",
+        "title": "Equipment Annexure"
+      },
+      {
+        "file": "SIMA327000855.pdf",
+        "title": "Equipment Annexure"
+      },
+      {
+        "file": "SIMA327000856.pdf",
+        "title": "Wheelchair"
+      }
+    ]
+  },
+  "LH": {
+    "airline": "Lufthansa",
+    "files": [
+      {
+        "file": "SIMA327000861.pdf",
+        "title": "Security Services"
+      },
+      {
+        "file": "SIMA327000864.pdf",
+        "title": "Wheelchair + ACU + ASU"
+      }
+    ]
+  },
+  "EY": {
+    "airline": "Etihad",
+    "files": [
+      {
+        "file": "SIMA327000862.pdf",
+        "title": "Wheelchair + GPU + ACU"
+      }
+    ]
+  },
+  "UL": {
+    "airline": "Srilankan",
+    "files": [
+      {
+        "file": "SIMA327000863.pdf",
+        "title": "Wheelchair + Ambulift + GPU"
+      }
+    ]
+  }
+}

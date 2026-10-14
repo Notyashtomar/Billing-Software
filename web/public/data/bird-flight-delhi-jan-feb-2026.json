@@ -1,0 +1,5845 @@
+{
+  "meta": {
+    "generatedAt": "2026-03-25T06:56:33.930961+00:00",
+    "sourceFile": "DEL_JAN25_TO_DEC25.xlsx",
+    "title": "Fris - At a Glance",
+    "subtitle": "January to December 2025"
+  },
+  "months": [
+    {
+      "key": "JAN25",
+      "label": "January 2025",
+      "totalFlights": 1863,
+      "uniqueAirlines": 33,
+      "cancellationCount": 183,
+      "activeDaysSta": 31,
+      "avgFlightsPerActiveStaDay": 60.1,
+      "staOnTimeCount": 149,
+      "ataOnOrBeforeStaCount": 774,
+      "ataStaDailyComparison": [
+        {
+          "date": "01 Jan",
+          "ataOnOrBeforeSta": 28,
+          "ataAfterSta": 25
+        },
+        {
+          "date": "02 Jan",
+          "ataOnOrBeforeSta": 29,
+          "ataAfterSta": 29
+        },
+        {
+          "date": "03 Jan",
+          "ataOnOrBeforeSta": 19,
+          "ataAfterSta": 37
+        },
+        {
+          "date": "04 Jan",
+          "ataOnOrBeforeSta": 8,
+          "ataAfterSta": 43
+        },
+        {
+          "date": "05 Jan",
+          "ataOnOrBeforeSta": 22,
+          "ataAfterSta": 35
+        },
+        {
+          "date": "06 Jan",
+          "ataOnOrBeforeSta": 28,
+          "ataAfterSta": 25
+        },
+        {
+          "date": "07 Jan",
+          "ataOnOrBeforeSta": 24,
+          "ataAfterSta": 31
+        },
+        {
+          "date": "08 Jan",
+          "ataOnOrBeforeSta": 20,
+          "ataAfterSta": 37
+        },
+        {
+          "date": "09 Jan",
+          "ataOnOrBeforeSta": 29,
+          "ataAfterSta": 23
+        },
+        {
+          "date": "10 Jan",
+          "ataOnOrBeforeSta": 14,
+          "ataAfterSta": 44
+        },
+        {
+          "date": "11 Jan",
+          "ataOnOrBeforeSta": 17,
+          "ataAfterSta": 35
+        },
+        {
+          "date": "12 Jan",
+          "ataOnOrBeforeSta": 27,
+          "ataAfterSta": 32
+        },
+        {
+          "date": "13 Jan",
+          "ataOnOrBeforeSta": 22,
+          "ataAfterSta": 30
+        },
+        {
+          "date": "14 Jan",
+          "ataOnOrBeforeSta": 27,
+          "ataAfterSta": 29
+        },
+        {
+          "date": "15 Jan",
+          "ataOnOrBeforeSta": 16,
+          "ataAfterSta": 38
+        },
+        {
+          "date": "16 Jan",
+          "ataOnOrBeforeSta": 28,
+          "ataAfterSta": 27
+        },
+        {
+          "date": "17 Jan",
+          "ataOnOrBeforeSta": 19,
+          "ataAfterSta": 37
+        },
+        {
+          "date": "18 Jan",
+          "ataOnOrBeforeSta": 24,
+          "ataAfterSta": 28
+        },
+        {
+          "date": "19 Jan",
+          "ataOnOrBeforeSta": 29,
+          "ataAfterSta": 25
+        },
+        {
+          "date": "20 Jan",
+          "ataOnOrBeforeSta": 30,
+          "ataAfterSta": 24
+        },
+        {
+          "date": "21 Jan",
+          "ataOnOrBeforeSta": 26,
+          "ataAfterSta": 25
+        },
+        {
+          "date": "22 Jan",
+          "ataOnOrBeforeSta": 28,
+          "ataAfterSta": 27
+        },
+        {
+          "date": "23 Jan",
+          "ataOnOrBeforeSta": 25,
+          "ataAfterSta": 25
+        },
+        {
+          "date": "24 Jan",
+          "ataOnOrBeforeSta": 34,
+          "ataAfterSta": 25
+        },
+        {
+          "date": "25 Jan",
+          "ataOnOrBeforeSta": 28,
+          "ataAfterSta": 21
+        },
+        {
+          "date": "26 Jan",
+          "ataOnOrBeforeSta": 31,
+          "ataAfterSta": 19
+        },
+        {
+          "date": "27 Jan",
+          "ataOnOrBeforeSta": 33,
+          "ataAfterSta": 23
+        },
+        {
+          "date": "28 Jan",
+          "ataOnOrBeforeSta": 30,
+          "ataAfterSta": 21
+        },
+        {
+          "date": "29 Jan",
+          "ataOnOrBeforeSta": 22,
+          "ataAfterSta": 32
+        },
+        {
+          "date": "30 Jan",
+          "ataOnOrBeforeSta": 26,
+          "ataAfterSta": 29
+        },
+        {
+          "date": "31 Jan",
+          "ataOnOrBeforeSta": 31,
+          "ataAfterSta": 25
+        }
+      ],
+      "delayBreakdown": {
+        "onTime": 149,
+        "delayed": 897,
+        "beforeTime": 634,
+        "other": 183
+      },
+      "delayCategories": [
+        {
+          "code": "2",
+          "count": 342
+        },
+        {
+          "code": "1",
+          "count": 843
+        },
+        {
+          "code": "LAST",
+          "count": 495
+        },
+        {
+          "code": "CANC",
+          "count": 183
+        }
+      ],
+      "topAirlines": [
+        {
+          "name": "Akasa Air",
+          "count": 470
+        },
+        {
+          "name": "SpiceJet",
+          "count": 290
+        },
+        {
+          "name": "Thai Airways",
+          "count": 97
+        },
+        {
+          "name": "S F Airlines",
+          "count": 72
+        },
+        {
+          "name": "Virgin Atlantic",
+          "count": 62
+        },
+        {
+          "name": "Kuwait Airways",
+          "count": 62
+        },
+        {
+          "name": "Oman Air",
+          "count": 62
+        },
+        {
+          "name": "Air Arabia",
+          "count": 62
+        },
+        {
+          "name": "Lufthansa German Airlines",
+          "count": 62
+        },
+        {
+          "name": "Gulf Air",
+          "count": 62
+        },
+        {
+          "name": "Cathay Pacific Airways",
+          "count": 62
+        },
+        {
+          "name": "Air France",
+          "count": 45
+        }
+      ],
+      "delaysByAirline": [
+        {
+          "name": "Akasa Air",
+          "count": 185
+        },
+        {
+          "name": "Thai Airways",
+          "count": 81
+        },
+        {
+          "name": "Cathay Pacific Airways",
+          "count": 59
+        },
+        {
+          "name": "SpiceJet",
+          "count": 59
+        },
+        {
+          "name": "Air Arabia",
+          "count": 46
+        },
+        {
+          "name": "Lufthansa German Airlines",
+          "count": 44
+        },
+        {
+          "name": "Virgin Atlantic",
+          "count": 42
+        },
+        {
+          "name": "Air France",
+          "count": 40
+        },
+        {
+          "name": "Indigo Airlines",
+          "count": 31
+        },
+        {
+          "name": "Swiss Intl Airlines",
+          "count": 28
+        },
+        {
+          "name": "KLM Royal Dutch Airlines",
+          "count": 27
+        },
+        {
+          "name": "Royal Nepal",
+          "count": 23
+        },
+        {
+          "name": "Vietjet Air",
+          "count": 22
+        },
+        {
+          "name": "Gulf Air",
+          "count": 22
+        },
+        {
+          "name": "Oman Air",
+          "count": 20
+        },
+        {
+          "name": "European Air Transport",
+          "count": 20
+        },
+        {
+          "name": "United Airlines",
+          "count": 18
+        },
+        {
+          "name": "Finnair",
+          "count": 18
+        },
+        {
+          "name": "Aerologic Cargo",
+          "count": 14
+        },
+        {
+          "name": "S F Airlines",
+          "count": 14
+        }
+      ],
+      "delaysByHour": [
+        {
+          "hour": "00:00",
+          "count": 93
+        },
+        {
+          "hour": "01:00",
+          "count": 44
+        },
+        {
+          "hour": "02:00",
+          "count": 79
+        },
+        {
+          "hour": "03:00",
+          "count": 9
+        },
+        {
+          "hour": "04:00",
+          "count": 69
+        },
+        {
+          "hour": "05:00",
+          "count": 2
+        },
+        {
+          "hour": "06:00",
+          "count": 38
+        },
+        {
+          "hour": "07:00",
+          "count": 42
+        },
+        {
+          "hour": "08:00",
+          "count": 7
+        },
+        {
+          "hour": "09:00",
+          "count": 99
+        },
+        {
+          "hour": "10:00",
+          "count": 36
+        },
+        {
+          "hour": "11:00",
+          "count": 29
+        },
+        {
+          "hour": "12:00",
+          "count": 6
+        },
+        {
+          "hour": "13:00",
+          "count": 13
+        },
+        {
+          "hour": "14:00",
+          "count": 18
+        },
+        {
+          "hour": "15:00",
+          "count": 45
+        },
+        {
+          "hour": "16:00",
+          "count": 21
+        },
+        {
+          "hour": "17:00",
+          "count": 29
+        },
+        {
+          "hour": "18:00",
+          "count": 21
+        },
+        {
+          "hour": "19:00",
+          "count": 10
+        },
+        {
+          "hour": "20:00",
+          "count": 20
+        },
+        {
+          "hour": "21:00",
+          "count": 85
+        },
+        {
+          "hour": "22:00",
+          "count": 34
+        },
+        {
+          "hour": "23:00",
+          "count": 48
+        }
+      ],
+      "topDelayReasons": [
+        {
+          "reason": "93 Aircraft rotation",
+          "count": 565
+        },
+        {
+          "reason": "89 Restrictions at airport of departure, airport/runway closed due obstruct...",
+          "count": 121
+        },
+        {
+          "reason": "63 Late crew boarding or departure procedures",
+          "count": 25
+        },
+        {
+          "reason": "16 Commercial Publicity, Passenger Convenience, VIP, Press, Ground meals an...",
+          "count": 16
+        },
+        {
+          "reason": "85 Mandatory security",
+          "count": 14
+        },
+        {
+          "reason": "86 Immigration, Customs, Health",
+          "count": 12
+        },
+        {
+          "reason": "99 Miscellaneous, not elsewhere specified",
+          "count": 12
+        },
+        {
+          "reason": "41 Aircraft defects",
+          "count": 7
+        },
+        {
+          "reason": "68 Cabin crew error or special request",
+          "count": 6
+        },
+        {
+          "reason": "43 Non-scheduled maintenance, special checks and / or additional works beyo...",
+          "count": 6
+        }
+      ],
+      "delayDurationBuckets": [
+        {
+          "bucket": "0 min",
+          "count": 0
+        },
+        {
+          "bucket": "1–5 min",
+          "count": 110
+        },
+        {
+          "bucket": "6–15 min",
+          "count": 226
+        },
+        {
+          "bucket": "16–30 min",
+          "count": 171
+        },
+        {
+          "bucket": "31–60 min",
+          "count": 181
+        },
+        {
+          "bucket": "60+ min",
+          "count": 209
+        }
+      ]
+    },
+    {
+      "key": "FEB25",
+      "label": "February 2025",
+      "totalFlights": 1586,
+      "uniqueAirlines": 33,
+      "cancellationCount": 100,
+      "activeDaysSta": 28,
+      "avgFlightsPerActiveStaDay": 56.64,
+      "staOnTimeCount": 160,
+      "ataOnOrBeforeStaCount": 773,
+      "ataStaDailyComparison": [
+        {
+          "date": "01 Feb",
+          "ataOnOrBeforeSta": 24,
+          "ataAfterSta": 27
+        },
+        {
+          "date": "02 Feb",
+          "ataOnOrBeforeSta": 33,
+          "ataAfterSta": 20
+        },
+        {
+          "date": "03 Feb",
+          "ataOnOrBeforeSta": 30,
+          "ataAfterSta": 21
+        },
+        {
+          "date": "04 Feb",
+          "ataOnOrBeforeSta": 27,
+          "ataAfterSta": 23
+        },
+        {
+          "date": "05 Feb",
+          "ataOnOrBeforeSta": 32,
+          "ataAfterSta": 20
+        },
+        {
+          "date": "06 Feb",
+          "ataOnOrBeforeSta": 36,
+          "ataAfterSta": 17
+        },
+        {
+          "date": "07 Feb",
+          "ataOnOrBeforeSta": 27,
+          "ataAfterSta": 29
+        },
+        {
+          "date": "08 Feb",
+          "ataOnOrBeforeSta": 32,
+          "ataAfterSta": 18
+        },
+        {
+          "date": "09 Feb",
+          "ataOnOrBeforeSta": 26,
+          "ataAfterSta": 28
+        },
+        {
+          "date": "10 Feb",
+          "ataOnOrBeforeSta": 26,
+          "ataAfterSta": 28
+        },
+        {
+          "date": "11 Feb",
+          "ataOnOrBeforeSta": 30,
+          "ataAfterSta": 20
+        },
+        {
+          "date": "12 Feb",
+          "ataOnOrBeforeSta": 33,
+          "ataAfterSta": 22
+        },
+        {
+          "date": "13 Feb",
+          "ataOnOrBeforeSta": 26,
+          "ataAfterSta": 28
+        },
+        {
+          "date": "14 Feb",
+          "ataOnOrBeforeSta": 25,
+          "ataAfterSta": 29
+        },
+        {
+          "date": "15 Feb",
+          "ataOnOrBeforeSta": 34,
+          "ataAfterSta": 15
+        },
+        {
+          "date": "16 Feb",
+          "ataOnOrBeforeSta": 28,
+          "ataAfterSta": 25
+        },
+        {
+          "date": "17 Feb",
+          "ataOnOrBeforeSta": 32,
+          "ataAfterSta": 23
+        },
+        {
+          "date": "18 Feb",
+          "ataOnOrBeforeSta": 29,
+          "ataAfterSta": 20
+        },
+        {
+          "date": "19 Feb",
+          "ataOnOrBeforeSta": 29,
+          "ataAfterSta": 26
+        },
+        {
+          "date": "20 Feb",
+          "ataOnOrBeforeSta": 17,
+          "ataAfterSta": 35
+        },
+        {
+          "date": "21 Feb",
+          "ataOnOrBeforeSta": 24,
+          "ataAfterSta": 34
+        },
+        {
+          "date": "22 Feb",
+          "ataOnOrBeforeSta": 27,
+          "ataAfterSta": 22
+        },
+        {
+          "date": "23 Feb",
+          "ataOnOrBeforeSta": 27,
+          "ataAfterSta": 28
+        },
+        {
+          "date": "24 Feb",
+          "ataOnOrBeforeSta": 29,
+          "ataAfterSta": 25
+        },
+        {
+          "date": "25 Feb",
+          "ataOnOrBeforeSta": 26,
+          "ataAfterSta": 26
+        },
+        {
+          "date": "26 Feb",
+          "ataOnOrBeforeSta": 22,
+          "ataAfterSta": 32
+        },
+        {
+          "date": "27 Feb",
+          "ataOnOrBeforeSta": 19,
+          "ataAfterSta": 38
+        },
+        {
+          "date": "28 Feb",
+          "ataOnOrBeforeSta": 23,
+          "ataAfterSta": 34
+        }
+      ],
+      "delayBreakdown": {
+        "onTime": 160,
+        "delayed": 741,
+        "beforeTime": 585,
+        "other": 100
+      },
+      "delayCategories": [
+        {
+          "code": "2",
+          "count": 262
+        },
+        {
+          "code": "1",
+          "count": 705
+        },
+        {
+          "code": "LAST",
+          "count": 519
+        },
+        {
+          "code": "CANC",
+          "count": 100
+        }
+      ],
+      "topAirlines": [
+        {
+          "name": "Akasa Air",
+          "count": 428
+        },
+        {
+          "name": "SpiceJet",
+          "count": 173
+        },
+        {
+          "name": "Thai Airways",
+          "count": 89
+        },
+        {
+          "name": "Cathay Pacific Airways",
+          "count": 56
+        },
+        {
+          "name": "Kuwait Airways",
+          "count": 56
+        },
+        {
+          "name": "Lufthansa German Airlines",
+          "count": 56
+        },
+        {
+          "name": "Gulf Air",
+          "count": 56
+        },
+        {
+          "name": "Oman Air",
+          "count": 56
+        },
+        {
+          "name": "Virgin Atlantic",
+          "count": 56
+        },
+        {
+          "name": "Air Arabia",
+          "count": 56
+        },
+        {
+          "name": "S F Airlines",
+          "count": 42
+        },
+        {
+          "name": "Air France",
+          "count": 41
+        }
+      ],
+      "delaysByAirline": [
+        {
+          "name": "Akasa Air",
+          "count": 162
+        },
+        {
+          "name": "Thai Airways",
+          "count": 69
+        },
+        {
+          "name": "Cathay Pacific Airways",
+          "count": 53
+        },
+        {
+          "name": "SpiceJet",
+          "count": 48
+        },
+        {
+          "name": "Air Arabia",
+          "count": 46
+        },
+        {
+          "name": "Lufthansa German Airlines",
+          "count": 37
+        },
+        {
+          "name": "Air France",
+          "count": 31
+        },
+        {
+          "name": "Indigo Airlines",
+          "count": 30
+        },
+        {
+          "name": "Virgin Atlantic",
+          "count": 28
+        },
+        {
+          "name": "Gulf Air",
+          "count": 28
+        },
+        {
+          "name": "KLM Royal Dutch Airlines",
+          "count": 26
+        },
+        {
+          "name": "Royal Nepal",
+          "count": 22
+        },
+        {
+          "name": "Vietjet Air",
+          "count": 18
+        },
+        {
+          "name": "European Air Transport",
+          "count": 15
+        },
+        {
+          "name": "Oman Air",
+          "count": 15
+        },
+        {
+          "name": "Swiss Intl Airlines",
+          "count": 15
+        },
+        {
+          "name": "Kuwait Airways",
+          "count": 13
+        },
+        {
+          "name": "Aerologic Cargo",
+          "count": 12
+        },
+        {
+          "name": "Myanmar Airways International",
+          "count": 11
+        },
+        {
+          "name": "United Airlines",
+          "count": 10
+        }
+      ],
+      "delaysByHour": [
+        {
+          "hour": "00:00",
+          "count": 70
+        },
+        {
+          "hour": "01:00",
+          "count": 41
+        },
+        {
+          "hour": "02:00",
+          "count": 71
+        },
+        {
+          "hour": "03:00",
+          "count": 16
+        },
+        {
+          "hour": "04:00",
+          "count": 53
+        },
+        {
+          "hour": "05:00",
+          "count": 2
+        },
+        {
+          "hour": "06:00",
+          "count": 22
+        },
+        {
+          "hour": "07:00",
+          "count": 39
+        },
+        {
+          "hour": "08:00",
+          "count": 3
+        },
+        {
+          "hour": "09:00",
+          "count": 59
+        },
+        {
+          "hour": "10:00",
+          "count": 31
+        },
+        {
+          "hour": "11:00",
+          "count": 11
+        },
+        {
+          "hour": "12:00",
+          "count": 3
+        },
+        {
+          "hour": "13:00",
+          "count": 16
+        },
+        {
+          "hour": "14:00",
+          "count": 23
+        },
+        {
+          "hour": "15:00",
+          "count": 39
+        },
+        {
+          "hour": "16:00",
+          "count": 16
+        },
+        {
+          "hour": "17:00",
+          "count": 31
+        },
+        {
+          "hour": "18:00",
+          "count": 25
+        },
+        {
+          "hour": "19:00",
+          "count": 9
+        },
+        {
+          "hour": "20:00",
+          "count": 22
+        },
+        {
+          "hour": "21:00",
+          "count": 77
+        },
+        {
+          "hour": "22:00",
+          "count": 21
+        },
+        {
+          "hour": "23:00",
+          "count": 41
+        }
+      ],
+      "topDelayReasons": [
+        {
+          "reason": "93 Aircraft rotation",
+          "count": 409
+        },
+        {
+          "reason": "89 Restrictions at airport of departure, airport/runway closed due obstruct...",
+          "count": 131
+        },
+        {
+          "reason": "63 Late crew boarding or departure procedures",
+          "count": 23
+        },
+        {
+          "reason": "85 Mandatory security",
+          "count": 18
+        },
+        {
+          "reason": "16 Commercial Publicity, Passenger Convenience, VIP, Press, Ground meals an...",
+          "count": 17
+        },
+        {
+          "reason": "09 Scheduled ground time less than declared minimum ground time",
+          "count": 15
+        },
+        {
+          "reason": "66 Late cabin crew boarding or departure procedures",
+          "count": 12
+        },
+        {
+          "reason": "86 Immigration, Customs, Health",
+          "count": 11
+        },
+        {
+          "reason": "41 Aircraft defects",
+          "count": 9
+        },
+        {
+          "reason": "15 Boarding, discrepancies and paging, missing checked-in passenger at gate",
+          "count": 9
+        }
+      ],
+      "delayDurationBuckets": [
+        {
+          "bucket": "0 min",
+          "count": 0
+        },
+        {
+          "bucket": "1–5 min",
+          "count": 152
+        },
+        {
+          "bucket": "6–15 min",
+          "count": 220
+        },
+        {
+          "bucket": "16–30 min",
+          "count": 170
+        },
+        {
+          "bucket": "31–60 min",
+          "count": 122
+        },
+        {
+          "bucket": "60+ min",
+          "count": 77
+        }
+      ]
+    },
+    {
+      "key": "MAR25",
+      "label": "March 2025",
+      "totalFlights": 1853,
+      "uniqueAirlines": 33,
+      "cancellationCount": 133,
+      "activeDaysSta": 31,
+      "avgFlightsPerActiveStaDay": 59.77,
+      "staOnTimeCount": 136,
+      "ataOnOrBeforeStaCount": 1023,
+      "ataStaDailyComparison": [
+        {
+          "date": "01 Mar",
+          "ataOnOrBeforeSta": 24,
+          "ataAfterSta": 25
+        },
+        {
+          "date": "02 Mar",
+          "ataOnOrBeforeSta": 30,
+          "ataAfterSta": 26
+        },
+        {
+          "date": "03 Mar",
+          "ataOnOrBeforeSta": 34,
+          "ataAfterSta": 26
+        },
+        {
+          "date": "04 Mar",
+          "ataOnOrBeforeSta": 25,
+          "ataAfterSta": 24
+        },
+        {
+          "date": "05 Mar",
+          "ataOnOrBeforeSta": 38,
+          "ataAfterSta": 21
+        },
+        {
+          "date": "06 Mar",
+          "ataOnOrBeforeSta": 31,
+          "ataAfterSta": 22
+        },
+        {
+          "date": "07 Mar",
+          "ataOnOrBeforeSta": 34,
+          "ataAfterSta": 26
+        },
+        {
+          "date": "08 Mar",
+          "ataOnOrBeforeSta": 30,
+          "ataAfterSta": 21
+        },
+        {
+          "date": "09 Mar",
+          "ataOnOrBeforeSta": 26,
+          "ataAfterSta": 30
+        },
+        {
+          "date": "10 Mar",
+          "ataOnOrBeforeSta": 29,
+          "ataAfterSta": 29
+        },
+        {
+          "date": "11 Mar",
+          "ataOnOrBeforeSta": 37,
+          "ataAfterSta": 14
+        },
+        {
+          "date": "12 Mar",
+          "ataOnOrBeforeSta": 33,
+          "ataAfterSta": 26
+        },
+        {
+          "date": "13 Mar",
+          "ataOnOrBeforeSta": 34,
+          "ataAfterSta": 22
+        },
+        {
+          "date": "14 Mar",
+          "ataOnOrBeforeSta": 36,
+          "ataAfterSta": 23
+        },
+        {
+          "date": "15 Mar",
+          "ataOnOrBeforeSta": 32,
+          "ataAfterSta": 21
+        },
+        {
+          "date": "16 Mar",
+          "ataOnOrBeforeSta": 31,
+          "ataAfterSta": 25
+        },
+        {
+          "date": "17 Mar",
+          "ataOnOrBeforeSta": 32,
+          "ataAfterSta": 27
+        },
+        {
+          "date": "18 Mar",
+          "ataOnOrBeforeSta": 30,
+          "ataAfterSta": 23
+        },
+        {
+          "date": "19 Mar",
+          "ataOnOrBeforeSta": 40,
+          "ataAfterSta": 19
+        },
+        {
+          "date": "20 Mar",
+          "ataOnOrBeforeSta": 34,
+          "ataAfterSta": 21
+        },
+        {
+          "date": "21 Mar",
+          "ataOnOrBeforeSta": 34,
+          "ataAfterSta": 25
+        },
+        {
+          "date": "22 Mar",
+          "ataOnOrBeforeSta": 31,
+          "ataAfterSta": 19
+        },
+        {
+          "date": "23 Mar",
+          "ataOnOrBeforeSta": 36,
+          "ataAfterSta": 18
+        },
+        {
+          "date": "24 Mar",
+          "ataOnOrBeforeSta": 38,
+          "ataAfterSta": 19
+        },
+        {
+          "date": "25 Mar",
+          "ataOnOrBeforeSta": 37,
+          "ataAfterSta": 18
+        },
+        {
+          "date": "26 Mar",
+          "ataOnOrBeforeSta": 37,
+          "ataAfterSta": 21
+        },
+        {
+          "date": "27 Mar",
+          "ataOnOrBeforeSta": 41,
+          "ataAfterSta": 14
+        },
+        {
+          "date": "28 Mar",
+          "ataOnOrBeforeSta": 34,
+          "ataAfterSta": 26
+        },
+        {
+          "date": "29 Mar",
+          "ataOnOrBeforeSta": 29,
+          "ataAfterSta": 24
+        },
+        {
+          "date": "30 Mar",
+          "ataOnOrBeforeSta": 33,
+          "ataAfterSta": 28
+        },
+        {
+          "date": "31 Mar",
+          "ataOnOrBeforeSta": 33,
+          "ataAfterSta": 14
+        }
+      ],
+      "delayBreakdown": {
+        "onTime": 136,
+        "delayed": 746,
+        "beforeTime": 838,
+        "other": 133
+      },
+      "delayCategories": [
+        {
+          "code": "2",
+          "count": 237
+        },
+        {
+          "code": "1",
+          "count": 687
+        },
+        {
+          "code": "LAST",
+          "count": 796
+        },
+        {
+          "code": "CANC",
+          "count": 133
+        }
+      ],
+      "topAirlines": [
+        {
+          "name": "Akasa Air",
+          "count": 521
+        },
+        {
+          "name": "SpiceJet",
+          "count": 190
+        },
+        {
+          "name": "Thai Airways",
+          "count": 99
+        },
+        {
+          "name": "Indigo Airlines",
+          "count": 72
+        },
+        {
+          "name": "S F Airlines",
+          "count": 70
+        },
+        {
+          "name": "Virgin Atlantic",
+          "count": 63
+        },
+        {
+          "name": "Air Arabia",
+          "count": 62
+        },
+        {
+          "name": "Cathay Pacific Airways",
+          "count": 62
+        },
+        {
+          "name": "Gulf Air",
+          "count": 62
+        },
+        {
+          "name": "Lufthansa German Airlines",
+          "count": 62
+        },
+        {
+          "name": "Oman Air",
+          "count": 61
+        },
+        {
+          "name": "Kuwait Airways",
+          "count": 61
+        }
+      ],
+      "delaysByAirline": [
+        {
+          "name": "Akasa Air",
+          "count": 141
+        },
+        {
+          "name": "Thai Airways",
+          "count": 63
+        },
+        {
+          "name": "Cathay Pacific Airways",
+          "count": 60
+        },
+        {
+          "name": "SpiceJet",
+          "count": 49
+        },
+        {
+          "name": "Lufthansa German Airlines",
+          "count": 44
+        },
+        {
+          "name": "Air Arabia",
+          "count": 38
+        },
+        {
+          "name": "Indigo Airlines",
+          "count": 34
+        },
+        {
+          "name": "Gulf Air",
+          "count": 30
+        },
+        {
+          "name": "Royal Nepal",
+          "count": 28
+        },
+        {
+          "name": "Virgin Atlantic",
+          "count": 24
+        },
+        {
+          "name": "KLM Royal Dutch Airlines",
+          "count": 22
+        },
+        {
+          "name": "Swiss Intl Airlines",
+          "count": 22
+        },
+        {
+          "name": "Druk Air",
+          "count": 21
+        },
+        {
+          "name": "Air France",
+          "count": 20
+        },
+        {
+          "name": "European Air Transport",
+          "count": 18
+        },
+        {
+          "name": "Vietjet Air",
+          "count": 17
+        },
+        {
+          "name": "Oman Air",
+          "count": 16
+        },
+        {
+          "name": "Kuwait Airways",
+          "count": 16
+        },
+        {
+          "name": "China Airlines Cargo",
+          "count": 14
+        },
+        {
+          "name": "Finnair",
+          "count": 11
+        }
+      ],
+      "delaysByHour": [
+        {
+          "hour": "00:00",
+          "count": 83
+        },
+        {
+          "hour": "01:00",
+          "count": 49
+        },
+        {
+          "hour": "02:00",
+          "count": 62
+        },
+        {
+          "hour": "03:00",
+          "count": 12
+        },
+        {
+          "hour": "04:00",
+          "count": 59
+        },
+        {
+          "hour": "05:00",
+          "count": 2
+        },
+        {
+          "hour": "06:00",
+          "count": 26
+        },
+        {
+          "hour": "07:00",
+          "count": 28
+        },
+        {
+          "hour": "08:00",
+          "count": 2
+        },
+        {
+          "hour": "09:00",
+          "count": 49
+        },
+        {
+          "hour": "10:00",
+          "count": 14
+        },
+        {
+          "hour": "11:00",
+          "count": 13
+        },
+        {
+          "hour": "12:00",
+          "count": 1
+        },
+        {
+          "hour": "13:00",
+          "count": 46
+        },
+        {
+          "hour": "14:00",
+          "count": 19
+        },
+        {
+          "hour": "15:00",
+          "count": 42
+        },
+        {
+          "hour": "16:00",
+          "count": 23
+        },
+        {
+          "hour": "17:00",
+          "count": 21
+        },
+        {
+          "hour": "18:00",
+          "count": 24
+        },
+        {
+          "hour": "19:00",
+          "count": 8
+        },
+        {
+          "hour": "20:00",
+          "count": 25
+        },
+        {
+          "hour": "21:00",
+          "count": 74
+        },
+        {
+          "hour": "22:00",
+          "count": 31
+        },
+        {
+          "hour": "23:00",
+          "count": 33
+        }
+      ],
+      "topDelayReasons": [
+        {
+          "reason": "93 Aircraft rotation",
+          "count": 355
+        },
+        {
+          "reason": "89 Restrictions at airport of departure, airport/runway closed due obstruct...",
+          "count": 175
+        },
+        {
+          "reason": "63 Late crew boarding or departure procedures",
+          "count": 26
+        },
+        {
+          "reason": "16 Commercial Publicity, Passenger Convenience, VIP, Press, Ground meals an...",
+          "count": 20
+        },
+        {
+          "reason": "09 Scheduled ground time less than declared minimum ground time",
+          "count": 16
+        },
+        {
+          "reason": "85 Mandatory security",
+          "count": 14
+        },
+        {
+          "reason": "99 Miscellaneous, not elsewhere specified",
+          "count": 10
+        },
+        {
+          "reason": "86 Immigration, Customs, Health",
+          "count": 10
+        },
+        {
+          "reason": "66 Late cabin crew boarding or departure procedures",
+          "count": 10
+        },
+        {
+          "reason": "81 ATC restriction en-route or capacity",
+          "count": 7
+        }
+      ],
+      "delayDurationBuckets": [
+        {
+          "bucket": "0 min",
+          "count": 0
+        },
+        {
+          "bucket": "1–5 min",
+          "count": 179
+        },
+        {
+          "bucket": "6–15 min",
+          "count": 236
+        },
+        {
+          "bucket": "16–30 min",
+          "count": 160
+        },
+        {
+          "bucket": "31–60 min",
+          "count": 107
+        },
+        {
+          "bucket": "60+ min",
+          "count": 64
+        }
+      ]
+    },
+    {
+      "key": "APR25",
+      "label": "April 2025",
+      "totalFlights": 1734,
+      "uniqueAirlines": 36,
+      "cancellationCount": 58,
+      "activeDaysSta": 30,
+      "avgFlightsPerActiveStaDay": 57.8,
+      "staOnTimeCount": 2,
+      "ataOnOrBeforeStaCount": 655,
+      "ataStaDailyComparison": [
+        {
+          "date": "01 Apr",
+          "ataOnOrBeforeSta": 32,
+          "ataAfterSta": 17
+        },
+        {
+          "date": "02 Apr",
+          "ataOnOrBeforeSta": 33,
+          "ataAfterSta": 24
+        },
+        {
+          "date": "03 Apr",
+          "ataOnOrBeforeSta": 29,
+          "ataAfterSta": 23
+        },
+        {
+          "date": "04 Apr",
+          "ataOnOrBeforeSta": 33,
+          "ataAfterSta": 26
+        },
+        {
+          "date": "05 Apr",
+          "ataOnOrBeforeSta": 28,
+          "ataAfterSta": 26
+        },
+        {
+          "date": "06 Apr",
+          "ataOnOrBeforeSta": 32,
+          "ataAfterSta": 26
+        },
+        {
+          "date": "07 Apr",
+          "ataOnOrBeforeSta": 26,
+          "ataAfterSta": 31
+        },
+        {
+          "date": "08 Apr",
+          "ataOnOrBeforeSta": 11,
+          "ataAfterSta": 41
+        },
+        {
+          "date": "09 Apr",
+          "ataOnOrBeforeSta": 14,
+          "ataAfterSta": 42
+        },
+        {
+          "date": "10 Apr",
+          "ataOnOrBeforeSta": 15,
+          "ataAfterSta": 38
+        },
+        {
+          "date": "11 Apr",
+          "ataOnOrBeforeSta": 7,
+          "ataAfterSta": 51
+        },
+        {
+          "date": "12 Apr",
+          "ataOnOrBeforeSta": 20,
+          "ataAfterSta": 37
+        },
+        {
+          "date": "13 Apr",
+          "ataOnOrBeforeSta": 16,
+          "ataAfterSta": 40
+        },
+        {
+          "date": "14 Apr",
+          "ataOnOrBeforeSta": 17,
+          "ataAfterSta": 42
+        },
+        {
+          "date": "15 Apr",
+          "ataOnOrBeforeSta": 10,
+          "ataAfterSta": 40
+        },
+        {
+          "date": "16 Apr",
+          "ataOnOrBeforeSta": 15,
+          "ataAfterSta": 42
+        },
+        {
+          "date": "17 Apr",
+          "ataOnOrBeforeSta": 15,
+          "ataAfterSta": 40
+        },
+        {
+          "date": "18 Apr",
+          "ataOnOrBeforeSta": 17,
+          "ataAfterSta": 44
+        },
+        {
+          "date": "19 Apr",
+          "ataOnOrBeforeSta": 13,
+          "ataAfterSta": 42
+        },
+        {
+          "date": "20 Apr",
+          "ataOnOrBeforeSta": 17,
+          "ataAfterSta": 41
+        },
+        {
+          "date": "21 Apr",
+          "ataOnOrBeforeSta": 29,
+          "ataAfterSta": 28
+        },
+        {
+          "date": "22 Apr",
+          "ataOnOrBeforeSta": 32,
+          "ataAfterSta": 20
+        },
+        {
+          "date": "23 Apr",
+          "ataOnOrBeforeSta": 32,
+          "ataAfterSta": 24
+        },
+        {
+          "date": "24 Apr",
+          "ataOnOrBeforeSta": 34,
+          "ataAfterSta": 21
+        },
+        {
+          "date": "25 Apr",
+          "ataOnOrBeforeSta": 27,
+          "ataAfterSta": 35
+        },
+        {
+          "date": "26 Apr",
+          "ataOnOrBeforeSta": 23,
+          "ataAfterSta": 32
+        },
+        {
+          "date": "27 Apr",
+          "ataOnOrBeforeSta": 27,
+          "ataAfterSta": 34
+        },
+        {
+          "date": "28 Apr",
+          "ataOnOrBeforeSta": 17,
+          "ataAfterSta": 40
+        },
+        {
+          "date": "29 Apr",
+          "ataOnOrBeforeSta": 16,
+          "ataAfterSta": 36
+        },
+        {
+          "date": "30 Apr",
+          "ataOnOrBeforeSta": 18,
+          "ataAfterSta": 38
+        }
+      ],
+      "delayBreakdown": {
+        "onTime": 2,
+        "delayed": 28,
+        "beforeTime": 16,
+        "other": 1688
+      },
+      "delayCategories": [
+        {
+          "code": "2",
+          "count": 852
+        },
+        {
+          "code": "1",
+          "count": 1655
+        },
+        {
+          "code": "LAST",
+          "count": 0
+        },
+        {
+          "code": "CANC",
+          "count": 58
+        }
+      ],
+      "topAirlines": [
+        {
+          "name": "Akasa Air",
+          "count": 486
+        },
+        {
+          "name": "SpiceJet",
+          "count": 177
+        },
+        {
+          "name": "Thai Airways",
+          "count": 94
+        },
+        {
+          "name": "S F Airlines",
+          "count": 84
+        },
+        {
+          "name": "Royal Nepal",
+          "count": 61
+        },
+        {
+          "name": "Virgin Atlantic",
+          "count": 60
+        },
+        {
+          "name": "Air Arabia",
+          "count": 60
+        },
+        {
+          "name": "Cathay Pacific Airways",
+          "count": 60
+        },
+        {
+          "name": "Gulf Air",
+          "count": 60
+        },
+        {
+          "name": "Indigo Airlines",
+          "count": 59
+        },
+        {
+          "name": "Lufthansa German Airlines",
+          "count": 59
+        },
+        {
+          "name": "Kuwait Airways",
+          "count": 43
+        }
+      ],
+      "delaysByAirline": [
+        {
+          "name": "Akasa Air",
+          "count": 8
+        },
+        {
+          "name": "Druk Air",
+          "count": 3
+        },
+        {
+          "name": "Vietjet Air",
+          "count": 2
+        },
+        {
+          "name": "Virgin Atlantic",
+          "count": 2
+        },
+        {
+          "name": "Cathay Pacific Airways",
+          "count": 2
+        },
+        {
+          "name": "Finnair",
+          "count": 1
+        },
+        {
+          "name": "Aircompany Somon Air LLC",
+          "count": 1
+        },
+        {
+          "name": "Royal Nepal",
+          "count": 1
+        },
+        {
+          "name": "European Air Transport",
+          "count": 1
+        },
+        {
+          "name": "Indigo Airlines",
+          "count": 1
+        },
+        {
+          "name": "Gulf Air",
+          "count": 1
+        },
+        {
+          "name": "Aerologic Cargo",
+          "count": 1
+        },
+        {
+          "name": "Lufthansa",
+          "count": 1
+        },
+        {
+          "name": "Swiss Intl Airlines",
+          "count": 1
+        },
+        {
+          "name": "Air France",
+          "count": 1
+        },
+        {
+          "name": "VietJet Air",
+          "count": 1
+        }
+      ],
+      "delaysByHour": [
+        {
+          "hour": "00:00",
+          "count": 2
+        },
+        {
+          "hour": "01:00",
+          "count": 0
+        },
+        {
+          "hour": "02:00",
+          "count": 0
+        },
+        {
+          "hour": "03:00",
+          "count": 0
+        },
+        {
+          "hour": "04:00",
+          "count": 0
+        },
+        {
+          "hour": "05:00",
+          "count": 2
+        },
+        {
+          "hour": "06:00",
+          "count": 0
+        },
+        {
+          "hour": "07:00",
+          "count": 1
+        },
+        {
+          "hour": "08:00",
+          "count": 0
+        },
+        {
+          "hour": "09:00",
+          "count": 4
+        },
+        {
+          "hour": "10:00",
+          "count": 0
+        },
+        {
+          "hour": "11:00",
+          "count": 0
+        },
+        {
+          "hour": "12:00",
+          "count": 0
+        },
+        {
+          "hour": "13:00",
+          "count": 3
+        },
+        {
+          "hour": "14:00",
+          "count": 3
+        },
+        {
+          "hour": "15:00",
+          "count": 1
+        },
+        {
+          "hour": "16:00",
+          "count": 0
+        },
+        {
+          "hour": "17:00",
+          "count": 2
+        },
+        {
+          "hour": "18:00",
+          "count": 0
+        },
+        {
+          "hour": "19:00",
+          "count": 0
+        },
+        {
+          "hour": "20:00",
+          "count": 1
+        },
+        {
+          "hour": "21:00",
+          "count": 1
+        },
+        {
+          "hour": "22:00",
+          "count": 4
+        },
+        {
+          "hour": "23:00",
+          "count": 4
+        }
+      ],
+      "topDelayReasons": [
+        {
+          "reason": "00:00",
+          "count": 745
+        },
+        {
+          "reason": "00:03",
+          "count": 47
+        },
+        {
+          "reason": "00:02",
+          "count": 36
+        },
+        {
+          "reason": "00:05",
+          "count": 36
+        },
+        {
+          "reason": "00:04",
+          "count": 34
+        },
+        {
+          "reason": "00:12",
+          "count": 30
+        },
+        {
+          "reason": "00:06",
+          "count": 28
+        },
+        {
+          "reason": "00:15",
+          "count": 23
+        },
+        {
+          "reason": "00:10",
+          "count": 23
+        },
+        {
+          "reason": "00:20",
+          "count": 23
+        }
+      ],
+      "delayDurationBuckets": [
+        {
+          "bucket": "0 min",
+          "count": 0
+        },
+        {
+          "bucket": "1–5 min",
+          "count": 4
+        },
+        {
+          "bucket": "6–15 min",
+          "count": 8
+        },
+        {
+          "bucket": "16–30 min",
+          "count": 5
+        },
+        {
+          "bucket": "31–60 min",
+          "count": 6
+        },
+        {
+          "bucket": "60+ min",
+          "count": 5
+        }
+      ]
+    },
+    {
+      "key": "MAY25",
+      "label": "May 2025",
+      "totalFlights": 2050,
+      "uniqueAirlines": 50,
+      "cancellationCount": 73,
+      "activeDaysSta": 31,
+      "avgFlightsPerActiveStaDay": 66.13,
+      "staOnTimeCount": 180,
+      "ataOnOrBeforeStaCount": 751,
+      "ataStaDailyComparison": [
+        {
+          "date": "01 May",
+          "ataOnOrBeforeSta": 17,
+          "ataAfterSta": 38
+        },
+        {
+          "date": "02 May",
+          "ataOnOrBeforeSta": 9,
+          "ataAfterSta": 51
+        },
+        {
+          "date": "03 May",
+          "ataOnOrBeforeSta": 13,
+          "ataAfterSta": 40
+        },
+        {
+          "date": "04 May",
+          "ataOnOrBeforeSta": 22,
+          "ataAfterSta": 34
+        },
+        {
+          "date": "05 May",
+          "ataOnOrBeforeSta": 16,
+          "ataAfterSta": 40
+        },
+        {
+          "date": "06 May",
+          "ataOnOrBeforeSta": 20,
+          "ataAfterSta": 33
+        },
+        {
+          "date": "07 May",
+          "ataOnOrBeforeSta": 8,
+          "ataAfterSta": 44
+        },
+        {
+          "date": "08 May",
+          "ataOnOrBeforeSta": 16,
+          "ataAfterSta": 40
+        },
+        {
+          "date": "09 May",
+          "ataOnOrBeforeSta": 12,
+          "ataAfterSta": 45
+        },
+        {
+          "date": "10 May",
+          "ataOnOrBeforeSta": 9,
+          "ataAfterSta": 45
+        },
+        {
+          "date": "11 May",
+          "ataOnOrBeforeSta": 19,
+          "ataAfterSta": 37
+        },
+        {
+          "date": "12 May",
+          "ataOnOrBeforeSta": 22,
+          "ataAfterSta": 38
+        },
+        {
+          "date": "13 May",
+          "ataOnOrBeforeSta": 29,
+          "ataAfterSta": 22
+        },
+        {
+          "date": "14 May",
+          "ataOnOrBeforeSta": 29,
+          "ataAfterSta": 32
+        },
+        {
+          "date": "15 May",
+          "ataOnOrBeforeSta": 26,
+          "ataAfterSta": 33
+        },
+        {
+          "date": "16 May",
+          "ataOnOrBeforeSta": 25,
+          "ataAfterSta": 46
+        },
+        {
+          "date": "17 May",
+          "ataOnOrBeforeSta": 24,
+          "ataAfterSta": 40
+        },
+        {
+          "date": "18 May",
+          "ataOnOrBeforeSta": 33,
+          "ataAfterSta": 40
+        },
+        {
+          "date": "19 May",
+          "ataOnOrBeforeSta": 37,
+          "ataAfterSta": 35
+        },
+        {
+          "date": "20 May",
+          "ataOnOrBeforeSta": 33,
+          "ataAfterSta": 40
+        },
+        {
+          "date": "21 May",
+          "ataOnOrBeforeSta": 27,
+          "ataAfterSta": 44
+        },
+        {
+          "date": "22 May",
+          "ataOnOrBeforeSta": 26,
+          "ataAfterSta": 42
+        },
+        {
+          "date": "23 May",
+          "ataOnOrBeforeSta": 28,
+          "ataAfterSta": 44
+        },
+        {
+          "date": "24 May",
+          "ataOnOrBeforeSta": 31,
+          "ataAfterSta": 36
+        },
+        {
+          "date": "25 May",
+          "ataOnOrBeforeSta": 23,
+          "ataAfterSta": 55
+        },
+        {
+          "date": "26 May",
+          "ataOnOrBeforeSta": 31,
+          "ataAfterSta": 45
+        },
+        {
+          "date": "27 May",
+          "ataOnOrBeforeSta": 31,
+          "ataAfterSta": 37
+        },
+        {
+          "date": "28 May",
+          "ataOnOrBeforeSta": 34,
+          "ataAfterSta": 41
+        },
+        {
+          "date": "29 May",
+          "ataOnOrBeforeSta": 27,
+          "ataAfterSta": 40
+        },
+        {
+          "date": "30 May",
+          "ataOnOrBeforeSta": 42,
+          "ataAfterSta": 33
+        },
+        {
+          "date": "31 May",
+          "ataOnOrBeforeSta": 32,
+          "ataAfterSta": 35
+        }
+      ],
+      "delayBreakdown": {
+        "onTime": 180,
+        "delayed": 1049,
+        "beforeTime": 748,
+        "other": 73
+      },
+      "delayCategories": [
+        {
+          "code": "2",
+          "count": 326
+        },
+        {
+          "code": "1",
+          "count": 957
+        },
+        {
+          "code": "LAST",
+          "count": 694
+        },
+        {
+          "code": "CANC",
+          "count": 73
+        }
+      ],
+      "topAirlines": [
+        {
+          "name": "Akasa Air",
+          "count": 511
+        },
+        {
+          "name": "SpiceJet",
+          "count": 209
+        },
+        {
+          "name": "Thai Airways",
+          "count": 99
+        },
+        {
+          "name": "S F Airlines",
+          "count": 84
+        },
+        {
+          "name": "INDIGO",
+          "count": 63
+        },
+        {
+          "name": "Cathay Pacific Airways",
+          "count": 62
+        },
+        {
+          "name": "Air Arabia",
+          "count": 62
+        },
+        {
+          "name": "Virgin Atlantic",
+          "count": 62
+        },
+        {
+          "name": "Gulf Air",
+          "count": 62
+        },
+        {
+          "name": "Lufthansa",
+          "count": 61
+        },
+        {
+          "name": "Kuwait Airways",
+          "count": 49
+        },
+        {
+          "name": "Oman Air",
+          "count": 45
+        }
+      ],
+      "delaysByAirline": [
+        {
+          "name": "Akasa Air",
+          "count": 261
+        },
+        {
+          "name": "SpiceJet",
+          "count": 59
+        },
+        {
+          "name": "Lufthansa",
+          "count": 54
+        },
+        {
+          "name": "Cathay Pacific Airways",
+          "count": 52
+        },
+        {
+          "name": "Air Arabia",
+          "count": 49
+        },
+        {
+          "name": "Thai Airways",
+          "count": 40
+        },
+        {
+          "name": "Virgin Atlantic",
+          "count": 35
+        },
+        {
+          "name": "Gulf Air",
+          "count": 34
+        },
+        {
+          "name": "INDIGO",
+          "count": 30
+        },
+        {
+          "name": "Royal Nepal",
+          "count": 28
+        },
+        {
+          "name": "Swiss Intl Airlines",
+          "count": 27
+        },
+        {
+          "name": "United Airlines",
+          "count": 24
+        },
+        {
+          "name": "VietJet Air",
+          "count": 23
+        },
+        {
+          "name": "European Air Transport",
+          "count": 22
+        },
+        {
+          "name": "Finnair",
+          "count": 22
+        },
+        {
+          "name": "Ethopian Airlines",
+          "count": 21
+        },
+        {
+          "name": "Aerologic Cargo",
+          "count": 21
+        },
+        {
+          "name": "KLM Royal Dutch Airlines",
+          "count": 20
+        },
+        {
+          "name": "Sri Lankan Airlines",
+          "count": 20
+        },
+        {
+          "name": "Air France",
+          "count": 20
+        }
+      ],
+      "delaysByHour": [
+        {
+          "hour": "00:00",
+          "count": 51
+        },
+        {
+          "hour": "01:00",
+          "count": 35
+        },
+        {
+          "hour": "02:00",
+          "count": 22
+        },
+        {
+          "hour": "03:00",
+          "count": 11
+        },
+        {
+          "hour": "04:00",
+          "count": 78
+        },
+        {
+          "hour": "05:00",
+          "count": 57
+        },
+        {
+          "hour": "06:00",
+          "count": 31
+        },
+        {
+          "hour": "07:00",
+          "count": 24
+        },
+        {
+          "hour": "08:00",
+          "count": 36
+        },
+        {
+          "hour": "09:00",
+          "count": 67
+        },
+        {
+          "hour": "10:00",
+          "count": 44
+        },
+        {
+          "hour": "11:00",
+          "count": 19
+        },
+        {
+          "hour": "12:00",
+          "count": 8
+        },
+        {
+          "hour": "13:00",
+          "count": 31
+        },
+        {
+          "hour": "14:00",
+          "count": 58
+        },
+        {
+          "hour": "15:00",
+          "count": 36
+        },
+        {
+          "hour": "16:00",
+          "count": 24
+        },
+        {
+          "hour": "17:00",
+          "count": 73
+        },
+        {
+          "hour": "18:00",
+          "count": 8
+        },
+        {
+          "hour": "19:00",
+          "count": 28
+        },
+        {
+          "hour": "20:00",
+          "count": 48
+        },
+        {
+          "hour": "21:00",
+          "count": 109
+        },
+        {
+          "hour": "22:00",
+          "count": 56
+        },
+        {
+          "hour": "23:00",
+          "count": 95
+        }
+      ],
+      "topDelayReasons": [
+        {
+          "reason": "93 Aircraft rotation",
+          "count": 662
+        },
+        {
+          "reason": "89 Restrictions at airport of departure, airport/runway closed due obstruct...",
+          "count": 175
+        },
+        {
+          "reason": "99 Miscellaneous, not elsewhere specified",
+          "count": 16
+        },
+        {
+          "reason": "85 Mandatory security",
+          "count": 10
+        },
+        {
+          "reason": "41 Aircraft defects",
+          "count": 8
+        },
+        {
+          "reason": "43 Non-scheduled maintenance, special checks and / or additional works beyo...",
+          "count": 8
+        },
+        {
+          "reason": "16 Commercial Publicity, Passenger Convenience, VIP, Press, Ground meals an...",
+          "count": 6
+        },
+        {
+          "reason": "86 Immigration, Customs, Health",
+          "count": 6
+        },
+        {
+          "reason": "73 Enroute or Alternate",
+          "count": 6
+        },
+        {
+          "reason": "81 ATC restriction en-route or capacity",
+          "count": 5
+        }
+      ],
+      "delayDurationBuckets": [
+        {
+          "bucket": "0 min",
+          "count": 0
+        },
+        {
+          "bucket": "1–5 min",
+          "count": 192
+        },
+        {
+          "bucket": "6–15 min",
+          "count": 255
+        },
+        {
+          "bucket": "16–30 min",
+          "count": 194
+        },
+        {
+          "bucket": "31–60 min",
+          "count": 166
+        },
+        {
+          "bucket": "60+ min",
+          "count": 242
+        }
+      ]
+    },
+    {
+      "key": "JUN25",
+      "label": "June 2025",
+      "totalFlights": 2269,
+      "uniqueAirlines": 47,
+      "cancellationCount": 171,
+      "activeDaysSta": 30,
+      "avgFlightsPerActiveStaDay": 75.63,
+      "staOnTimeCount": 155,
+      "ataOnOrBeforeStaCount": 1030,
+      "ataStaDailyComparison": [
+        {
+          "date": "01 Jun",
+          "ataOnOrBeforeSta": 26,
+          "ataAfterSta": 50
+        },
+        {
+          "date": "02 Jun",
+          "ataOnOrBeforeSta": 39,
+          "ataAfterSta": 31
+        },
+        {
+          "date": "03 Jun",
+          "ataOnOrBeforeSta": 35,
+          "ataAfterSta": 32
+        },
+        {
+          "date": "04 Jun",
+          "ataOnOrBeforeSta": 35,
+          "ataAfterSta": 37
+        },
+        {
+          "date": "05 Jun",
+          "ataOnOrBeforeSta": 39,
+          "ataAfterSta": 31
+        },
+        {
+          "date": "06 Jun",
+          "ataOnOrBeforeSta": 36,
+          "ataAfterSta": 34
+        },
+        {
+          "date": "07 Jun",
+          "ataOnOrBeforeSta": 38,
+          "ataAfterSta": 29
+        },
+        {
+          "date": "08 Jun",
+          "ataOnOrBeforeSta": 44,
+          "ataAfterSta": 28
+        },
+        {
+          "date": "09 Jun",
+          "ataOnOrBeforeSta": 42,
+          "ataAfterSta": 28
+        },
+        {
+          "date": "10 Jun",
+          "ataOnOrBeforeSta": 45,
+          "ataAfterSta": 24
+        },
+        {
+          "date": "11 Jun",
+          "ataOnOrBeforeSta": 37,
+          "ataAfterSta": 31
+        },
+        {
+          "date": "12 Jun",
+          "ataOnOrBeforeSta": 45,
+          "ataAfterSta": 25
+        },
+        {
+          "date": "13 Jun",
+          "ataOnOrBeforeSta": 32,
+          "ataAfterSta": 40
+        },
+        {
+          "date": "14 Jun",
+          "ataOnOrBeforeSta": 22,
+          "ataAfterSta": 43
+        },
+        {
+          "date": "15 Jun",
+          "ataOnOrBeforeSta": 29,
+          "ataAfterSta": 44
+        },
+        {
+          "date": "16 Jun",
+          "ataOnOrBeforeSta": 32,
+          "ataAfterSta": 38
+        },
+        {
+          "date": "17 Jun",
+          "ataOnOrBeforeSta": 31,
+          "ataAfterSta": 33
+        },
+        {
+          "date": "18 Jun",
+          "ataOnOrBeforeSta": 29,
+          "ataAfterSta": 40
+        },
+        {
+          "date": "19 Jun",
+          "ataOnOrBeforeSta": 20,
+          "ataAfterSta": 48
+        },
+        {
+          "date": "20 Jun",
+          "ataOnOrBeforeSta": 33,
+          "ataAfterSta": 39
+        },
+        {
+          "date": "21 Jun",
+          "ataOnOrBeforeSta": 41,
+          "ataAfterSta": 28
+        },
+        {
+          "date": "22 Jun",
+          "ataOnOrBeforeSta": 38,
+          "ataAfterSta": 36
+        },
+        {
+          "date": "23 Jun",
+          "ataOnOrBeforeSta": 32,
+          "ataAfterSta": 37
+        },
+        {
+          "date": "24 Jun",
+          "ataOnOrBeforeSta": 39,
+          "ataAfterSta": 31
+        },
+        {
+          "date": "25 Jun",
+          "ataOnOrBeforeSta": 34,
+          "ataAfterSta": 35
+        },
+        {
+          "date": "26 Jun",
+          "ataOnOrBeforeSta": 24,
+          "ataAfterSta": 44
+        },
+        {
+          "date": "27 Jun",
+          "ataOnOrBeforeSta": 30,
+          "ataAfterSta": 43
+        },
+        {
+          "date": "28 Jun",
+          "ataOnOrBeforeSta": 29,
+          "ataAfterSta": 40
+        },
+        {
+          "date": "29 Jun",
+          "ataOnOrBeforeSta": 33,
+          "ataAfterSta": 41
+        },
+        {
+          "date": "30 Jun",
+          "ataOnOrBeforeSta": 41,
+          "ataAfterSta": 29
+        }
+      ],
+      "delayBreakdown": {
+        "onTime": 155,
+        "delayed": 996,
+        "beforeTime": 948,
+        "other": 170
+      },
+      "delayCategories": [
+        {
+          "code": "2",
+          "count": 247
+        },
+        {
+          "code": "1",
+          "count": 858
+        },
+        {
+          "code": "LAST",
+          "count": 993
+        },
+        {
+          "code": "CANC",
+          "count": 171
+        }
+      ],
+      "topAirlines": [
+        {
+          "name": "Akasa Air",
+          "count": 485
+        },
+        {
+          "name": "SpiceJet",
+          "count": 214
+        },
+        {
+          "name": "Thai Airways",
+          "count": 95
+        },
+        {
+          "name": "S F Airlines",
+          "count": 88
+        },
+        {
+          "name": "Ethiopian Airlines",
+          "count": 66
+        },
+        {
+          "name": "Indigo Airlines",
+          "count": 62
+        },
+        {
+          "name": "Gulf Air",
+          "count": 61
+        },
+        {
+          "name": "Virgin Atlantic",
+          "count": 60
+        },
+        {
+          "name": "British Airways",
+          "count": 60
+        },
+        {
+          "name": "Srilankan Airlines",
+          "count": 60
+        },
+        {
+          "name": "Lufthansa German Airlines",
+          "count": 60
+        },
+        {
+          "name": "Royal Nepal",
+          "count": 60
+        }
+      ],
+      "delaysByAirline": [
+        {
+          "name": "Akasa Air",
+          "count": 203
+        },
+        {
+          "name": "SpiceJet",
+          "count": 77
+        },
+        {
+          "name": "Air Arabia",
+          "count": 55
+        },
+        {
+          "name": "Thai Airways",
+          "count": 45
+        },
+        {
+          "name": "Cathay Pacific Airways",
+          "count": 45
+        },
+        {
+          "name": "Gulf Air",
+          "count": 39
+        },
+        {
+          "name": "Srilankan Airlines",
+          "count": 34
+        },
+        {
+          "name": "Lufthansa German Airlines",
+          "count": 34
+        },
+        {
+          "name": "Indigo Airlines",
+          "count": 32
+        },
+        {
+          "name": "Ethiopian Airlines",
+          "count": 29
+        },
+        {
+          "name": "Royal Nepal",
+          "count": 28
+        },
+        {
+          "name": "UPS Cargo",
+          "count": 26
+        },
+        {
+          "name": "Turkish Airlines",
+          "count": 25
+        },
+        {
+          "name": "Batik Air Malaysia",
+          "count": 24
+        },
+        {
+          "name": "Swiss Intl Airlines",
+          "count": 22
+        },
+        {
+          "name": "Cathay Pacific Cargo",
+          "count": 20
+        },
+        {
+          "name": "Uzbekistan Airways",
+          "count": 20
+        },
+        {
+          "name": "Kuwait Airways",
+          "count": 19
+        },
+        {
+          "name": "Vietjet Air",
+          "count": 19
+        },
+        {
+          "name": "Virgin Atlantic",
+          "count": 17
+        }
+      ],
+      "delaysByHour": [
+        {
+          "hour": "00:00",
+          "count": 30
+        },
+        {
+          "hour": "01:00",
+          "count": 33
+        },
+        {
+          "hour": "02:00",
+          "count": 19
+        },
+        {
+          "hour": "03:00",
+          "count": 17
+        },
+        {
+          "hour": "04:00",
+          "count": 99
+        },
+        {
+          "hour": "05:00",
+          "count": 45
+        },
+        {
+          "hour": "06:00",
+          "count": 33
+        },
+        {
+          "hour": "07:00",
+          "count": 19
+        },
+        {
+          "hour": "08:00",
+          "count": 40
+        },
+        {
+          "hour": "09:00",
+          "count": 41
+        },
+        {
+          "hour": "10:00",
+          "count": 41
+        },
+        {
+          "hour": "11:00",
+          "count": 29
+        },
+        {
+          "hour": "12:00",
+          "count": 20
+        },
+        {
+          "hour": "13:00",
+          "count": 18
+        },
+        {
+          "hour": "14:00",
+          "count": 41
+        },
+        {
+          "hour": "15:00",
+          "count": 34
+        },
+        {
+          "hour": "16:00",
+          "count": 38
+        },
+        {
+          "hour": "17:00",
+          "count": 79
+        },
+        {
+          "hour": "18:00",
+          "count": 11
+        },
+        {
+          "hour": "19:00",
+          "count": 26
+        },
+        {
+          "hour": "20:00",
+          "count": 38
+        },
+        {
+          "hour": "21:00",
+          "count": 104
+        },
+        {
+          "hour": "22:00",
+          "count": 55
+        },
+        {
+          "hour": "23:00",
+          "count": 86
+        }
+      ],
+      "topDelayReasons": [
+        {
+          "reason": "93 Aircraft rotation",
+          "count": 554
+        },
+        {
+          "reason": "89 Restrictions at airport of departure, airport/runway closed due obstruct...",
+          "count": 175
+        },
+        {
+          "reason": "41 Aircraft defects",
+          "count": 19
+        },
+        {
+          "reason": "43 Non-scheduled maintenance, special checks and / or additional works beyo...",
+          "count": 12
+        },
+        {
+          "reason": "86 Immigration, Customs, Health",
+          "count": 8
+        },
+        {
+          "reason": "85 Mandatory security",
+          "count": 8
+        },
+        {
+          "reason": "99 Miscellaneous, not elsewhere specified",
+          "count": 7
+        },
+        {
+          "reason": "63 Late crew boarding or departure procedures",
+          "count": 7
+        },
+        {
+          "reason": "65 Flight deck crew special request or error",
+          "count": 7
+        },
+        {
+          "reason": "83 ATC restriction at destination",
+          "count": 4
+        }
+      ],
+      "delayDurationBuckets": [
+        {
+          "bucket": "0 min",
+          "count": 0
+        },
+        {
+          "bucket": "1–5 min",
+          "count": 240
+        },
+        {
+          "bucket": "6–15 min",
+          "count": 266
+        },
+        {
+          "bucket": "16–30 min",
+          "count": 181
+        },
+        {
+          "bucket": "31–60 min",
+          "count": 150
+        },
+        {
+          "bucket": "60+ min",
+          "count": 159
+        }
+      ]
+    },
+    {
+      "key": "JUL25",
+      "label": "July 2025",
+      "totalFlights": 2371,
+      "uniqueAirlines": 53,
+      "cancellationCount": 162,
+      "activeDaysSta": 31,
+      "avgFlightsPerActiveStaDay": 76.48,
+      "staOnTimeCount": 173,
+      "ataOnOrBeforeStaCount": 954,
+      "ataStaDailyComparison": [
+        {
+          "date": "01 Jul",
+          "ataOnOrBeforeSta": 33,
+          "ataAfterSta": 38
+        },
+        {
+          "date": "02 Jul",
+          "ataOnOrBeforeSta": 26,
+          "ataAfterSta": 46
+        },
+        {
+          "date": "03 Jul",
+          "ataOnOrBeforeSta": 24,
+          "ataAfterSta": 45
+        },
+        {
+          "date": "04 Jul",
+          "ataOnOrBeforeSta": 35,
+          "ataAfterSta": 35
+        },
+        {
+          "date": "05 Jul",
+          "ataOnOrBeforeSta": 27,
+          "ataAfterSta": 40
+        },
+        {
+          "date": "06 Jul",
+          "ataOnOrBeforeSta": 29,
+          "ataAfterSta": 46
+        },
+        {
+          "date": "07 Jul",
+          "ataOnOrBeforeSta": 23,
+          "ataAfterSta": 43
+        },
+        {
+          "date": "08 Jul",
+          "ataOnOrBeforeSta": 33,
+          "ataAfterSta": 36
+        },
+        {
+          "date": "09 Jul",
+          "ataOnOrBeforeSta": 30,
+          "ataAfterSta": 41
+        },
+        {
+          "date": "10 Jul",
+          "ataOnOrBeforeSta": 26,
+          "ataAfterSta": 49
+        },
+        {
+          "date": "11 Jul",
+          "ataOnOrBeforeSta": 41,
+          "ataAfterSta": 35
+        },
+        {
+          "date": "12 Jul",
+          "ataOnOrBeforeSta": 29,
+          "ataAfterSta": 38
+        },
+        {
+          "date": "13 Jul",
+          "ataOnOrBeforeSta": 24,
+          "ataAfterSta": 52
+        },
+        {
+          "date": "14 Jul",
+          "ataOnOrBeforeSta": 26,
+          "ataAfterSta": 45
+        },
+        {
+          "date": "15 Jul",
+          "ataOnOrBeforeSta": 29,
+          "ataAfterSta": 39
+        },
+        {
+          "date": "16 Jul",
+          "ataOnOrBeforeSta": 27,
+          "ataAfterSta": 45
+        },
+        {
+          "date": "17 Jul",
+          "ataOnOrBeforeSta": 27,
+          "ataAfterSta": 44
+        },
+        {
+          "date": "18 Jul",
+          "ataOnOrBeforeSta": 25,
+          "ataAfterSta": 52
+        },
+        {
+          "date": "19 Jul",
+          "ataOnOrBeforeSta": 35,
+          "ataAfterSta": 33
+        },
+        {
+          "date": "20 Jul",
+          "ataOnOrBeforeSta": 36,
+          "ataAfterSta": 37
+        },
+        {
+          "date": "21 Jul",
+          "ataOnOrBeforeSta": 25,
+          "ataAfterSta": 49
+        },
+        {
+          "date": "22 Jul",
+          "ataOnOrBeforeSta": 38,
+          "ataAfterSta": 34
+        },
+        {
+          "date": "23 Jul",
+          "ataOnOrBeforeSta": 38,
+          "ataAfterSta": 34
+        },
+        {
+          "date": "24 Jul",
+          "ataOnOrBeforeSta": 31,
+          "ataAfterSta": 39
+        },
+        {
+          "date": "25 Jul",
+          "ataOnOrBeforeSta": 39,
+          "ataAfterSta": 36
+        },
+        {
+          "date": "26 Jul",
+          "ataOnOrBeforeSta": 32,
+          "ataAfterSta": 37
+        },
+        {
+          "date": "27 Jul",
+          "ataOnOrBeforeSta": 36,
+          "ataAfterSta": 38
+        },
+        {
+          "date": "28 Jul",
+          "ataOnOrBeforeSta": 35,
+          "ataAfterSta": 34
+        },
+        {
+          "date": "29 Jul",
+          "ataOnOrBeforeSta": 35,
+          "ataAfterSta": 34
+        },
+        {
+          "date": "30 Jul",
+          "ataOnOrBeforeSta": 34,
+          "ataAfterSta": 39
+        },
+        {
+          "date": "31 Jul",
+          "ataOnOrBeforeSta": 26,
+          "ataAfterSta": 42
+        }
+      ],
+      "delayBreakdown": {
+        "onTime": 173,
+        "delayed": 1099,
+        "beforeTime": 937,
+        "other": 162
+      },
+      "delayCategories": [
+        {
+          "code": "2",
+          "count": 365
+        },
+        {
+          "code": "1",
+          "count": 994
+        },
+        {
+          "code": "LAST",
+          "count": 850
+        },
+        {
+          "code": "CANC",
+          "count": 162
+        }
+      ],
+      "topAirlines": [
+        {
+          "name": "Akasa Air",
+          "count": 544
+        },
+        {
+          "name": "SpiceJet",
+          "count": 222
+        },
+        {
+          "name": "S F Airlines",
+          "count": 116
+        },
+        {
+          "name": "Thai Airways",
+          "count": 98
+        },
+        {
+          "name": "Ethiopian Airlines",
+          "count": 65
+        },
+        {
+          "name": "British Airways",
+          "count": 62
+        },
+        {
+          "name": "Air Arabia",
+          "count": 62
+        },
+        {
+          "name": "Srilankan Airlines",
+          "count": 62
+        },
+        {
+          "name": "Virgin Atlantic",
+          "count": 62
+        },
+        {
+          "name": "Cathay Pacific Airways",
+          "count": 62
+        },
+        {
+          "name": "Gulf Air",
+          "count": 62
+        },
+        {
+          "name": "Lufthansa German Airlines",
+          "count": 61
+        }
+      ],
+      "delaysByAirline": [
+        {
+          "name": "Akasa Air",
+          "count": 224
+        },
+        {
+          "name": "SpiceJet",
+          "count": 69
+        },
+        {
+          "name": "Air Arabia",
+          "count": 59
+        },
+        {
+          "name": "Ethiopian Airlines",
+          "count": 50
+        },
+        {
+          "name": "Gulf Air",
+          "count": 49
+        },
+        {
+          "name": "Cathay Pacific Airways",
+          "count": 48
+        },
+        {
+          "name": "Thai Airways",
+          "count": 37
+        },
+        {
+          "name": "Lufthansa German Airlines",
+          "count": 34
+        },
+        {
+          "name": "Srilankan Airlines",
+          "count": 34
+        },
+        {
+          "name": "Batik Air Malaysia",
+          "count": 30
+        },
+        {
+          "name": "Turkish Airlines",
+          "count": 29
+        },
+        {
+          "name": "Swiss Intl Airlines",
+          "count": 26
+        },
+        {
+          "name": "UPS Cargo",
+          "count": 25
+        },
+        {
+          "name": "ITA Airways",
+          "count": 23
+        },
+        {
+          "name": "Aerologic Cargo",
+          "count": 23
+        },
+        {
+          "name": "Indigo Airlines",
+          "count": 22
+        },
+        {
+          "name": "Virgin Atlantic",
+          "count": 22
+        },
+        {
+          "name": "Royal Nepal",
+          "count": 22
+        },
+        {
+          "name": "Kuwait Airways",
+          "count": 21
+        },
+        {
+          "name": "Uzbekistan Airways",
+          "count": 21
+        }
+      ],
+      "delaysByHour": [
+        {
+          "hour": "00:00",
+          "count": 37
+        },
+        {
+          "hour": "01:00",
+          "count": 66
+        },
+        {
+          "hour": "02:00",
+          "count": 19
+        },
+        {
+          "hour": "03:00",
+          "count": 16
+        },
+        {
+          "hour": "04:00",
+          "count": 110
+        },
+        {
+          "hour": "05:00",
+          "count": 51
+        },
+        {
+          "hour": "06:00",
+          "count": 30
+        },
+        {
+          "hour": "07:00",
+          "count": 29
+        },
+        {
+          "hour": "08:00",
+          "count": 55
+        },
+        {
+          "hour": "09:00",
+          "count": 60
+        },
+        {
+          "hour": "10:00",
+          "count": 27
+        },
+        {
+          "hour": "11:00",
+          "count": 30
+        },
+        {
+          "hour": "12:00",
+          "count": 18
+        },
+        {
+          "hour": "13:00",
+          "count": 32
+        },
+        {
+          "hour": "14:00",
+          "count": 43
+        },
+        {
+          "hour": "15:00",
+          "count": 39
+        },
+        {
+          "hour": "16:00",
+          "count": 32
+        },
+        {
+          "hour": "17:00",
+          "count": 78
+        },
+        {
+          "hour": "18:00",
+          "count": 6
+        },
+        {
+          "hour": "19:00",
+          "count": 32
+        },
+        {
+          "hour": "20:00",
+          "count": 38
+        },
+        {
+          "hour": "21:00",
+          "count": 112
+        },
+        {
+          "hour": "22:00",
+          "count": 46
+        },
+        {
+          "hour": "23:00",
+          "count": 93
+        }
+      ],
+      "topDelayReasons": [
+        {
+          "reason": "93 Aircraft rotation",
+          "count": 706
+        },
+        {
+          "reason": "89 Restrictions at airport of departure, airport/runway closed due obstruct...",
+          "count": 172
+        },
+        {
+          "reason": "26 Late preparation in warehouse",
+          "count": 13
+        },
+        {
+          "reason": "86 Immigration, Customs, Health",
+          "count": 13
+        },
+        {
+          "reason": "85 Mandatory security",
+          "count": 11
+        },
+        {
+          "reason": "41 Aircraft defects",
+          "count": 10
+        },
+        {
+          "reason": "43 Non-scheduled maintenance, special checks and / or additional works beyo...",
+          "count": 9
+        },
+        {
+          "reason": "16 Commercial Publicity, Passenger Convenience, VIP, Press, Ground meals an...",
+          "count": 6
+        },
+        {
+          "reason": "81 ATC restriction en-route or capacity",
+          "count": 6
+        },
+        {
+          "reason": "68 Cabin crew error or special request",
+          "count": 5
+        }
+      ],
+      "delayDurationBuckets": [
+        {
+          "bucket": "0 min",
+          "count": 0
+        },
+        {
+          "bucket": "1–5 min",
+          "count": 188
+        },
+        {
+          "bucket": "6–15 min",
+          "count": 306
+        },
+        {
+          "bucket": "16–30 min",
+          "count": 230
+        },
+        {
+          "bucket": "31–60 min",
+          "count": 201
+        },
+        {
+          "bucket": "60+ min",
+          "count": 174
+        }
+      ]
+    },
+    {
+      "key": "AUG25",
+      "label": "August 2025",
+      "totalFlights": 2350,
+      "uniqueAirlines": 53,
+      "cancellationCount": 152,
+      "activeDaysSta": 31,
+      "avgFlightsPerActiveStaDay": 75.81,
+      "staOnTimeCount": 226,
+      "ataOnOrBeforeStaCount": 1104,
+      "ataStaDailyComparison": [
+        {
+          "date": "01 Aug",
+          "ataOnOrBeforeSta": 35,
+          "ataAfterSta": 40
+        },
+        {
+          "date": "02 Aug",
+          "ataOnOrBeforeSta": 32,
+          "ataAfterSta": 31
+        },
+        {
+          "date": "03 Aug",
+          "ataOnOrBeforeSta": 36,
+          "ataAfterSta": 37
+        },
+        {
+          "date": "04 Aug",
+          "ataOnOrBeforeSta": 36,
+          "ataAfterSta": 34
+        },
+        {
+          "date": "05 Aug",
+          "ataOnOrBeforeSta": 35,
+          "ataAfterSta": 34
+        },
+        {
+          "date": "06 Aug",
+          "ataOnOrBeforeSta": 40,
+          "ataAfterSta": 31
+        },
+        {
+          "date": "07 Aug",
+          "ataOnOrBeforeSta": 26,
+          "ataAfterSta": 42
+        },
+        {
+          "date": "08 Aug",
+          "ataOnOrBeforeSta": 38,
+          "ataAfterSta": 38
+        },
+        {
+          "date": "09 Aug",
+          "ataOnOrBeforeSta": 33,
+          "ataAfterSta": 33
+        },
+        {
+          "date": "10 Aug",
+          "ataOnOrBeforeSta": 36,
+          "ataAfterSta": 35
+        },
+        {
+          "date": "11 Aug",
+          "ataOnOrBeforeSta": 40,
+          "ataAfterSta": 33
+        },
+        {
+          "date": "12 Aug",
+          "ataOnOrBeforeSta": 38,
+          "ataAfterSta": 33
+        },
+        {
+          "date": "13 Aug",
+          "ataOnOrBeforeSta": 44,
+          "ataAfterSta": 28
+        },
+        {
+          "date": "14 Aug",
+          "ataOnOrBeforeSta": 32,
+          "ataAfterSta": 36
+        },
+        {
+          "date": "15 Aug",
+          "ataOnOrBeforeSta": 42,
+          "ataAfterSta": 32
+        },
+        {
+          "date": "16 Aug",
+          "ataOnOrBeforeSta": 44,
+          "ataAfterSta": 25
+        },
+        {
+          "date": "17 Aug",
+          "ataOnOrBeforeSta": 35,
+          "ataAfterSta": 37
+        },
+        {
+          "date": "18 Aug",
+          "ataOnOrBeforeSta": 28,
+          "ataAfterSta": 43
+        },
+        {
+          "date": "19 Aug",
+          "ataOnOrBeforeSta": 31,
+          "ataAfterSta": 41
+        },
+        {
+          "date": "20 Aug",
+          "ataOnOrBeforeSta": 34,
+          "ataAfterSta": 38
+        },
+        {
+          "date": "21 Aug",
+          "ataOnOrBeforeSta": 30,
+          "ataAfterSta": 38
+        },
+        {
+          "date": "22 Aug",
+          "ataOnOrBeforeSta": 46,
+          "ataAfterSta": 28
+        },
+        {
+          "date": "23 Aug",
+          "ataOnOrBeforeSta": 27,
+          "ataAfterSta": 39
+        },
+        {
+          "date": "24 Aug",
+          "ataOnOrBeforeSta": 40,
+          "ataAfterSta": 33
+        },
+        {
+          "date": "25 Aug",
+          "ataOnOrBeforeSta": 31,
+          "ataAfterSta": 42
+        },
+        {
+          "date": "26 Aug",
+          "ataOnOrBeforeSta": 40,
+          "ataAfterSta": 30
+        },
+        {
+          "date": "27 Aug",
+          "ataOnOrBeforeSta": 34,
+          "ataAfterSta": 39
+        },
+        {
+          "date": "28 Aug",
+          "ataOnOrBeforeSta": 40,
+          "ataAfterSta": 31
+        },
+        {
+          "date": "29 Aug",
+          "ataOnOrBeforeSta": 39,
+          "ataAfterSta": 36
+        },
+        {
+          "date": "30 Aug",
+          "ataOnOrBeforeSta": 26,
+          "ataAfterSta": 40
+        },
+        {
+          "date": "31 Aug",
+          "ataOnOrBeforeSta": 36,
+          "ataAfterSta": 37
+        }
+      ],
+      "delayBreakdown": {
+        "onTime": 226,
+        "delayed": 1032,
+        "beforeTime": 940,
+        "other": 152
+      },
+      "delayCategories": [
+        {
+          "code": "2",
+          "count": 321
+        },
+        {
+          "code": "1",
+          "count": 960
+        },
+        {
+          "code": "LAST",
+          "count": 917
+        },
+        {
+          "code": "CANC",
+          "count": 152
+        }
+      ],
+      "topAirlines": [
+        {
+          "name": "AKASA",
+          "count": 563
+        },
+        {
+          "name": "Spice Jet",
+          "count": 216
+        },
+        {
+          "name": "S F Airlines",
+          "count": 122
+        },
+        {
+          "name": "Thai Airways",
+          "count": 98
+        },
+        {
+          "name": "Ethiopian Airlines",
+          "count": 63
+        },
+        {
+          "name": "Air Arabia",
+          "count": 62
+        },
+        {
+          "name": "British Airways",
+          "count": 62
+        },
+        {
+          "name": "Cathay Pacific Airways",
+          "count": 62
+        },
+        {
+          "name": "Gulf Air",
+          "count": 62
+        },
+        {
+          "name": "Sri Lankan Airlines",
+          "count": 62
+        },
+        {
+          "name": "Virgin Atlantic",
+          "count": 62
+        },
+        {
+          "name": "Lufthansa",
+          "count": 61
+        }
+      ],
+      "delaysByAirline": [
+        {
+          "name": "AKASA",
+          "count": 226
+        },
+        {
+          "name": "Air Arabia",
+          "count": 62
+        },
+        {
+          "name": "Gulf Air",
+          "count": 43
+        },
+        {
+          "name": "Cathay Pacific Airways",
+          "count": 40
+        },
+        {
+          "name": "Lufthansa",
+          "count": 40
+        },
+        {
+          "name": "Spice Jet",
+          "count": 39
+        },
+        {
+          "name": "Ethiopian Airlines",
+          "count": 38
+        },
+        {
+          "name": "Sri Lankan Airlines",
+          "count": 36
+        },
+        {
+          "name": "Turkish Airlines",
+          "count": 31
+        },
+        {
+          "name": "Indigo",
+          "count": 28
+        },
+        {
+          "name": "Royal Nepal",
+          "count": 27
+        },
+        {
+          "name": "Swiss Intl Airlines",
+          "count": 27
+        },
+        {
+          "name": "UPS Cargo",
+          "count": 26
+        },
+        {
+          "name": "ITA Airways",
+          "count": 25
+        },
+        {
+          "name": "Thai Airways",
+          "count": 25
+        },
+        {
+          "name": "Batik Air Malaysia",
+          "count": 23
+        },
+        {
+          "name": "Uzbekistan Airways",
+          "count": 23
+        },
+        {
+          "name": "Aerologic Cargo",
+          "count": 21
+        },
+        {
+          "name": "Cathay Pacific Cargo",
+          "count": 21
+        },
+        {
+          "name": "Virgin Atlantic",
+          "count": 18
+        }
+      ],
+      "delaysByHour": [
+        {
+          "hour": "00:00",
+          "count": 36
+        },
+        {
+          "hour": "01:00",
+          "count": 53
+        },
+        {
+          "hour": "02:00",
+          "count": 16
+        },
+        {
+          "hour": "03:00",
+          "count": 13
+        },
+        {
+          "hour": "04:00",
+          "count": 121
+        },
+        {
+          "hour": "05:00",
+          "count": 55
+        },
+        {
+          "hour": "06:00",
+          "count": 25
+        },
+        {
+          "hour": "07:00",
+          "count": 41
+        },
+        {
+          "hour": "08:00",
+          "count": 57
+        },
+        {
+          "hour": "09:00",
+          "count": 59
+        },
+        {
+          "hour": "10:00",
+          "count": 29
+        },
+        {
+          "hour": "11:00",
+          "count": 14
+        },
+        {
+          "hour": "12:00",
+          "count": 24
+        },
+        {
+          "hour": "13:00",
+          "count": 25
+        },
+        {
+          "hour": "14:00",
+          "count": 53
+        },
+        {
+          "hour": "15:00",
+          "count": 24
+        },
+        {
+          "hour": "16:00",
+          "count": 34
+        },
+        {
+          "hour": "17:00",
+          "count": 71
+        },
+        {
+          "hour": "18:00",
+          "count": 3
+        },
+        {
+          "hour": "19:00",
+          "count": 33
+        },
+        {
+          "hour": "20:00",
+          "count": 34
+        },
+        {
+          "hour": "21:00",
+          "count": 80
+        },
+        {
+          "hour": "22:00",
+          "count": 42
+        },
+        {
+          "hour": "23:00",
+          "count": 90
+        }
+      ],
+      "topDelayReasons": [
+        {
+          "reason": "93 Aircraft rotation",
+          "count": 601
+        },
+        {
+          "reason": "89 Restrictions at airport of departure, airport/runway closed due obstruct...",
+          "count": 217
+        },
+        {
+          "reason": "26 Late preparation in warehouse",
+          "count": 17
+        },
+        {
+          "reason": "85 Mandatory security",
+          "count": 17
+        },
+        {
+          "reason": "41 Aircraft defects",
+          "count": 16
+        },
+        {
+          "reason": "16 Commercial Publicity, Passenger Convenience, VIP, Press, Ground meals an...",
+          "count": 10
+        },
+        {
+          "reason": "86 Immigration, Customs, Health",
+          "count": 9
+        },
+        {
+          "reason": "71 Departure station",
+          "count": 6
+        },
+        {
+          "reason": "81 ATC restriction en-route or capacity",
+          "count": 6
+        },
+        {
+          "reason": "99 Miscellaneous, not elsewhere specified",
+          "count": 6
+        }
+      ],
+      "delayDurationBuckets": [
+        {
+          "bucket": "0 min",
+          "count": 0
+        },
+        {
+          "bucket": "1–5 min",
+          "count": 245
+        },
+        {
+          "bucket": "6–15 min",
+          "count": 268
+        },
+        {
+          "bucket": "16–30 min",
+          "count": 201
+        },
+        {
+          "bucket": "31–60 min",
+          "count": 170
+        },
+        {
+          "bucket": "60+ min",
+          "count": 148
+        }
+      ]
+    },
+    {
+      "key": "SEP25",
+      "label": "September 2025",
+      "totalFlights": 2265,
+      "uniqueAirlines": 51,
+      "cancellationCount": 138,
+      "activeDaysSta": 30,
+      "avgFlightsPerActiveStaDay": 75.5,
+      "staOnTimeCount": 201,
+      "ataOnOrBeforeStaCount": 1062,
+      "ataStaDailyComparison": [
+        {
+          "date": "01 Sep",
+          "ataOnOrBeforeSta": 29,
+          "ataAfterSta": 47
+        },
+        {
+          "date": "02 Sep",
+          "ataOnOrBeforeSta": 37,
+          "ataAfterSta": 32
+        },
+        {
+          "date": "03 Sep",
+          "ataOnOrBeforeSta": 30,
+          "ataAfterSta": 42
+        },
+        {
+          "date": "04 Sep",
+          "ataOnOrBeforeSta": 29,
+          "ataAfterSta": 41
+        },
+        {
+          "date": "05 Sep",
+          "ataOnOrBeforeSta": 30,
+          "ataAfterSta": 44
+        },
+        {
+          "date": "06 Sep",
+          "ataOnOrBeforeSta": 25,
+          "ataAfterSta": 44
+        },
+        {
+          "date": "07 Sep",
+          "ataOnOrBeforeSta": 44,
+          "ataAfterSta": 30
+        },
+        {
+          "date": "08 Sep",
+          "ataOnOrBeforeSta": 33,
+          "ataAfterSta": 43
+        },
+        {
+          "date": "09 Sep",
+          "ataOnOrBeforeSta": 46,
+          "ataAfterSta": 24
+        },
+        {
+          "date": "10 Sep",
+          "ataOnOrBeforeSta": 37,
+          "ataAfterSta": 30
+        },
+        {
+          "date": "11 Sep",
+          "ataOnOrBeforeSta": 39,
+          "ataAfterSta": 33
+        },
+        {
+          "date": "12 Sep",
+          "ataOnOrBeforeSta": 45,
+          "ataAfterSta": 29
+        },
+        {
+          "date": "13 Sep",
+          "ataOnOrBeforeSta": 39,
+          "ataAfterSta": 29
+        },
+        {
+          "date": "14 Sep",
+          "ataOnOrBeforeSta": 36,
+          "ataAfterSta": 35
+        },
+        {
+          "date": "15 Sep",
+          "ataOnOrBeforeSta": 36,
+          "ataAfterSta": 36
+        },
+        {
+          "date": "16 Sep",
+          "ataOnOrBeforeSta": 44,
+          "ataAfterSta": 26
+        },
+        {
+          "date": "17 Sep",
+          "ataOnOrBeforeSta": 32,
+          "ataAfterSta": 38
+        },
+        {
+          "date": "18 Sep",
+          "ataOnOrBeforeSta": 39,
+          "ataAfterSta": 32
+        },
+        {
+          "date": "19 Sep",
+          "ataOnOrBeforeSta": 48,
+          "ataAfterSta": 26
+        },
+        {
+          "date": "20 Sep",
+          "ataOnOrBeforeSta": 41,
+          "ataAfterSta": 26
+        },
+        {
+          "date": "21 Sep",
+          "ataOnOrBeforeSta": 36,
+          "ataAfterSta": 34
+        },
+        {
+          "date": "22 Sep",
+          "ataOnOrBeforeSta": 32,
+          "ataAfterSta": 39
+        },
+        {
+          "date": "23 Sep",
+          "ataOnOrBeforeSta": 35,
+          "ataAfterSta": 33
+        },
+        {
+          "date": "24 Sep",
+          "ataOnOrBeforeSta": 34,
+          "ataAfterSta": 33
+        },
+        {
+          "date": "25 Sep",
+          "ataOnOrBeforeSta": 31,
+          "ataAfterSta": 37
+        },
+        {
+          "date": "26 Sep",
+          "ataOnOrBeforeSta": 40,
+          "ataAfterSta": 34
+        },
+        {
+          "date": "27 Sep",
+          "ataOnOrBeforeSta": 23,
+          "ataAfterSta": 45
+        },
+        {
+          "date": "28 Sep",
+          "ataOnOrBeforeSta": 30,
+          "ataAfterSta": 41
+        },
+        {
+          "date": "29 Sep",
+          "ataOnOrBeforeSta": 31,
+          "ataAfterSta": 44
+        },
+        {
+          "date": "30 Sep",
+          "ataOnOrBeforeSta": 31,
+          "ataAfterSta": 38
+        }
+      ],
+      "delayBreakdown": {
+        "onTime": 201,
+        "delayed": 996,
+        "beforeTime": 930,
+        "other": 138
+      },
+      "delayCategories": [
+        {
+          "code": "2",
+          "count": 316
+        },
+        {
+          "code": "1",
+          "count": 921
+        },
+        {
+          "code": "LAST",
+          "count": 890
+        },
+        {
+          "code": "CANC",
+          "count": 138
+        }
+      ],
+      "topAirlines": [
+        {
+          "name": "Akasa Air",
+          "count": 513
+        },
+        {
+          "name": "SpiceJet",
+          "count": 211
+        },
+        {
+          "name": "S F Airlines",
+          "count": 108
+        },
+        {
+          "name": "Thai Airways",
+          "count": 95
+        },
+        {
+          "name": "Ethiopian Airlines",
+          "count": 68
+        },
+        {
+          "name": "Lufthansa German Airlines",
+          "count": 60
+        },
+        {
+          "name": "Virgin Atlantic",
+          "count": 60
+        },
+        {
+          "name": "Cathay Pacific Airways",
+          "count": 60
+        },
+        {
+          "name": "Gulf Air",
+          "count": 60
+        },
+        {
+          "name": "Srilankan Airlines",
+          "count": 60
+        },
+        {
+          "name": "Air Arabia",
+          "count": 60
+        },
+        {
+          "name": "British Airways",
+          "count": 60
+        }
+      ],
+      "delaysByAirline": [
+        {
+          "name": "Akasa Air",
+          "count": 227
+        },
+        {
+          "name": "Air Arabia",
+          "count": 52
+        },
+        {
+          "name": "Lufthansa German Airlines",
+          "count": 47
+        },
+        {
+          "name": "SpiceJet",
+          "count": 47
+        },
+        {
+          "name": "Gulf Air",
+          "count": 43
+        },
+        {
+          "name": "Thai Airways",
+          "count": 41
+        },
+        {
+          "name": "Cathay Pacific Airways",
+          "count": 37
+        },
+        {
+          "name": "Virgin Atlantic",
+          "count": 29
+        },
+        {
+          "name": "Turkish Airlines",
+          "count": 29
+        },
+        {
+          "name": "Srilankan Airlines",
+          "count": 28
+        },
+        {
+          "name": "Swiss Intl Airlines",
+          "count": 27
+        },
+        {
+          "name": "Batik Air Malaysia",
+          "count": 26
+        },
+        {
+          "name": "Royal Nepal",
+          "count": 24
+        },
+        {
+          "name": "UPS Cargo",
+          "count": 24
+        },
+        {
+          "name": "Uzbekistan Airways",
+          "count": 23
+        },
+        {
+          "name": "Ethiopian Airlines",
+          "count": 23
+        },
+        {
+          "name": "Indigo Airlines",
+          "count": 21
+        },
+        {
+          "name": "Aero Nomad",
+          "count": 20
+        },
+        {
+          "name": "Cathay Pacific Cargo",
+          "count": 20
+        },
+        {
+          "name": "Aerologic Cargo",
+          "count": 16
+        }
+      ],
+      "delaysByHour": [
+        {
+          "hour": "00:00",
+          "count": 51
+        },
+        {
+          "hour": "01:00",
+          "count": 38
+        },
+        {
+          "hour": "02:00",
+          "count": 23
+        },
+        {
+          "hour": "03:00",
+          "count": 8
+        },
+        {
+          "hour": "04:00",
+          "count": 110
+        },
+        {
+          "hour": "05:00",
+          "count": 34
+        },
+        {
+          "hour": "06:00",
+          "count": 14
+        },
+        {
+          "hour": "07:00",
+          "count": 27
+        },
+        {
+          "hour": "08:00",
+          "count": 50
+        },
+        {
+          "hour": "09:00",
+          "count": 63
+        },
+        {
+          "hour": "10:00",
+          "count": 42
+        },
+        {
+          "hour": "11:00",
+          "count": 19
+        },
+        {
+          "hour": "12:00",
+          "count": 31
+        },
+        {
+          "hour": "13:00",
+          "count": 22
+        },
+        {
+          "hour": "14:00",
+          "count": 50
+        },
+        {
+          "hour": "15:00",
+          "count": 28
+        },
+        {
+          "hour": "16:00",
+          "count": 39
+        },
+        {
+          "hour": "17:00",
+          "count": 65
+        },
+        {
+          "hour": "18:00",
+          "count": 5
+        },
+        {
+          "hour": "19:00",
+          "count": 20
+        },
+        {
+          "hour": "20:00",
+          "count": 40
+        },
+        {
+          "hour": "21:00",
+          "count": 90
+        },
+        {
+          "hour": "22:00",
+          "count": 38
+        },
+        {
+          "hour": "23:00",
+          "count": 89
+        }
+      ],
+      "topDelayReasons": [
+        {
+          "reason": "93 Aircraft rotation",
+          "count": 590
+        },
+        {
+          "reason": "89 Restrictions at airport of departure, airport/runway closed due obstruct...",
+          "count": 192
+        },
+        {
+          "reason": "41 Aircraft defects",
+          "count": 17
+        },
+        {
+          "reason": "86 Immigration, Customs, Health",
+          "count": 17
+        },
+        {
+          "reason": "85 Mandatory security",
+          "count": 16
+        },
+        {
+          "reason": "99 Miscellaneous, not elsewhere specified",
+          "count": 12
+        },
+        {
+          "reason": "43 Non-scheduled maintenance, special checks and / or additional works beyo...",
+          "count": 10
+        },
+        {
+          "reason": "63 Late crew boarding or departure procedures",
+          "count": 9
+        },
+        {
+          "reason": "16 Commercial Publicity, Passenger Convenience, VIP, Press, Ground meals an...",
+          "count": 8
+        },
+        {
+          "reason": "81 ATC restriction en-route or capacity",
+          "count": 7
+        }
+      ],
+      "delayDurationBuckets": [
+        {
+          "bucket": "0 min",
+          "count": 0
+        },
+        {
+          "bucket": "1–5 min",
+          "count": 229
+        },
+        {
+          "bucket": "6–15 min",
+          "count": 301
+        },
+        {
+          "bucket": "16–30 min",
+          "count": 204
+        },
+        {
+          "bucket": "31–60 min",
+          "count": 162
+        },
+        {
+          "bucket": "60+ min",
+          "count": 100
+        }
+      ]
+    },
+    {
+      "key": "OCT25",
+      "label": "October 2025",
+      "totalFlights": 2379,
+      "uniqueAirlines": 52,
+      "cancellationCount": 147,
+      "activeDaysSta": 31,
+      "avgFlightsPerActiveStaDay": 76.74,
+      "staOnTimeCount": 200,
+      "ataOnOrBeforeStaCount": 1188,
+      "ataStaDailyComparison": [
+        {
+          "date": "01 Oct",
+          "ataOnOrBeforeSta": 37,
+          "ataAfterSta": 33
+        },
+        {
+          "date": "02 Oct",
+          "ataOnOrBeforeSta": 36,
+          "ataAfterSta": 32
+        },
+        {
+          "date": "03 Oct",
+          "ataOnOrBeforeSta": 37,
+          "ataAfterSta": 32
+        },
+        {
+          "date": "04 Oct",
+          "ataOnOrBeforeSta": 33,
+          "ataAfterSta": 34
+        },
+        {
+          "date": "05 Oct",
+          "ataOnOrBeforeSta": 42,
+          "ataAfterSta": 28
+        },
+        {
+          "date": "06 Oct",
+          "ataOnOrBeforeSta": 36,
+          "ataAfterSta": 35
+        },
+        {
+          "date": "07 Oct",
+          "ataOnOrBeforeSta": 27,
+          "ataAfterSta": 44
+        },
+        {
+          "date": "08 Oct",
+          "ataOnOrBeforeSta": 39,
+          "ataAfterSta": 33
+        },
+        {
+          "date": "09 Oct",
+          "ataOnOrBeforeSta": 39,
+          "ataAfterSta": 34
+        },
+        {
+          "date": "10 Oct",
+          "ataOnOrBeforeSta": 40,
+          "ataAfterSta": 29
+        },
+        {
+          "date": "11 Oct",
+          "ataOnOrBeforeSta": 42,
+          "ataAfterSta": 29
+        },
+        {
+          "date": "12 Oct",
+          "ataOnOrBeforeSta": 43,
+          "ataAfterSta": 29
+        },
+        {
+          "date": "13 Oct",
+          "ataOnOrBeforeSta": 35,
+          "ataAfterSta": 35
+        },
+        {
+          "date": "14 Oct",
+          "ataOnOrBeforeSta": 40,
+          "ataAfterSta": 30
+        },
+        {
+          "date": "15 Oct",
+          "ataOnOrBeforeSta": 40,
+          "ataAfterSta": 31
+        },
+        {
+          "date": "16 Oct",
+          "ataOnOrBeforeSta": 35,
+          "ataAfterSta": 34
+        },
+        {
+          "date": "17 Oct",
+          "ataOnOrBeforeSta": 40,
+          "ataAfterSta": 36
+        },
+        {
+          "date": "18 Oct",
+          "ataOnOrBeforeSta": 39,
+          "ataAfterSta": 30
+        },
+        {
+          "date": "19 Oct",
+          "ataOnOrBeforeSta": 35,
+          "ataAfterSta": 35
+        },
+        {
+          "date": "20 Oct",
+          "ataOnOrBeforeSta": 34,
+          "ataAfterSta": 32
+        },
+        {
+          "date": "21 Oct",
+          "ataOnOrBeforeSta": 39,
+          "ataAfterSta": 27
+        },
+        {
+          "date": "22 Oct",
+          "ataOnOrBeforeSta": 41,
+          "ataAfterSta": 26
+        },
+        {
+          "date": "23 Oct",
+          "ataOnOrBeforeSta": 41,
+          "ataAfterSta": 31
+        },
+        {
+          "date": "24 Oct",
+          "ataOnOrBeforeSta": 38,
+          "ataAfterSta": 38
+        },
+        {
+          "date": "25 Oct",
+          "ataOnOrBeforeSta": 36,
+          "ataAfterSta": 32
+        },
+        {
+          "date": "26 Oct",
+          "ataOnOrBeforeSta": 50,
+          "ataAfterSta": 30
+        },
+        {
+          "date": "27 Oct",
+          "ataOnOrBeforeSta": 45,
+          "ataAfterSta": 34
+        },
+        {
+          "date": "28 Oct",
+          "ataOnOrBeforeSta": 37,
+          "ataAfterSta": 42
+        },
+        {
+          "date": "29 Oct",
+          "ataOnOrBeforeSta": 39,
+          "ataAfterSta": 39
+        },
+        {
+          "date": "30 Oct",
+          "ataOnOrBeforeSta": 40,
+          "ataAfterSta": 41
+        },
+        {
+          "date": "31 Oct",
+          "ataOnOrBeforeSta": 33,
+          "ataAfterSta": 49
+        }
+      ],
+      "delayBreakdown": {
+        "onTime": 200,
+        "delayed": 1052,
+        "beforeTime": 979,
+        "other": 148
+      },
+      "delayCategories": [
+        {
+          "code": "2",
+          "count": 330
+        },
+        {
+          "code": "1",
+          "count": 967
+        },
+        {
+          "code": "LAST",
+          "count": 935
+        },
+        {
+          "code": "CANC",
+          "count": 147
+        }
+      ],
+      "topAirlines": [
+        {
+          "name": "Akasa Air",
+          "count": 562
+        },
+        {
+          "name": "Spice Jet",
+          "count": 214
+        },
+        {
+          "name": "Thai Airways",
+          "count": 99
+        },
+        {
+          "name": "S F Airlines",
+          "count": 92
+        },
+        {
+          "name": "Ethiopian Airlines",
+          "count": 72
+        },
+        {
+          "name": "Air Arabia",
+          "count": 62
+        },
+        {
+          "name": "Gulf Air",
+          "count": 62
+        },
+        {
+          "name": "Virgin Atlantic",
+          "count": 62
+        },
+        {
+          "name": "Lufthansa German Airlines",
+          "count": 62
+        },
+        {
+          "name": "Srilankan Airlines",
+          "count": 62
+        },
+        {
+          "name": "Cathay Pacific Airways",
+          "count": 61
+        },
+        {
+          "name": "British Airways",
+          "count": 61
+        }
+      ],
+      "delaysByAirline": [
+        {
+          "name": "Akasa Air",
+          "count": 275
+        },
+        {
+          "name": "Spice Jet",
+          "count": 52
+        },
+        {
+          "name": "Cathay Pacific Airways",
+          "count": 45
+        },
+        {
+          "name": "Air Arabia",
+          "count": 45
+        },
+        {
+          "name": "Thai Airways",
+          "count": 43
+        },
+        {
+          "name": "Lufthansa German Airlines",
+          "count": 37
+        },
+        {
+          "name": "Gulf Air",
+          "count": 36
+        },
+        {
+          "name": "Srilankan Airlines",
+          "count": 28
+        },
+        {
+          "name": "Indigo Airlines",
+          "count": 26
+        },
+        {
+          "name": "Swiss Intl Airlines",
+          "count": 26
+        },
+        {
+          "name": "Royal Nepal",
+          "count": 26
+        },
+        {
+          "name": "Cathay Pacific Cargo",
+          "count": 24
+        },
+        {
+          "name": "Malindo Air",
+          "count": 24
+        },
+        {
+          "name": "Turkish Airlines",
+          "count": 23
+        },
+        {
+          "name": "Uzbekistan Airways",
+          "count": 22
+        },
+        {
+          "name": "UPS Cargo",
+          "count": 22
+        },
+        {
+          "name": "Druk Air",
+          "count": 19
+        },
+        {
+          "name": "Virgin Atlantic",
+          "count": 18
+        },
+        {
+          "name": "Vietjet Air",
+          "count": 16
+        },
+        {
+          "name": "United Airlines",
+          "count": 16
+        }
+      ],
+      "delaysByHour": [
+        {
+          "hour": "00:00",
+          "count": 43
+        },
+        {
+          "hour": "01:00",
+          "count": 37
+        },
+        {
+          "hour": "02:00",
+          "count": 22
+        },
+        {
+          "hour": "03:00",
+          "count": 7
+        },
+        {
+          "hour": "04:00",
+          "count": 88
+        },
+        {
+          "hour": "05:00",
+          "count": 38
+        },
+        {
+          "hour": "06:00",
+          "count": 22
+        },
+        {
+          "hour": "07:00",
+          "count": 21
+        },
+        {
+          "hour": "08:00",
+          "count": 47
+        },
+        {
+          "hour": "09:00",
+          "count": 67
+        },
+        {
+          "hour": "10:00",
+          "count": 60
+        },
+        {
+          "hour": "11:00",
+          "count": 46
+        },
+        {
+          "hour": "12:00",
+          "count": 28
+        },
+        {
+          "hour": "13:00",
+          "count": 23
+        },
+        {
+          "hour": "14:00",
+          "count": 62
+        },
+        {
+          "hour": "15:00",
+          "count": 37
+        },
+        {
+          "hour": "16:00",
+          "count": 44
+        },
+        {
+          "hour": "17:00",
+          "count": 68
+        },
+        {
+          "hour": "18:00",
+          "count": 12
+        },
+        {
+          "hour": "19:00",
+          "count": 24
+        },
+        {
+          "hour": "20:00",
+          "count": 32
+        },
+        {
+          "hour": "21:00",
+          "count": 99
+        },
+        {
+          "hour": "22:00",
+          "count": 43
+        },
+        {
+          "hour": "23:00",
+          "count": 82
+        }
+      ],
+      "topDelayReasons": [
+        {
+          "reason": "93 Aircraft rotation",
+          "count": 547
+        },
+        {
+          "reason": "89 Restrictions at airport of departure, airport/runway closed due obstruct...",
+          "count": 259
+        },
+        {
+          "reason": "99 Miscellaneous, not elsewhere specified",
+          "count": 18
+        },
+        {
+          "reason": "41 Aircraft defects",
+          "count": 17
+        },
+        {
+          "reason": "63 Late crew boarding or departure procedures",
+          "count": 17
+        },
+        {
+          "reason": "86 Immigration, Customs, Health",
+          "count": 17
+        },
+        {
+          "reason": "16 Commercial Publicity, Passenger Convenience, VIP, Press, Ground meals an...",
+          "count": 15
+        },
+        {
+          "reason": "81 ATC restriction en-route or capacity",
+          "count": 13
+        },
+        {
+          "reason": "85 Mandatory security",
+          "count": 10
+        },
+        {
+          "reason": "43 Non-scheduled maintenance, special checks and / or additional works beyo...",
+          "count": 7
+        }
+      ],
+      "delayDurationBuckets": [
+        {
+          "bucket": "0 min",
+          "count": 0
+        },
+        {
+          "bucket": "1–5 min",
+          "count": 256
+        },
+        {
+          "bucket": "6–15 min",
+          "count": 278
+        },
+        {
+          "bucket": "16–30 min",
+          "count": 242
+        },
+        {
+          "bucket": "31–60 min",
+          "count": 152
+        },
+        {
+          "bucket": "60+ min",
+          "count": 124
+        }
+      ]
+    },
+    {
+      "key": "NOV25",
+      "label": "November 2025",
+      "totalFlights": 2440,
+      "uniqueAirlines": 50,
+      "cancellationCount": 72,
+      "activeDaysSta": 30,
+      "avgFlightsPerActiveStaDay": 81.33,
+      "staOnTimeCount": 190,
+      "ataOnOrBeforeStaCount": 988,
+      "ataStaDailyComparison": [
+        {
+          "date": "01 Nov",
+          "ataOnOrBeforeSta": 35,
+          "ataAfterSta": 39
+        },
+        {
+          "date": "02 Nov",
+          "ataOnOrBeforeSta": 29,
+          "ataAfterSta": 48
+        },
+        {
+          "date": "03 Nov",
+          "ataOnOrBeforeSta": 30,
+          "ataAfterSta": 50
+        },
+        {
+          "date": "04 Nov",
+          "ataOnOrBeforeSta": 33,
+          "ataAfterSta": 45
+        },
+        {
+          "date": "05 Nov",
+          "ataOnOrBeforeSta": 40,
+          "ataAfterSta": 38
+        },
+        {
+          "date": "06 Nov",
+          "ataOnOrBeforeSta": 45,
+          "ataAfterSta": 37
+        },
+        {
+          "date": "07 Nov",
+          "ataOnOrBeforeSta": 26,
+          "ataAfterSta": 53
+        },
+        {
+          "date": "08 Nov",
+          "ataOnOrBeforeSta": 32,
+          "ataAfterSta": 44
+        },
+        {
+          "date": "09 Nov",
+          "ataOnOrBeforeSta": 35,
+          "ataAfterSta": 46
+        },
+        {
+          "date": "10 Nov",
+          "ataOnOrBeforeSta": 40,
+          "ataAfterSta": 38
+        },
+        {
+          "date": "11 Nov",
+          "ataOnOrBeforeSta": 33,
+          "ataAfterSta": 43
+        },
+        {
+          "date": "12 Nov",
+          "ataOnOrBeforeSta": 39,
+          "ataAfterSta": 39
+        },
+        {
+          "date": "13 Nov",
+          "ataOnOrBeforeSta": 37,
+          "ataAfterSta": 44
+        },
+        {
+          "date": "14 Nov",
+          "ataOnOrBeforeSta": 26,
+          "ataAfterSta": 54
+        },
+        {
+          "date": "15 Nov",
+          "ataOnOrBeforeSta": 25,
+          "ataAfterSta": 49
+        },
+        {
+          "date": "16 Nov",
+          "ataOnOrBeforeSta": 36,
+          "ataAfterSta": 46
+        },
+        {
+          "date": "17 Nov",
+          "ataOnOrBeforeSta": 34,
+          "ataAfterSta": 46
+        },
+        {
+          "date": "18 Nov",
+          "ataOnOrBeforeSta": 39,
+          "ataAfterSta": 39
+        },
+        {
+          "date": "19 Nov",
+          "ataOnOrBeforeSta": 36,
+          "ataAfterSta": 45
+        },
+        {
+          "date": "20 Nov",
+          "ataOnOrBeforeSta": 39,
+          "ataAfterSta": 43
+        },
+        {
+          "date": "21 Nov",
+          "ataOnOrBeforeSta": 40,
+          "ataAfterSta": 43
+        },
+        {
+          "date": "22 Nov",
+          "ataOnOrBeforeSta": 30,
+          "ataAfterSta": 46
+        },
+        {
+          "date": "23 Nov",
+          "ataOnOrBeforeSta": 27,
+          "ataAfterSta": 57
+        },
+        {
+          "date": "24 Nov",
+          "ataOnOrBeforeSta": 22,
+          "ataAfterSta": 57
+        },
+        {
+          "date": "25 Nov",
+          "ataOnOrBeforeSta": 22,
+          "ataAfterSta": 56
+        },
+        {
+          "date": "26 Nov",
+          "ataOnOrBeforeSta": 35,
+          "ataAfterSta": 43
+        },
+        {
+          "date": "27 Nov",
+          "ataOnOrBeforeSta": 31,
+          "ataAfterSta": 49
+        },
+        {
+          "date": "28 Nov",
+          "ataOnOrBeforeSta": 22,
+          "ataAfterSta": 58
+        },
+        {
+          "date": "29 Nov",
+          "ataOnOrBeforeSta": 29,
+          "ataAfterSta": 43
+        },
+        {
+          "date": "30 Nov",
+          "ataOnOrBeforeSta": 41,
+          "ataAfterSta": 42
+        }
+      ],
+      "delayBreakdown": {
+        "onTime": 190,
+        "delayed": 1389,
+        "beforeTime": 789,
+        "other": 72
+      },
+      "delayCategories": [
+        {
+          "code": "2",
+          "count": 538
+        },
+        {
+          "code": "1",
+          "count": 1286
+        },
+        {
+          "code": "LAST",
+          "count": 544
+        },
+        {
+          "code": "CANC",
+          "count": 72
+        }
+      ],
+      "topAirlines": [
+        {
+          "name": "Akasa Air",
+          "count": 726
+        },
+        {
+          "name": "SpiceJet",
+          "count": 155
+        },
+        {
+          "name": "S F Airlines",
+          "count": 110
+        },
+        {
+          "name": "Thai Airways",
+          "count": 95
+        },
+        {
+          "name": "Ethiopian Airlines",
+          "count": 66
+        },
+        {
+          "name": "Srilankan Airlines",
+          "count": 60
+        },
+        {
+          "name": "Lufthansa German Airlines",
+          "count": 60
+        },
+        {
+          "name": "Kuwait Airways",
+          "count": 60
+        },
+        {
+          "name": "Gulf Air",
+          "count": 60
+        },
+        {
+          "name": "Cathay Pacific Airways",
+          "count": 60
+        },
+        {
+          "name": "British Airways",
+          "count": 60
+        },
+        {
+          "name": "Virgin Atlantic",
+          "count": 60
+        }
+      ],
+      "delaysByAirline": [
+        {
+          "name": "Akasa Air",
+          "count": 445
+        },
+        {
+          "name": "SpiceJet",
+          "count": 66
+        },
+        {
+          "name": "Air Arabia",
+          "count": 56
+        },
+        {
+          "name": "Lufthansa German Airlines",
+          "count": 51
+        },
+        {
+          "name": "Thai Airways",
+          "count": 49
+        },
+        {
+          "name": "Gulf Air",
+          "count": 45
+        },
+        {
+          "name": "Indigo Airlines",
+          "count": 40
+        },
+        {
+          "name": "Srilankan Airlines",
+          "count": 36
+        },
+        {
+          "name": "Cathay Pacific Airways",
+          "count": 35
+        },
+        {
+          "name": "Swiss Intl Airlines",
+          "count": 30
+        },
+        {
+          "name": "Kuwait Airways",
+          "count": 30
+        },
+        {
+          "name": "British Airways",
+          "count": 29
+        },
+        {
+          "name": "Batik Air Malaysia",
+          "count": 27
+        },
+        {
+          "name": "Turkish Airlines",
+          "count": 26
+        },
+        {
+          "name": "Air France",
+          "count": 26
+        },
+        {
+          "name": "Uzbekistan Airways",
+          "count": 25
+        },
+        {
+          "name": "Royal Nepal",
+          "count": 23
+        },
+        {
+          "name": "UPS Cargo",
+          "count": 21
+        },
+        {
+          "name": "Virgin Atlantic",
+          "count": 20
+        },
+        {
+          "name": "S F Airlines",
+          "count": 20
+        }
+      ],
+      "delaysByHour": [
+        {
+          "hour": "00:00",
+          "count": 89
+        },
+        {
+          "hour": "01:00",
+          "count": 79
+        },
+        {
+          "hour": "02:00",
+          "count": 72
+        },
+        {
+          "hour": "03:00",
+          "count": 10
+        },
+        {
+          "hour": "04:00",
+          "count": 88
+        },
+        {
+          "hour": "05:00",
+          "count": 30
+        },
+        {
+          "hour": "06:00",
+          "count": 36
+        },
+        {
+          "hour": "07:00",
+          "count": 28
+        },
+        {
+          "hour": "08:00",
+          "count": 99
+        },
+        {
+          "hour": "09:00",
+          "count": 61
+        },
+        {
+          "hour": "10:00",
+          "count": 47
+        },
+        {
+          "hour": "11:00",
+          "count": 89
+        },
+        {
+          "hour": "12:00",
+          "count": 11
+        },
+        {
+          "hour": "13:00",
+          "count": 48
+        },
+        {
+          "hour": "14:00",
+          "count": 70
+        },
+        {
+          "hour": "15:00",
+          "count": 53
+        },
+        {
+          "hour": "16:00",
+          "count": 79
+        },
+        {
+          "hour": "17:00",
+          "count": 100
+        },
+        {
+          "hour": "18:00",
+          "count": 40
+        },
+        {
+          "hour": "19:00",
+          "count": 50
+        },
+        {
+          "hour": "20:00",
+          "count": 42
+        },
+        {
+          "hour": "21:00",
+          "count": 89
+        },
+        {
+          "hour": "22:00",
+          "count": 31
+        },
+        {
+          "hour": "23:00",
+          "count": 48
+        }
+      ],
+      "topDelayReasons": [
+        {
+          "reason": "93 Aircraft rotation",
+          "count": 804
+        },
+        {
+          "reason": "89 Restrictions at airport of departure, airport/runway closed due obstruct...",
+          "count": 297
+        },
+        {
+          "reason": "81 ATC restriction en-route or capacity",
+          "count": 20
+        },
+        {
+          "reason": "16 Commercial Publicity, Passenger Convenience, VIP, Press, Ground meals an...",
+          "count": 16
+        },
+        {
+          "reason": "63 Late crew boarding or departure procedures",
+          "count": 15
+        },
+        {
+          "reason": "41 Aircraft defects",
+          "count": 15
+        },
+        {
+          "reason": "86 Immigration, Customs, Health",
+          "count": 15
+        },
+        {
+          "reason": "33 Loading Equipment, lack of or breakdown, e.g. container pallet loader, l...",
+          "count": 10
+        },
+        {
+          "reason": "85 Mandatory security",
+          "count": 10
+        },
+        {
+          "reason": "66 Late cabin crew boarding or departure procedures",
+          "count": 9
+        }
+      ],
+      "delayDurationBuckets": [
+        {
+          "bucket": "0 min",
+          "count": 0
+        },
+        {
+          "bucket": "1–5 min",
+          "count": 232
+        },
+        {
+          "bucket": "6–15 min",
+          "count": 344
+        },
+        {
+          "bucket": "16–30 min",
+          "count": 330
+        },
+        {
+          "bucket": "31–60 min",
+          "count": 259
+        },
+        {
+          "bucket": "60+ min",
+          "count": 224
+        }
+      ]
+    },
+    {
+      "key": "DEC25",
+      "label": "December 2025",
+      "totalFlights": 2647,
+      "uniqueAirlines": 53,
+      "cancellationCount": 61,
+      "activeDaysSta": 31,
+      "avgFlightsPerActiveStaDay": 85.39,
+      "staOnTimeCount": 213,
+      "ataOnOrBeforeStaCount": 903,
+      "ataStaDailyComparison": [
+        {
+          "date": "01 Dec",
+          "ataOnOrBeforeSta": 38,
+          "ataAfterSta": 47
+        },
+        {
+          "date": "02 Dec",
+          "ataOnOrBeforeSta": 33,
+          "ataAfterSta": 47
+        },
+        {
+          "date": "03 Dec",
+          "ataOnOrBeforeSta": 34,
+          "ataAfterSta": 50
+        },
+        {
+          "date": "04 Dec",
+          "ataOnOrBeforeSta": 31,
+          "ataAfterSta": 57
+        },
+        {
+          "date": "05 Dec",
+          "ataOnOrBeforeSta": 38,
+          "ataAfterSta": 48
+        },
+        {
+          "date": "06 Dec",
+          "ataOnOrBeforeSta": 20,
+          "ataAfterSta": 60
+        },
+        {
+          "date": "07 Dec",
+          "ataOnOrBeforeSta": 37,
+          "ataAfterSta": 49
+        },
+        {
+          "date": "08 Dec",
+          "ataOnOrBeforeSta": 34,
+          "ataAfterSta": 50
+        },
+        {
+          "date": "09 Dec",
+          "ataOnOrBeforeSta": 35,
+          "ataAfterSta": 46
+        },
+        {
+          "date": "10 Dec",
+          "ataOnOrBeforeSta": 38,
+          "ataAfterSta": 45
+        },
+        {
+          "date": "11 Dec",
+          "ataOnOrBeforeSta": 37,
+          "ataAfterSta": 50
+        },
+        {
+          "date": "12 Dec",
+          "ataOnOrBeforeSta": 28,
+          "ataAfterSta": 57
+        },
+        {
+          "date": "13 Dec",
+          "ataOnOrBeforeSta": 20,
+          "ataAfterSta": 60
+        },
+        {
+          "date": "14 Dec",
+          "ataOnOrBeforeSta": 20,
+          "ataAfterSta": 68
+        },
+        {
+          "date": "15 Dec",
+          "ataOnOrBeforeSta": 14,
+          "ataAfterSta": 64
+        },
+        {
+          "date": "16 Dec",
+          "ataOnOrBeforeSta": 25,
+          "ataAfterSta": 61
+        },
+        {
+          "date": "17 Dec",
+          "ataOnOrBeforeSta": 26,
+          "ataAfterSta": 57
+        },
+        {
+          "date": "18 Dec",
+          "ataOnOrBeforeSta": 27,
+          "ataAfterSta": 59
+        },
+        {
+          "date": "19 Dec",
+          "ataOnOrBeforeSta": 16,
+          "ataAfterSta": 66
+        },
+        {
+          "date": "20 Dec",
+          "ataOnOrBeforeSta": 21,
+          "ataAfterSta": 63
+        },
+        {
+          "date": "21 Dec",
+          "ataOnOrBeforeSta": 28,
+          "ataAfterSta": 59
+        },
+        {
+          "date": "22 Dec",
+          "ataOnOrBeforeSta": 23,
+          "ataAfterSta": 61
+        },
+        {
+          "date": "23 Dec",
+          "ataOnOrBeforeSta": 22,
+          "ataAfterSta": 58
+        },
+        {
+          "date": "24 Dec",
+          "ataOnOrBeforeSta": 30,
+          "ataAfterSta": 56
+        },
+        {
+          "date": "25 Dec",
+          "ataOnOrBeforeSta": 35,
+          "ataAfterSta": 51
+        },
+        {
+          "date": "26 Dec",
+          "ataOnOrBeforeSta": 35,
+          "ataAfterSta": 49
+        },
+        {
+          "date": "27 Dec",
+          "ataOnOrBeforeSta": 42,
+          "ataAfterSta": 38
+        },
+        {
+          "date": "28 Dec",
+          "ataOnOrBeforeSta": 38,
+          "ataAfterSta": 48
+        },
+        {
+          "date": "29 Dec",
+          "ataOnOrBeforeSta": 28,
+          "ataAfterSta": 51
+        },
+        {
+          "date": "30 Dec",
+          "ataOnOrBeforeSta": 19,
+          "ataAfterSta": 61
+        },
+        {
+          "date": "31 Dec",
+          "ataOnOrBeforeSta": 31,
+          "ataAfterSta": 47
+        }
+      ],
+      "delayBreakdown": {
+        "onTime": 213,
+        "delayed": 1646,
+        "beforeTime": 727,
+        "other": 61
+      },
+      "delayCategories": [
+        {
+          "code": "2",
+          "count": 753
+        },
+        {
+          "code": "1",
+          "count": 1531
+        },
+        {
+          "code": "LAST",
+          "count": 302
+        },
+        {
+          "code": "CANC",
+          "count": 61
+        }
+      ],
+      "topAirlines": [
+        {
+          "name": "Akasa Air",
+          "count": 754
+        },
+        {
+          "name": "SpiceJet",
+          "count": 214
+        },
+        {
+          "name": "S F Airlines",
+          "count": 125
+        },
+        {
+          "name": "Thai Airways",
+          "count": 96
+        },
+        {
+          "name": "Ethopian Airlines",
+          "count": 74
+        },
+        {
+          "name": "Air Arabia",
+          "count": 63
+        },
+        {
+          "name": "Cathay Pacific Airways",
+          "count": 63
+        },
+        {
+          "name": "Oman Air",
+          "count": 62
+        },
+        {
+          "name": "Lufthansa German Airlines",
+          "count": 62
+        },
+        {
+          "name": "Virgin Atlantic Airways",
+          "count": 62
+        },
+        {
+          "name": "British Airways",
+          "count": 62
+        },
+        {
+          "name": "Srilankan Airlines",
+          "count": 62
+        }
+      ],
+      "delaysByAirline": [
+        {
+          "name": "Akasa Air",
+          "count": 523
+        },
+        {
+          "name": "Thai Airways",
+          "count": 82
+        },
+        {
+          "name": "SpiceJet",
+          "count": 73
+        },
+        {
+          "name": "Lufthansa German Airlines",
+          "count": 58
+        },
+        {
+          "name": "Air Arabia",
+          "count": 57
+        },
+        {
+          "name": "Indigo Airlines",
+          "count": 53
+        },
+        {
+          "name": "Cathay Pacific Airways",
+          "count": 48
+        },
+        {
+          "name": "Gulf Air",
+          "count": 43
+        },
+        {
+          "name": "Air France",
+          "count": 41
+        },
+        {
+          "name": "Kuwait Airways",
+          "count": 36
+        },
+        {
+          "name": "Virgin Atlantic Airways",
+          "count": 29
+        },
+        {
+          "name": "Turkish Airlines",
+          "count": 29
+        },
+        {
+          "name": "Swiss Intl Airlines",
+          "count": 29
+        },
+        {
+          "name": "Azerbaijan Airlines",
+          "count": 28
+        },
+        {
+          "name": "Cathay Pacific Cargo",
+          "count": 28
+        },
+        {
+          "name": "British Airways",
+          "count": 28
+        },
+        {
+          "name": "Thai Air Asia X",
+          "count": 27
+        },
+        {
+          "name": "Srilankan Airlines",
+          "count": 25
+        },
+        {
+          "name": "Royal Nepal",
+          "count": 24
+        },
+        {
+          "name": "Uzbekistan Airways",
+          "count": 24
+        }
+      ],
+      "delaysByHour": [
+        {
+          "hour": "00:00",
+          "count": 110
+        },
+        {
+          "hour": "01:00",
+          "count": 97
+        },
+        {
+          "hour": "02:00",
+          "count": 95
+        },
+        {
+          "hour": "03:00",
+          "count": 34
+        },
+        {
+          "hour": "04:00",
+          "count": 97
+        },
+        {
+          "hour": "05:00",
+          "count": 33
+        },
+        {
+          "hour": "06:00",
+          "count": 57
+        },
+        {
+          "hour": "07:00",
+          "count": 46
+        },
+        {
+          "hour": "08:00",
+          "count": 72
+        },
+        {
+          "hour": "09:00",
+          "count": 99
+        },
+        {
+          "hour": "10:00",
+          "count": 56
+        },
+        {
+          "hour": "11:00",
+          "count": 81
+        },
+        {
+          "hour": "12:00",
+          "count": 7
+        },
+        {
+          "hour": "13:00",
+          "count": 49
+        },
+        {
+          "hour": "14:00",
+          "count": 115
+        },
+        {
+          "hour": "15:00",
+          "count": 55
+        },
+        {
+          "hour": "16:00",
+          "count": 84
+        },
+        {
+          "hour": "17:00",
+          "count": 92
+        },
+        {
+          "hour": "18:00",
+          "count": 49
+        },
+        {
+          "hour": "19:00",
+          "count": 67
+        },
+        {
+          "hour": "20:00",
+          "count": 51
+        },
+        {
+          "hour": "21:00",
+          "count": 85
+        },
+        {
+          "hour": "22:00",
+          "count": 44
+        },
+        {
+          "hour": "23:00",
+          "count": 71
+        }
+      ],
+      "topDelayReasons": [
+        {
+          "reason": "93 Aircraft rotation",
+          "count": 1001
+        },
+        {
+          "reason": "89 Restrictions at airport of departure, airport/runway closed due obstruct...",
+          "count": 279
+        },
+        {
+          "reason": "99 Miscellaneous, not elsewhere specified",
+          "count": 34
+        },
+        {
+          "reason": "71 Departure station",
+          "count": 31
+        },
+        {
+          "reason": "16 Commercial Publicity, Passenger Convenience, VIP, Press, Ground meals an...",
+          "count": 20
+        },
+        {
+          "reason": "96 Operations control, rerouting, diversion, consolidation, aircraft change...",
+          "count": 18
+        },
+        {
+          "reason": "81 ATC restriction en-route or capacity",
+          "count": 16
+        },
+        {
+          "reason": "63 Late crew boarding or departure procedures",
+          "count": 14
+        },
+        {
+          "reason": "41 Aircraft defects",
+          "count": 13
+        },
+        {
+          "reason": "33 Loading Equipment, lack of or breakdown, e.g. container pallet loader, l...",
+          "count": 11
+        }
+      ],
+      "delayDurationBuckets": [
+        {
+          "bucket": "0 min",
+          "count": 0
+        },
+        {
+          "bucket": "1–5 min",
+          "count": 240
+        },
+        {
+          "bucket": "6–15 min",
+          "count": 369
+        },
+        {
+          "bucket": "16–30 min",
+          "count": 341
+        },
+        {
+          "bucket": "31–60 min",
+          "count": 284
+        },
+        {
+          "bucket": "60+ min",
+          "count": 412
+        }
+      ]
+    }
+  ],
+  "combined": {
+    "totalFlights": 25807,
+    "monthOverMonthFlightChangePct": -14.87,
+    "calendarDaysJanFeb2026": 365,
+    "avgFlightsPerCalendarDay": 70.7
+  }
+}
