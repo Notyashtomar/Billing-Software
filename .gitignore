@@ -1,0 +1,15 @@
+# Local environment files (may contain API tokens)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.production
+
+# Generated Cloudflare worker bundle (embeds env secrets)
+web/wrangler-dry-run/
+
+# Dependencies and OS junk
+node_modules/
+.DS_Store
+Thumbs.db
