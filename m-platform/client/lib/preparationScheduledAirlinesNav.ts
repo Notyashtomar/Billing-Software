@@ -1,4 +1,5 @@
 import type { PreparationStatus } from '@/lib/billing-shared/enums';
+import { deployedFrisUrl } from '@/lib/deployed-fris';
 import {
   flightScheduleYmdRangeFromLabels,
   type ScheduledAirlinesFlightDateRange,
@@ -110,11 +111,20 @@ function appendBillingSerialNavParams(
   p.set('highlightSerial', trimmedSerial);
   p.set('serial', trimmedSerial);
 
-  const flightDateRange = flightDateRangeFromOperationalSnapshot(opts.snap);
-  appendScheduledAirlinesDateRange(p, flightDateRange, {
-    fromYmd: opts.fromYmd,
-    toYmd: opts.toYmd,
-  });
+  const pageFrom = opts.fromYmd?.trim() ?? '';
+  const pageTo = opts.toYmd?.trim() ?? '';
+  if (pageFrom && pageTo) {
+    // Keep the billing screen's date window so the same flights stay in range.
+    appendScheduledAirlinesDateRange(p, null, {
+      fromYmd: pageFrom,
+      toYmd: pageTo,
+    });
+  } else {
+    appendScheduledAirlinesDateRange(
+      p,
+      flightDateRangeFromOperationalSnapshot(opts.snap),
+    );
+  }
 
   const snap = opts.snap;
   const airlineName = snap
@@ -140,7 +150,7 @@ export function buildScheduledAirlinesHrefFromBillingSerial(
 ): string {
   const p = new URLSearchParams();
   appendBillingSerialNavParams(p, serial, opts);
-  return `/fris/flights/scheduledairlines?${p.toString()}`;
+  return deployedFrisUrl(`/fris/flights/scheduledairlines?${p.toString()}`);
 }
 
 /**
@@ -154,7 +164,7 @@ export function buildRafFormsHrefFromBillingSerial(
   const p = new URLSearchParams();
   appendBillingSerialNavParams(p, serial, opts);
   p.set('openSidebar', '1');
-  return `${RAF_FORMS_PATH}?${p.toString()}`;
+  return deployedFrisUrl(`${RAF_FORMS_PATH}?${p.toString()}`);
 }
 
 export function buildRafFormsHrefFromPreparation(

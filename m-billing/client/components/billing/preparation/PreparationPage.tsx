@@ -1280,9 +1280,10 @@ export function PreparationPage({ api }: Props) {
                         </td>
                         <td className="px-4 py-3 text-gray-800">
                           {serialHref ? (
-                            <Link
+                            <a
                               href={serialHref}
-                              scroll={false}
+                              target="_blank"
+                              rel="noopener noreferrer"
                               className="font-medium text-[color:var(--billing-accent-strong)] underline decoration-[color:var(--billing-accent)]/40 underline-offset-2 hover:text-[color:var(--billing-heading)]"
                               title={
                                 isRafRow
@@ -1291,7 +1292,7 @@ export function PreparationPage({ api }: Props) {
                               }
                             >
                               {serialLabel}
-                            </Link>
+                            </a>
                           ) : (
                             serialLabel
                           )}

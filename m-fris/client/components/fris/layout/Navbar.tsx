@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import Link from 'next/link';
+import NextLink from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   Menu,
@@ -83,10 +83,11 @@ import {
   DASHBOARD_PATH,
   isDashboardFlightScopeHrefActive,
 } from '@/lib/dashboardFlightScope';
+import { isBillingNavbarChrome } from '@/lib/bwms-app-tools';
 import {
-  BILLING_NAVBAR_ALLOWED_LABELS,
-  isBillingNavbarChrome,
-} from '@/lib/bwms-app-tools';
+  DEPLOYED_SCHEDULED_AIRLINES_PATH,
+  deployedFrisUrl,
+} from '@/lib/deployed-fris';
 import {
   billingPageIdFromHref,
   clientMayUseBwmsAppPage,
@@ -99,7 +100,40 @@ import {
   BILLING_WORKFLOW_NAV,
 } from '@/components/billing/billingAppNav';
 
-const BILLING_FRIS_CROSS_NAV = new Set<string>(BILLING_NAVBAR_ALLOWED_LABELS);
+/** Billing Advance / Flights open the live scheduled-airlines page in a new tab. */
+function AppNavLink({
+  href,
+  className,
+  onClick,
+  children,
+  role,
+}: {
+  href: string;
+  className?: string;
+  onClick?: () => void;
+  children: React.ReactNode;
+  role?: string;
+}) {
+  if (/^https?:\/\//i.test(href)) {
+    return (
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={className}
+        role={role}
+        onClick={onClick}
+      >
+        {children}
+      </a>
+    );
+  }
+  return (
+    <NextLink href={href} className={className} role={role} onClick={onClick}>
+      {children}
+    </NextLink>
+  );
+}
 
 /** Billed Services family — grant any sibling so tab does not vanish. */
 const BILLING_SOURCES_PAGE_IDS = [
@@ -834,8 +868,23 @@ const Navbar: React.FC = () => {
     }
 
     if (billingNavbarChrome) {
-      const frisCross = items.filter((item) => BILLING_FRIS_CROSS_NAV.has(item.label));
-      return [...buildBillingChromeNavItems(), ...frisCross];
+      const scheduledAirlines = deployedFrisUrl(DEPLOYED_SCHEDULED_AIRLINES_PATH);
+      const openScheduledAirlines = (label: 'Advance' | 'Flights'): NavItem => {
+        const source = ALL_NAV_ITEMS.find((item) => item.label === label)!;
+        return {
+          ...source,
+          path: scheduledAirlines,
+          hasDropdown: false,
+          dropdownItems: undefined,
+        };
+      };
+      const mis = items.filter((item) => item.label === 'MIS');
+      return [
+        ...buildBillingChromeNavItems(),
+        openScheduledAirlines('Advance'),
+        openScheduledAirlines('Flights'),
+        ...mis,
+      ];
     }
 
     return items;
@@ -1265,7 +1314,7 @@ const Navbar: React.FC = () => {
                   )}
                 </button>
                 ) : (
-                  <Link
+                  <AppNavLink
                     href={item.path}
                     className={`
                     flex items-center space-x-1.5 lg:space-x-2
@@ -1283,7 +1332,7 @@ const Navbar: React.FC = () => {
                       </span>
                     )}
                     <span>{item.label}</span>
-                  </Link>
+                  </AppNavLink>
                 )}
 
                 {/* Active indicator */}
@@ -1324,7 +1373,7 @@ const Navbar: React.FC = () => {
                             </span>
                           </div>
                         ) : (
-                        <Link
+                        <AppNavLink
                           key={`${row.path}-${index}`}
                           href={row.path}
                           className={`
@@ -1353,7 +1402,7 @@ const Navbar: React.FC = () => {
                             </span>
                           )}
                           <span className="text-sm font-medium">{row.label}</span>
-                        </Link>
+                        </AppNavLink>
                       ),
                     )
                   ) : (
@@ -1375,7 +1424,7 @@ const Navbar: React.FC = () => {
                         }}
                       >
                         <div className="flex items-stretch">
-                          <Link
+                          <AppNavLink
                             href={dropdownItem.path}
                             className={`
                               flex flex-1 items-center gap-2 px-4 py-3
@@ -1406,7 +1455,7 @@ const Navbar: React.FC = () => {
                             <span className="flex-1 text-sm font-medium">
                               {dropdownItem.label}
                             </span>
-                          </Link>
+                          </AppNavLink>
                           {dropdownItem.hasNestedDropdown && (
                             <button
                               type="button"
@@ -1442,7 +1491,7 @@ const Navbar: React.FC = () => {
                             <div className="border-t border-gray-100 bg-gray-50/80 py-1">
                               {dropdownItem.nestedItems.map(
                                 (nestedItem, nestedIndex) => (
-                                  <Link
+                                  <AppNavLink
                                     key={nestedIndex}
                                     href={nestedItem.path}
                                     className={`
@@ -1473,7 +1522,7 @@ const Navbar: React.FC = () => {
                                     <span className="font-medium">
                                       {nestedItem.label}
                                     </span>
-                                  </Link>
+                                  </AppNavLink>
                                 ),
                               )}
                             </div>
@@ -1584,7 +1633,7 @@ const Navbar: React.FC = () => {
 
               {/* Dropdown Items */}
               <div className="py-2">
-                <Link
+                <AppNavLink
                   href="/fris/profile"
                   className={`
                     flex items-center space-x-3 px-4 py-3
@@ -1598,7 +1647,7 @@ const Navbar: React.FC = () => {
                 >
                   <User className={`w-4 h-4 ${navSkin.linkHoverIcon}`} />
                   <span className="font-medium">View Profile</span>
-                </Link>
+                </AppNavLink>
 
                 <button
                   type="button"
@@ -1716,7 +1765,7 @@ const Navbar: React.FC = () => {
                     <span>{item.label}</span>
                   </button>
                 ) : (
-                  <Link
+                  <AppNavLink
                     href={item.path}
                     className={`
                     flex items-center space-x-2 px-3 py-3
@@ -1734,7 +1783,7 @@ const Navbar: React.FC = () => {
                       </span>
                     )}
                     <span>{item.label}</span>
-                  </Link>
+                  </AppNavLink>
                 )}
 
                 {item.hasDropdown && (
@@ -1782,7 +1831,7 @@ const Navbar: React.FC = () => {
                                 </span>
                               </div>
                             ) : (
-                            <Link
+                            <AppNavLink
                               key={`${row.path}-${index}`}
                               href={row.path}
                               className={`
@@ -1798,7 +1847,7 @@ const Navbar: React.FC = () => {
                                 <span className="text-gray-400">{row.icon}</span>
                               )}
                               <span className="text-sm">{row.label}</span>
-                            </Link>
+                            </AppNavLink>
                           ),
                         )
                       : item.dropdownItems.map((dropdownItem, index) => (
@@ -1811,7 +1860,7 @@ const Navbar: React.FC = () => {
                         }}
                       >
                         <div className="flex items-center justify-between">
-                          <Link
+                          <AppNavLink
                             href={dropdownItem.path}
                             className={`
                               flex items-center space-x-2 px-3 py-2
@@ -1840,7 +1889,7 @@ const Navbar: React.FC = () => {
                             <span className="text-sm">
                               {dropdownItem.label}
                             </span>
-                          </Link>
+                          </AppNavLink>
                           {dropdownItem.hasNestedDropdown && (
                             <button
                               className="p-2"
@@ -1870,7 +1919,7 @@ const Navbar: React.FC = () => {
                               <div className="pl-6 bg-gray-50/50 rounded-lg ml-2">
                                 {dropdownItem.nestedItems.map(
                                   (nestedItem, nestedIndex) => (
-                                    <Link
+                                    <AppNavLink
                                       key={nestedIndex}
                                       href={nestedItem.path}
                                       className={`
@@ -1894,7 +1943,7 @@ const Navbar: React.FC = () => {
                                         </span>
                                       )}
                                       <span>{nestedItem.label}</span>
-                                    </Link>
+                                    </AppNavLink>
                                   ),
                                 )}
                               </div>
@@ -1960,7 +2009,7 @@ const Navbar: React.FC = () => {
               role="menu"
             >
               <div className="space-y-1 py-2 pl-2">
-                <Link
+                <AppNavLink
                   href="/fris/profile"
                   role="menuitem"
                   className={`
@@ -1976,7 +2025,7 @@ const Navbar: React.FC = () => {
                 >
                   <User className="h-4 w-4 shrink-0" />
                   <span>View Profile</span>
-                </Link>
+                </AppNavLink>
 
                 <button
                   type="button"

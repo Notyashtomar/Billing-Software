@@ -6,6 +6,9 @@ module.exports = {
     './components/**/*.{js,ts,jsx,tsx,mdx}',
     './app/**/*.{js,ts,jsx,tsx,mdx}',
     './src/**/*.{js,ts,jsx,tsx,mdx}',
+    '../m-platform/client/**/*.{js,ts,jsx,tsx,mdx}',
+    '../m-fris/client/**/*.{js,ts,jsx,tsx,mdx}',
+    '../m-billing/client/**/*.{js,ts,jsx,tsx,mdx}',
   ],
   theme: {
     extend: {
