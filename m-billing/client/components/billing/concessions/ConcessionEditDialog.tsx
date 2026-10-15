@@ -21,7 +21,6 @@ import {
   type ContractConcessionRatesForm,
 } from '@/lib/billing-shared/contract-concessions';
 import {
-  EXCLUSIVE_BHS_INVOICE_CONCESSION_PERCENT,
   contractHasSavedCeilingRate,
   isExclusiveBhsConcessionContract,
 } from '@/lib/billing-shared/exclusive-bhs-concession';
@@ -185,9 +184,9 @@ export function ConcessionEditDialog({
               >
                 <p className="font-medium text-gray-900">Exclusive BHS pricing</p>
                 <p className="mt-1">
-                  Invoice concession is the higher of {EXCLUSIVE_BHS_INVOICE_CONCESSION_PERCENT}% of
-                  scheduled-flight charges or this ceiling rate multiplied by the number of flights.
-                  Save the ceiling in the matching bill currency.
+                  Invoice concession is the higher of the international or domestic percent saved
+                  on this station&apos;s contract and this ceiling rate multiplied by the number of
+                  flights. Save the ceiling in the matching bill currency.
                 </p>
               </div>
             ) : null}

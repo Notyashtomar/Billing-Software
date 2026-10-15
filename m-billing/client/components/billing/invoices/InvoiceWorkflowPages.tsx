@@ -10,7 +10,6 @@ import {
   readLoginStationCode,
 } from '@/lib/billing-default-period';
 import { Building2, CalendarDays, ChevronLeft, Download, Loader2, Package, Plane, RefreshCw, UsersRound, Wrench } from 'lucide-react';
-import { EXCLUSIVE_BHS_INVOICE_CONCESSION_PERCENT } from '@/lib/billing-shared/exclusive-bhs-concession';
 import { BillingPageHeader } from '../BillingLayout';
 import { billingUi } from '../billingUi';
 import { BillingDataTable } from '../BillingDataTable';
@@ -205,11 +204,7 @@ function InvoiceAmountBreakdown({
   const concessionAmount = headerAlreadyPeeled
     ? headerConcession
     : headerConcession + ceilingOnLines;
-  const rawConcessionPercent = header.concessionFeePercent ?? 0;
-  const concessionPercent =
-    rawConcessionPercent > EXCLUSIVE_BHS_INVOICE_CONCESSION_PERCENT
-      ? EXCLUSIVE_BHS_INVOICE_CONCESSION_PERCENT
-      : rawConcessionPercent;
+  const concessionPercent = header.concessionFeePercent ?? 0;
   const currency = header.currencyCode === 'USD' ? 'USD' : 'INR';
   const usdReceivable = currency === 'USD' && Boolean(header.totalReceivableInUsd);
   const roe = Number(header.currencyFactor) > 0 ? Number(header.currencyFactor) : 1;
@@ -305,11 +300,7 @@ function InvoiceCalculationDetails({
 }) {
   const currency = header.currencyCode === 'USD' ? 'USD' : 'INR';
   const usdReceivable = currency === 'USD' && Boolean(header.totalReceivableInUsd);
-  const rawConcessionPercent = header.concessionFeePercent ?? 0;
-  const concessionPercent =
-    rawConcessionPercent > EXCLUSIVE_BHS_INVOICE_CONCESSION_PERCENT
-      ? EXCLUSIVE_BHS_INVOICE_CONCESSION_PERCENT
-      : rawConcessionPercent;
+  const concessionPercent = header.concessionFeePercent ?? 0;
   const concessionAmount = header.concessionFeeAmount ?? 0;
   const roe = Number(header.currencyFactor) > 0 ? Number(header.currencyFactor) : 1;
   const grossBilling = header.subtotalExclTax + concessionAmount;
