@@ -315,7 +315,13 @@ export class BillingCustomersService {
       doc.invoiceTerms = dto.invoiceTerms.trim() || undefined;
       delete customerFields.invoiceTerms;
     }
-    Object.assign(doc, customerFields);
+    // Partial PATCH bodies are expanded to a full DTO, so omitted fields arrive
+    // as undefined. Assigning those would wipe required values such as name.
+    for (const [key, value] of Object.entries(customerFields)) {
+      if (value !== undefined) {
+        doc.set(key, value);
+      }
+    }
     if (flightNumber !== undefined) {
       doc.flightNumber = flightNumber.trim() || undefined;
     }

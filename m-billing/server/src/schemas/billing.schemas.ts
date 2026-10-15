@@ -252,7 +252,7 @@ export class BillingContract {
   @Prop({ enum: ['comprehensive', 'non_comprehensive', 'mixed'] })
   bhsConcessionCoverage?: 'comprehensive' | 'non_comprehensive' | 'mixed';
 
-  /** Exclusive contracts only: royalty = amount × 18/(100−18) instead of × 18/100. */
+  /** Exclusive contracts only: royalty = amount × p/(100−p) using this contract's saved concession %. */
   @Prop({ default: false })
   extendedRoyaltyEnabled?: boolean;
 
