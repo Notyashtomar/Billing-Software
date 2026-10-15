@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Receipt } from 'lucide-react';
 import ModuleGlassLoginCard from '@/components/login/ModuleGlassLoginCard';
 import { getApiBase } from '@/services/api';
@@ -97,6 +97,7 @@ type LoginResponseUser = FrisSessionUser;
  * themed with Finance suite blue + yellow.
  */
 export default function BillingLogin() {
+  const router = useRouter();
   const searchParams = useSearchParams();
 
   const [employeeId, setEmployeeId] = useState('');
@@ -140,6 +141,7 @@ export default function BillingLogin() {
       setResolvedStationId('');
       setStationsFetchFailed(false);
       setStationsLoading(false);
+      router.replace(buildLandingMapSelectUrl());
       return;
     }
 
@@ -176,7 +178,7 @@ export default function BillingLogin() {
     return () => {
       cancelled = true;
     };
-  }, [mounted, searchParams]);
+  }, [mounted, router, searchParams]);
 
   async function authenticate(
     userid: string,
@@ -386,7 +388,7 @@ export default function BillingLogin() {
           title="Billing Login"
           subtitle="Access your account securely"
           station={{
-            loading: stationsLoading,
+            loading: stationsLoading && !loginStation?.stationCode,
             code: loginStation?.stationCode,
             label: stationLabel,
             city: loginStation?.stationCity || loginStation?.stationName,
@@ -399,7 +401,7 @@ export default function BillingLogin() {
           showPassword={showPassword}
           error={error}
           isLoading={isLoading}
-          submitDisabled={!loginStation?.stationCode || stationsLoading}
+          submitDisabled={!loginStation?.stationCode}
           submitLabel="Login"
           onEmployeeIdChange={setEmployeeId}
           onPasswordChange={setPassword}

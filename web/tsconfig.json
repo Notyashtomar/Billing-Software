@@ -19,7 +19,12 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": [
+        "./*",
+        "../m-platform/client/*",
+        "../m-fris/client/*",
+        "../m-billing/client/*"
+      ]
     }
   },
   "include": [

@@ -1,6 +1,9 @@
 @import "tailwindcss";
 @config "../tailwind.config.js";
 @source "../../../modules/m-bill-receivables/client";
+@source "../../m-platform/client";
+@source "../../m-fris/client";
+@source "../../m-billing/client";
 
 /** Phone landscape stays on mobile nav (wide but short viewport). */
 @custom-variant nav-desktop (@media (min-width: 1024px) and (min-height: 500px));

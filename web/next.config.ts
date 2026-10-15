@@ -249,9 +249,18 @@ const nextConfig: NextConfig = {
         )
       : { ...(prev ?? {}) };
 
+    // Shared UI lives in the module clients. This checkout has no junction
+    // mounts under web/, so try web first, then those trees.
+    const moduleClientRoots = [
+      path.join(__dirname),
+      path.join(__dirname, '../m-platform/client'),
+      path.join(__dirname, '../m-fris/client'),
+      path.join(__dirname, '../m-billing/client'),
+    ];
+
     webpackConfig.resolve.alias = {
       ...prevAsObject,
-      '@': path.join(__dirname),
+      '@': moduleClientRoots,
       ...(isServer ? BROWSER_ONLY_SERVER_ALIASES : {}),
       // Client: mammoth browser build (Node entry breaks Word preview in Next).
       // Must override the empty BROWSER_ONLY stub which only applies on server.

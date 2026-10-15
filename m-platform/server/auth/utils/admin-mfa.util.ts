@@ -1,10 +1,16 @@
-type OtplibModule = typeof import('otplib');
+type OtplibModule = {
+  verify: (input: {
+    secret: string;
+    token: string;
+  }) => Promise<{ valid?: boolean }>;
+  generateSecret: () => string;
+};
 
 let otplibPromise: Promise<OtplibModule> | undefined;
 
 async function loadOtplib(): Promise<OtplibModule> {
   if (!otplibPromise) {
-    otplibPromise = import('otplib');
+    otplibPromise = import('otplib') as Promise<OtplibModule>;
   }
   return otplibPromise;
 }

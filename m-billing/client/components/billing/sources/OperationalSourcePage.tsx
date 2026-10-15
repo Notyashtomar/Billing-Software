@@ -2587,9 +2587,10 @@ export function OperationalSourcePage({ api, config }: Props) {
                     snap: r.operationalData,
                   });
               return (
-                <Link
+                <a
                   href={href}
-                  scroll={false}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="font-medium text-[color:var(--billing-accent-strong)] underline decoration-[color:var(--billing-accent)]/40 underline-offset-2 hover:text-[color:var(--billing-heading)]"
                   title={
                     isRaf
@@ -2598,7 +2599,7 @@ export function OperationalSourcePage({ api, config }: Props) {
                   }
                 >
                   {label}
-                </Link>
+                </a>
               );
             },
           },
