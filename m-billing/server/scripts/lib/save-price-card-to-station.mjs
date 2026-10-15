@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { loadMongoUri } from './seed-catalog-from-price-card.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const require = createRequire(resolve(__dirname, '../../../../../apps/api/package.json'));
+const require = createRequire(resolve(__dirname, '../../../../api/package.json'));
 
 const DOC_CUSTOMER = 'customer';
 const DOC_CONTRACT = 'contract';

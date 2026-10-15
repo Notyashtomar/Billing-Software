@@ -10,9 +10,9 @@ import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const require = createRequire(resolve(__dirname, '../../../../../apps/api/package.json'));
-const API_DIR = resolve(__dirname, '../../../../../apps/api');
-const REPO_ROOT = resolve(__dirname, '../../../../../../');
+const require = createRequire(resolve(__dirname, '../../../../api/package.json'));
+const API_DIR = resolve(__dirname, '../../../../api');
+const REPO_ROOT = resolve(__dirname, '../../../..');
 
 const DOC_TYPE_CATALOG = 'service_catalog';
 const DOC_TYPE_RAF = 'raf_adhoc_rate';
