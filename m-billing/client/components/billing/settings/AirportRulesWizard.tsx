@@ -69,17 +69,51 @@ export function ConfigureRulesButton({
   );
 }
 
-async function downloadTemplate() {
+function columnLetter(index: number): string {
+  let n = index;
+  let letters = '';
+  while (n > 0) {
+    const rem = (n - 1) % 26;
+    letters = String.fromCharCode(65 + rem) + letters;
+    n = Math.floor((n - 1) / 26);
+  }
+  return letters;
+}
+
+function workbookServices(rates: CeilingRate[]): string[] {
+  const extras = rates
+    .map((rate) => rate.serviceType.trim())
+    .filter((service) => service && !(TEMPLATE_SERVICES as readonly string[]).includes(service));
+  return [...TEMPLATE_SERVICES, ...Array.from(new Set(extras))];
+}
+
+function workbookAircraft(rates: CeilingRate[]): string[] {
+  const known = new Set<string>(AIRCRAFT_CODES);
+  const extras = rates
+    .map((rate) => rate.aircraftCode.trim().toUpperCase())
+    .filter((code) => code && !known.has(code));
+  return [...AIRCRAFT_CODES, ...Array.from(new Set(extras))];
+}
+
+export async function downloadMagRatesWorkbook(
+  rates: CeilingRate[] = [],
+  fileName = 'airport-mag-rates.xlsx',
+) {
   const ExcelJS = await getExcelJSModule();
+  const services = workbookServices(rates);
+  const aircraft = workbookAircraft(rates);
+  const amounts = new Map(
+    rates.map((rate) => [`${rate.aircraftCode.trim().toUpperCase()}|${rate.serviceType.trim()}`, rate.amount]),
+  );
   const workbook = new ExcelJS.Workbook();
   workbook.creator = 'FRIS Billing';
-  const sheet = workbook.addWorksheet('Ceiling rates', {
+  const sheet = workbook.addWorksheet('MAG rates', {
     views: [{ state: 'frozen', ySplit: 1, xSplit: 1, showGridLines: false }],
     properties: { tabColor: { argb: 'FF1E3A5F' } },
   });
   sheet.columns = [
     { header: 'Aircraft code', key: 'aircraft', width: 18 },
-    ...TEMPLATE_SERVICES.map((header, index) => ({
+    ...services.map((header, index) => ({
       header,
       key: `service${index}`,
       width: 28,
@@ -98,8 +132,11 @@ async function downloadTemplate() {
       right: { style: 'thin', color: { argb: 'FF1E3A5F' } },
     };
   });
-  AIRCRAFT_CODES.forEach((code) => {
-    const row = sheet.addRow([code, null, null, null, null]);
+  aircraft.forEach((code) => {
+    const row = sheet.addRow([
+      code,
+      ...services.map((service) => amounts.get(`${code}|${service}`) ?? null),
+    ]);
     row.height = 22;
     row.eachCell({ includeEmpty: true }, (cell, col) => {
       cell.border = {
@@ -118,9 +155,11 @@ async function downloadTemplate() {
       }
     });
   });
-  sheet.autoFilter = 'A1:E6';
+  const lastColumn = columnLetter(services.length + 1);
+  const lastRow = aircraft.length + 1;
+  sheet.autoFilter = `A1:${lastColumn}${lastRow}`;
   sheet.addConditionalFormatting({
-    ref: 'B2:E6',
+    ref: `B2:${lastColumn}${lastRow}`,
     rules: [
       {
         type: 'cellIs',
@@ -149,9 +188,13 @@ async function downloadTemplate() {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = 'airport-ceiling-rates-template.xlsx';
+  link.download = fileName;
   link.click();
   URL.revokeObjectURL(url);
+}
+
+async function downloadTemplate() {
+  await downloadMagRatesWorkbook([], 'airport-mag-rates-template.xlsx');
 }
 
 async function parseCeilingWorkbook(file: File): Promise<CeilingRate[]> {
@@ -192,7 +235,7 @@ async function parseCeilingWorkbook(file: File): Promise<CeilingRate[]> {
     });
   }
   if (rates.length === 0) {
-    throw new Error('Enter at least one ceiling amount in the workbook.');
+    throw new Error('Enter at least one MAG amount in the workbook.');
   }
   return rates;
 }
@@ -200,15 +243,7 @@ async function parseCeilingWorkbook(file: File): Promise<CeilingRate[]> {
 export function AirportRulesWizard({ api, initial, onClose, onSaved }: Props) {
   const [step, setStep] = useState(0);
   const [ownership, setOwnership] = useState<'private' | 'aai'>(initial?.ownership ?? 'private');
-  const [mechanism, setMechanism] = useState<'gross' | 'net'>(
-    initial?.revenueShareMechanism ?? 'gross',
-  );
-  const [percent, setPercent] = useState(
-    initial?.revenueSharePercent != null ? String(initial.revenueSharePercent) : '',
-  );
   const [minShare, setMinShare] = useState(initial?.minRevenueShareApplicable ?? false);
-  const [effectiveFrom, setEffectiveFrom] = useState(initial?.effectiveFrom?.slice(0, 10) ?? '');
-  const [effectiveTo, setEffectiveTo] = useState(initial?.effectiveTo?.slice(0, 10) ?? '');
   const [ceilingRates, setCeilingRates] = useState<CeilingRate[]>(initial?.ceilingRates ?? []);
   const [fileName, setFileName] = useState('');
   const [error, setError] = useState('');
@@ -222,13 +257,7 @@ export function AirportRulesWizard({ api, initial, onClose, onSaved }: Props) {
         ?.airportCommercial;
       if (cancelled || !commercial) return;
       setOwnership(commercial.ownership ?? 'private');
-      setMechanism(commercial.revenueShareMechanism ?? 'gross');
-      setPercent(
-        commercial.revenueSharePercent != null ? String(commercial.revenueSharePercent) : '',
-      );
       setMinShare(Boolean(commercial.minRevenueShareApplicable));
-      setEffectiveFrom(commercial.effectiveFrom ? String(commercial.effectiveFrom).slice(0, 10) : '');
-      setEffectiveTo(commercial.effectiveTo ? String(commercial.effectiveTo).slice(0, 10) : '');
       setCeilingRates(commercial.ceilingRates ?? []);
     });
     return () => {
@@ -237,60 +266,46 @@ export function AirportRulesWizard({ api, initial, onClose, onSaved }: Props) {
   }, [api, initial]);
 
   const needsWorkbook = ownership === 'private' && minShare;
-  const steps =
+  const steps: { id: 'ownership' | 'minimum' | 'mag'; label: string }[] =
     ownership === 'aai'
-      ? ['Ownership', 'Revenue share', 'Period']
-      : needsWorkbook
-        ? ['Ownership', 'Revenue share', 'Minimum share', 'Ceiling rates']
-        : ['Ownership', 'Revenue share', 'Minimum share', 'Period'];
+      ? [{ id: 'ownership', label: 'Ownership' }]
+      : [
+          { id: 'ownership', label: 'Ownership' },
+          { id: 'minimum', label: 'Minimum share' },
+          { id: 'mag', label: 'MAG rates' },
+        ];
+  const stepIndex = Math.min(step, steps.length - 1);
+  const currentStep = steps[stepIndex];
+  const onMagStep = currentStep.id === 'mag';
+  const canSaveNow = ownership === 'aai' || onMagStep || (currentStep.id === 'minimum' && !minShare);
 
   const chooseOwnership = (next: 'private' | 'aai') => {
     setOwnership(next);
-    setMechanism(next === 'private' ? 'gross' : 'net');
-    if (next === 'aai') setMinShare(false);
+    if (next === 'aai') {
+      setMinShare(false);
+      setStep(0);
+    }
   };
 
   const goNext = () => {
     setError('');
-    if (step === 1) {
-      const value = Number(percent);
-      if (!Number.isFinite(value) || value < 0 || value > 100) {
-        setError('Enter a revenue share between 0 and 100.');
-        return;
-      }
-    }
-    if (!needsWorkbook && step === steps.length - 1) return;
-    if (needsWorkbook && step === 2 && !effectiveFrom) {
-      /* dates collected on last step */
-    }
-    setStep((current) => Math.min(current + 1, steps.length - 1));
+    if (currentStep.id === 'ownership' && ownership === 'aai') return;
+    if (currentStep.id === 'minimum' && !minShare) return;
+    setStep(stepIndex + 1);
   };
 
   const save = async () => {
     setError('');
-    if (!effectiveFrom || !effectiveTo) {
-      setError('Enter the effective date and the valid-till date.');
-      return;
-    }
-    if (effectiveTo < effectiveFrom) {
-      setError('Valid till must be on or after the effective date.');
-      return;
-    }
     if (needsWorkbook && ceilingRates.length === 0) {
-      setError('Upload the ceiling-rate workbook before saving.');
+      setError('Upload the MAG rates workbook before saving.');
       return;
     }
-    const value = Number(percent);
     setSaving(true);
     try {
       await api.updateSettings({
         airportCommercial: {
           ownership,
-          revenueShareMechanism: mechanism,
-          revenueSharePercent: value,
           minRevenueShareApplicable: needsWorkbook,
-          effectiveFrom,
-          effectiveTo,
           ceilingRates: needsWorkbook ? ceilingRates : [],
         },
       });
@@ -321,8 +336,24 @@ export function AirportRulesWizard({ api, initial, onClose, onSaved }: Props) {
               Configure airport rules
             </h2>
             <p className="mt-1 text-xs text-[color:var(--billing-text-muted)]">
-              Step {step + 1} of {steps.length}: {steps[step]}
+              Step {stepIndex + 1} of {steps.length}: {currentStep.label}
             </p>
+            <ol className="mt-2 flex flex-wrap gap-1.5">
+              {steps.map((item, index) => (
+                <li
+                  key={item.id}
+                  className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                    index === stepIndex
+                      ? 'bg-[color:var(--billing-primary)] text-white'
+                      : item.id === 'mag' && !needsWorkbook
+                        ? 'bg-[color:var(--billing-border)] text-[color:var(--billing-text-muted)] opacity-50'
+                        : 'bg-[color:var(--billing-border)] text-[color:var(--billing-text-muted)]'
+                  }`}
+                >
+                  {index + 1}. {item.label}
+                </li>
+              ))}
+            </ol>
           </div>
           <button type="button" className="text-sm text-[color:var(--billing-text-muted)]" onClick={onClose}>
             Close
@@ -335,7 +366,7 @@ export function AirportRulesWizard({ api, initial, onClose, onSaved }: Props) {
           </p>
         ) : null}
 
-        {step === 0 ? (
+        {currentStep.id === 'ownership' ? (
           <fieldset className="mt-4 grid gap-2">
             <legend className="text-sm font-medium text-[color:var(--billing-heading)]">Ownership</legend>
             {(
@@ -357,52 +388,14 @@ export function AirportRulesWizard({ api, initial, onClose, onSaved }: Props) {
           </fieldset>
         ) : null}
 
-        {step === 1 ? (
-          <div className="mt-4 grid gap-3">
-            <fieldset className="grid gap-2">
-              <legend className="text-sm font-medium text-[color:var(--billing-heading)]">
-                Revenue share mechanism
-              </legend>
-              {(
-                [
-                  ['gross', 'Share on gross'],
-                  ['net', 'Share on net'],
-                ] as const
-              ).map(([value, label]) => (
-                <label key={value} className="flex min-h-11 items-center gap-2 text-sm">
-                  <input
-                    type="radio"
-                    name="mechanism"
-                    checked={mechanism === value}
-                    onChange={() => setMechanism(value)}
-                  />
-                  {label}
-                </label>
-              ))}
-            </fieldset>
-            <label className="grid gap-1 text-sm font-medium text-[color:var(--billing-heading)]">
-              Revenue share %
-              <input
-                type="number"
-                min={0}
-                max={100}
-                step="0.01"
-                value={percent}
-                onChange={(event) => setPercent(event.target.value)}
-                className="min-h-11 rounded-lg border border-[color:var(--billing-border)] px-3 font-normal"
-              />
-            </label>
-          </div>
-        ) : null}
-
-        {ownership === 'private' && step === 2 ? (
+        {currentStep.id === 'minimum' ? (
           <fieldset className="mt-4 grid gap-2">
             <legend className="text-sm font-medium text-[color:var(--billing-heading)]">
               Does this station have a minimum revenue share?
             </legend>
             {(
               [
-                [true, 'Yes — ceiling rates will be uploaded'],
+                [true, 'Yes — (MAG rates applicable)'],
                 [false, 'No'],
               ] as const
             ).map(([value, label]) => (
@@ -410,8 +403,15 @@ export function AirportRulesWizard({ api, initial, onClose, onSaved }: Props) {
                 <input
                   type="radio"
                   name="minShare"
+                  value={value ? 'yes' : 'no'}
                   checked={minShare === value}
-                  onChange={() => setMinShare(value)}
+                  onChange={() => {
+                    setMinShare(value);
+                    if (value) {
+                      const magIndex = steps.findIndex((item) => item.id === 'mag');
+                      if (magIndex >= 0) setStep(magIndex);
+                    }
+                  }}
                 />
                 {label}
               </label>
@@ -419,37 +419,12 @@ export function AirportRulesWizard({ api, initial, onClose, onSaved }: Props) {
           </fieldset>
         ) : null}
 
-        {(ownership === 'aai' && step === 2) || (ownership === 'private' && step === 3) ? (
+        {currentStep.id === 'mag' ? (
           <div className="mt-4 grid gap-3">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="grid gap-1 text-sm font-medium">
-                Effective from
-                <input
-                  type="date"
-                  value={effectiveFrom}
-                  onChange={(event) => setEffectiveFrom(event.target.value)}
-                  className="min-h-11 rounded-lg border border-[color:var(--billing-border)] px-3 font-normal"
-                />
-              </label>
-              <label className="grid gap-1 text-sm font-medium">
-                Valid till
-                <input
-                  type="date"
-                  value={effectiveTo}
-                  onChange={(event) => setEffectiveTo(event.target.value)}
-                  className="min-h-11 rounded-lg border border-[color:var(--billing-border)] px-3 font-normal"
-                />
-              </label>
-            </div>
-            {ownership === 'aai' ? (
-              <p className="text-sm text-[color:var(--billing-text-muted)]">
-                Airport Authority stations do not use a minimum revenue-share table.
-              </p>
-            ) : null}
-            {needsWorkbook ? (
               <div className="grid gap-2 rounded-lg border border-[color:var(--billing-border)] p-3">
-                <p className="text-sm text-[color:var(--billing-heading)]">
-                  Header row is the service type. The first column is the aircraft code (B–F).
+                <p className="text-sm font-medium text-[color:var(--billing-heading)]">Upload MAG rates</p>
+                <p className="text-sm text-[color:var(--billing-text-muted)]">
+                  The header row is the service type. The first column is the aircraft code (B–F).
                 </p>
                 <button
                   type="button"
@@ -480,16 +455,19 @@ export function AirportRulesWizard({ api, initial, onClose, onSaved }: Props) {
                 </label>
                 {fileName ? (
                   <p className="text-xs text-[color:var(--billing-text-muted)]">
-                    {fileName}: {ceilingRates.length} ceiling amount{ceilingRates.length === 1 ? '' : 's'}
+                    {fileName}: {ceilingRates.length} MAG rate{ceilingRates.length === 1 ? '' : 's'}
+                  </p>
+                ) : ceilingRates.length > 0 ? (
+                  <p className="text-xs text-[color:var(--billing-text-muted)]">
+                    {ceilingRates.length} MAG rate{ceilingRates.length === 1 ? '' : 's'} already uploaded. Upload again to replace them.
                   </p>
                 ) : null}
               </div>
-            ) : null}
           </div>
         ) : null}
 
         <div className="mt-5 flex flex-wrap justify-end gap-2">
-          {step > 0 ? (
+          {stepIndex > 0 ? (
             <button
               type="button"
               className="min-h-10 rounded-lg border border-[color:var(--billing-border)] px-3 text-sm font-semibold"
@@ -501,7 +479,7 @@ export function AirportRulesWizard({ api, initial, onClose, onSaved }: Props) {
               Back
             </button>
           ) : null}
-          {step < steps.length - 1 ? (
+          {!canSaveNow ? (
             <button
               type="button"
               className="min-h-10 rounded-lg bg-[color:var(--billing-primary)] px-3 text-sm font-semibold text-white"
