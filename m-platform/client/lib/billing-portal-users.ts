@@ -1,5 +1,5 @@
 /** Login ids allowed to open Billing. Keep in sync with server `user/utils/billing-portal-users.util.ts`. */
-export const BILLING_PORTAL_USERIDS = ['DELX0001', 'DELR1443'] as const;
+export const BILLING_PORTAL_USERIDS = ['DELX0001', 'DELR1443', 'DELG0317'] as const;
 
 const ALLOWED = new Set(
   BILLING_PORTAL_USERIDS.map((id) => id.toUpperCase()),
@@ -14,7 +14,7 @@ export function isBillingPortalUserid(
 }
 
 /**
- * DELX0001 and DELR1443 stay off other admins' user lists and credential pages.
+ * Billing portal accounts stay off other admins' user lists and credential pages.
  * The signed-in account can still see its own row.
  */
 export function viewerMaySeeBillingPortalUser(
