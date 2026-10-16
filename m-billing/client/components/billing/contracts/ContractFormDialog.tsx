@@ -72,10 +72,7 @@ import {
   expandAdsEquipmentRulesAcrossValidity,
 } from '@/lib/billing-shared/ads-equipment-rules-validity';
 import { sanitizeContractAircraftTypes } from './sanitizeContractAircraftTypes';
-import {
-  EXCLUSIVE_BHS_INVOICE_CONCESSION_PERCENT,
-  type BhsPricingMode,
-} from '@/lib/billing-shared/exclusive-bhs-concession';
+import { type BhsPricingMode } from '@/lib/billing-shared/exclusive-bhs-concession';
 
 function normalizeContractCategory(value: string | undefined | null): ContractCategory {
   return value === 'Dom' || value === 'Int' || value === 'Both' ? value : 'Both';
@@ -1799,9 +1796,8 @@ export function ContractFormDialog({
                             Exclusive
                           </span>
                           <span className="mt-0.5 block text-xs text-[color:var(--billing-text-muted)]">
-                            Concession is billed separately — the higher of{' '}
-                            {EXCLUSIVE_BHS_INVOICE_CONCESSION_PERCENT}% of scheduled-flight charges
-                            or the ceiling rate × flight count (set on Concessions).
+                            Concession is billed separately — the higher of the percent saved on this
+                            station&apos;s Concessions page or the ceiling rate × flight count.
                           </span>
                         </span>
                       </label>
@@ -1814,7 +1810,7 @@ export function ContractFormDialog({
                         title="Extended royalty"
                         description={
                           bhsConcessionCoverage === 'non_comprehensive'
-                            ? `Exclusive pricing only. Royalty is total × ${EXCLUSIVE_BHS_INVOICE_CONCESSION_PERCENT}/(${100 - EXCLUSIVE_BHS_INVOICE_CONCESSION_PERCENT}) instead of total × ${EXCLUSIVE_BHS_INVOICE_CONCESSION_PERCENT}/100. The invoice layout stays the same.`
+                            ? 'Exclusive pricing only. Royalty is total × saved % / (100 − saved %) instead of total × saved % / 100, using the percent on this station’s contract. The invoice layout stays the same.'
                             : 'Turn on Exclusive pricing to use extended royalty. Inclusive contracts keep royalty inside the package.'
                         }
                       />

@@ -10,14 +10,18 @@ import { normalizeFlightCategory } from './aircraft-type-match.util';
 export const INVOICE_CGST_PERCENT = 9;
 export const INVOICE_SGST_PERCENT = 9;
 
-/** Exclusive BHS (non_comprehensive): concession is max(this % of flight total, ceiling × flights). */
+/**
+ * Historical Chennai exclusive rate. Invoices do not use this number.
+ * Exclusive concession is the percent saved on that station's contract.
+ */
 export const EXCLUSIVE_BHS_INVOICE_CONCESSION_PERCENT = 18;
 
-/** Normal exclusive royalty is amount × 18/100. Extended is amount × 18/(100−18). */
-export function exclusiveRoyaltyRate(extended: boolean): number {
-  const percent = EXCLUSIVE_BHS_INVOICE_CONCESSION_PERCENT;
-  if (!extended) return percent / 100;
-  return percent / (100 - percent);
+/** Normal exclusive royalty is amount × percent/100. Extended is amount × percent/(100−percent). */
+export function exclusiveRoyaltyRate(extended: boolean, percent = 0): number {
+  const rate = Number(percent);
+  if (!Number.isFinite(rate) || rate <= 0) return 0;
+  if (!extended || rate >= 100) return rate / 100;
+  return rate / (100 - rate);
 }
 
 export function usesExtendedRoyalty(
@@ -1354,23 +1358,99 @@ function bhsScheduledFlightSubtotal(particulars: InvoiceLineConcessionInput[]): 
   );
 }
 
+function finiteSavedPercent(value: unknown): number | null {
+  if (value == null || value === '') return null;
+  const n = Number(value);
+  return Number.isFinite(n) && n >= 0 ? n : null;
+}
+
+/** Percent stored on this station's contract. Never a rate from another station. */
+function savedExclusiveConcessionPercent(
+  line: InvoiceLineConcessionInput,
+  contract?: InvoiceChargeContractShape | null,
+): number {
+  const rates = contract?.concessionRates ?? {};
+  const { categoryRaw } = flightSnapshotBlob(line);
+  const categoryLower = categoryRaw.toLowerCase();
+  const isDiverted = isDivertedFlightSnapshot(line);
+  const normalized = normalizeFlightCategory(categoryRaw);
+  const isDom =
+    normalized === 'Dom' ||
+    (/domestic/.test(categoryLower) && !/international/.test(categoryLower));
+  const isCargo = /cargo/.test(categoryLower);
+  const specific =
+    isDiverted && isDom
+      ? rates.divertedDom
+      : isDiverted
+        ? rates.divertedInt
+        : isCargo && isDom
+          ? rates.domesticCargo
+          : isCargo
+            ? rates.internationalCargo
+            : isDom
+              ? rates.dom
+              : rates.int;
+  const saved = finiteSavedPercent(specific);
+  if (saved != null) return saved;
+  return finiteSavedPercent(contract?.royaltyAtGross) ?? 0;
+}
+
+function exclusivePercentConcession(
+  particulars: InvoiceLineConcessionInput[],
+  contract: InvoiceChargeContractShape | null | undefined,
+  extended: boolean,
+): { amount: number; labelPercent: number } {
+  const bhsLines = particulars.filter(
+    (line) => isBhsFlightLine(line) && lineExclAmount(line) > 0,
+  );
+  const rows =
+    bhsLines.length > 0
+      ? bhsLines
+      : particulars.filter((line) => lineExclAmount(line) > 0);
+  if (rows.length === 0) return { amount: 0, labelPercent: 0 };
+
+  let base = 0;
+  let amount = 0;
+  let weightedPercent = 0;
+  const labels = new Set<number>();
+  for (const line of rows) {
+    const percent = savedExclusiveConcessionPercent(line, contract);
+    const lineAmount = lineExclAmount(line);
+    base += lineAmount;
+    weightedPercent += lineAmount * percent;
+    amount += lineAmount * exclusiveRoyaltyRate(extended, percent);
+    labels.add(roundBillingMoney(percent));
+  }
+  const labelPercent =
+    labels.size === 1
+      ? [...labels][0]
+      : base > 0
+        ? roundBillingMoney(weightedPercent / base)
+        : 0;
+  return { amount: roundBillingMoney(amount), labelPercent };
+}
+
 function exclusiveBhsInvoiceConcession(opts: {
   particulars: InvoiceLineConcessionInput[];
   subtotal: number;
-  contract?: {
-    ceilingRatePerFlightINR?: number | null;
-    ceilingRatePerFlightUSD?: number | null;
-  } | null;
+  contract?:
+    | (InvoiceChargeContractShape & {
+        ceilingRatePerFlightINR?: number | null;
+        ceilingRatePerFlightUSD?: number | null;
+      })
+    | null;
   currencyCode: string;
   flightCount: number;
   ceilingFromLines: number;
   currencyFactor?: number | null;
   extendedRoyalty?: boolean;
 }): { concessionFeePercent: number; concessionFeeAmount: number } {
-  const flightSubtotal = bhsScheduledFlightSubtotal(opts.particulars);
-  const percentBase = flightSubtotal > 0 ? flightSubtotal : opts.subtotal;
-  const royaltyRate = exclusiveRoyaltyRate(Boolean(opts.extendedRoyalty));
-  const percentAmount = roundBillingMoney(percentBase * royaltyRate);
+  const fromSaved = exclusivePercentConcession(
+    opts.particulars,
+    opts.contract,
+    Boolean(opts.extendedRoyalty),
+  );
+  const percentAmount = fromSaved.amount;
   const fromContract = scaledContractCeilingAmount(
     opts.contract,
     opts.currencyCode,
@@ -1386,10 +1466,10 @@ function exclusiveBhsInvoiceConcession(opts: {
   if (ceilingTotal > percentAmount + 0.004) {
     return { concessionFeePercent: 0, concessionFeeAmount };
   }
-  // Label stays the contractual 18%. Extended royalty only changes the amount
-  // (base × 18/82). Do not store the effective ~21.95% ratio.
+  // Label stays the percent saved on this station's contract. Extended royalty
+  // only changes the amount (base × p/(100−p)).
   return {
-    concessionFeePercent: EXCLUSIVE_BHS_INVOICE_CONCESSION_PERCENT,
+    concessionFeePercent: fromSaved.labelPercent,
     concessionFeeAmount: percentAmount,
   };
 }

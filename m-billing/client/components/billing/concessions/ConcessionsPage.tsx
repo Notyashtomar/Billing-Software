@@ -18,7 +18,6 @@ import {
 } from '@/lib/billing-shared/contract-concessions';
 import { formatBillingDateRange } from '@/lib/billing-shared/billing-date-format';
 import {
-  EXCLUSIVE_BHS_INVOICE_CONCESSION_PERCENT,
   contractHasSavedCeilingRate,
   exclusiveBhsContractsMissingCeiling,
   isExclusiveBhsConcessionContract,
@@ -199,7 +198,7 @@ export function ConcessionsPage({ api }: Props) {
       <div className="mb-3 shrink-0">
         <BillingPageHeader
           title="Concessions"
-          description={`Scenario concession rates by contract. For Exclusive BHS airlines, invoice concession is the higher of ${EXCLUSIVE_BHS_INVOICE_CONCESSION_PERCENT}% of scheduled-flight total or the ceiling rate × flight count — save the ceiling here.`}
+          description="Scenario concession rates by contract, saved on that station's contract. For Exclusive BHS airlines, the invoice uses the higher of the international or domestic percent saved here and the ceiling rate × flight count."
           actions={
             <button
               type="button"
@@ -232,8 +231,8 @@ export function ConcessionsPage({ api }: Props) {
           </summary>
           <div className="mt-2" role="alert">
           <p className="text-amber-900">
-            Save a ceiling rate per flight (INR or USD) so invoices can compare it with{' '}
-            {EXCLUSIVE_BHS_INVOICE_CONCESSION_PERCENT}% of flight charges.
+            Save a ceiling rate per flight (INR or USD) so invoices can compare it with the
+            concession percent saved on this station&apos;s contract.
           </p>
           <p className="mt-1 text-xs font-medium text-amber-800">
             Scroll the list to open any row.

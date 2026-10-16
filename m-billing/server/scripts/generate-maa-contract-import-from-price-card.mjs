@@ -70,6 +70,7 @@ function stationHintFromWorkbookPath(filePath) {
   const base = basename(String(filePath ?? '')).toLowerCase();
   const rules = [
     [/cochin|\bcok\b/, 'COK'],
+    [/coimbatore|\bcjb\b/, 'CJB'],
     [/delhi|\bdel\b/, 'DEL'],
     [/chennai|\bmaa\b/, 'MAA'],
     [/hyderabad|\bhyd\b/, 'HYD'],

@@ -17,6 +17,10 @@ describe('exclusive BHS invoice concession', () => {
   const exclusiveContract = {
     bhsConcessionCoverage: 'non_comprehensive' as const,
     ceilingRatePerFlightINR: 38130,
+    concessionRates: {
+      int: EXCLUSIVE_BHS_INVOICE_CONCESSION_PERCENT,
+      dom: EXCLUSIVE_BHS_INVOICE_CONCESSION_PERCENT,
+    },
   };
 
   it('converts INR ceiling to USD per flight using invoice currency factor', () => {
@@ -41,6 +45,10 @@ describe('exclusive BHS invoice concession', () => {
       {
         bhsConcessionCoverage: 'non_comprehensive',
         ceilingRatePerFlightINR: 38130,
+        concessionRates: {
+          int: EXCLUSIVE_BHS_INVOICE_CONCESSION_PERCENT,
+          dom: EXCLUSIVE_BHS_INVOICE_CONCESSION_PERCENT,
+        },
       },
       { currencyCode: 'USD', currencyFactor: factor, scheduledFlightCount: 18 },
     );
@@ -126,6 +134,10 @@ describe('exclusive BHS invoice concession', () => {
       {
         bhsConcessionCoverage: 'non_comprehensive',
         ceilingRatePerFlightINR: 500,
+        concessionRates: {
+          int: EXCLUSIVE_BHS_INVOICE_CONCESSION_PERCENT,
+          dom: EXCLUSIVE_BHS_INVOICE_CONCESSION_PERCENT,
+        },
       },
       { currencyCode: 'INR' },
     );
@@ -149,6 +161,10 @@ describe('exclusive BHS invoice concession', () => {
         bhsConcessionCoverage: 'non_comprehensive',
         extendedRoyaltyEnabled: true,
         ceilingRatePerFlightINR: 500,
+        concessionRates: {
+          int: EXCLUSIVE_BHS_INVOICE_CONCESSION_PERCENT,
+          dom: EXCLUSIVE_BHS_INVOICE_CONCESSION_PERCENT,
+        },
       },
       { currencyCode: 'INR' },
     );
@@ -156,6 +172,51 @@ describe('exclusive BHS invoice concession', () => {
     expect(totals.concessionFeeAmount).toBe(extended);
     expect(totals.concessionFeePercent).toBe(18);
     expect(totals.grossAmount).toBe(roundBillingMoney(20_000 + extended));
+  });
+
+  it('uses the percent saved on this station contract, not the Chennai 18% default', () => {
+    const totals = calculateInvoiceConcessionFromLines(
+      20_000,
+      [
+        {
+          serviceCode: 'Scheduled Flight',
+          quantity: 2,
+          lineAmountExclTax: 20_000,
+          sourceType: 'scheduled_flight',
+          sourceRef: { categoryOfFlight: 'Domestic' },
+        },
+      ],
+      {
+        bhsConcessionCoverage: 'non_comprehensive',
+        concessionRates: { int: 18, dom: 5 },
+        ceilingRatePerFlightINR: 100,
+      },
+      { currencyCode: 'INR' },
+    );
+    expect(totals.concessionFeeAmount).toBe(1000);
+    expect(totals.concessionFeePercent).toBe(5);
+    expect(totals.grossAmount).toBe(21_000);
+  });
+
+  it('does not invent 18% when this station has no saved exclusive concession', () => {
+    const totals = calculateInvoiceConcessionFromLines(
+      20_000,
+      [
+        {
+          serviceCode: 'Scheduled Flight',
+          quantity: 2,
+          lineAmountExclTax: 20_000,
+          sourceType: 'scheduled_flight',
+        },
+      ],
+      {
+        bhsConcessionCoverage: 'non_comprehensive',
+        ceilingRatePerFlightINR: 500,
+      },
+      { currencyCode: 'INR' },
+    );
+    expect(totals.concessionFeeAmount).toBe(1000);
+    expect(totals.concessionFeePercent).toBe(0);
   });
 
   it('ignores extended royalty unless pricing is exclusive', () => {
@@ -373,14 +434,21 @@ describe('resolveActiveContractForInvoice station lock', () => {
           lean: async () => docs.find((doc) => doc._id === id) ?? null,
         };
       },
-      findOne(filter: { customerCode?: string; stationCode?: string }) {
+      findOne(filter: {
+        customerCode?: string;
+        stationCode?: string;
+        $or?: Array<{ customerCode?: string }>;
+      }) {
+        const customerCode =
+          filter.customerCode ??
+          filter.$or?.find((clause) => clause.customerCode)?.customerCode;
         return {
           sort() {
             return {
               lean: async () =>
                 docs.find(
                   (doc) =>
-                    doc.customerCode === filter.customerCode &&
+                    doc.customerCode === customerCode &&
                     doc.stationCode === filter.stationCode,
                 ) ?? null,
             };
