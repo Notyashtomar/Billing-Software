@@ -74,15 +74,40 @@ export class BillingSettingsService {
   async update(ctx: StationScopeContext, dto: UpdateBillingSettingsDto, actor: BillingActor) {
     const stationCode = StationScope.require(ctx);
     const setPayload: Record<string, unknown> = { ...dto };
+    const existing =
+      dto.airportCommercial || dto.royaltyMaster
+        ? await this.settingsModel.findOne(StationScope.filter({}, ctx)).lean()
+        : null;
     if (dto.airportCommercial) {
       const rules = dto.airportCommercial;
-      const ceiling = rules.minRevenueShareApplicable ? rules.ceilingRates ?? [] : [];
+      const prev = existing?.airportCommercial;
+      const mag = Boolean(rules.minRevenueShareApplicable);
+      const ceiling = mag ? (rules.ceilingRates ?? prev?.ceilingRates ?? []) : [];
       setPayload.airportCommercial = {
-        ...rules,
+        ownership: rules.ownership,
+        minRevenueShareApplicable: mag,
         ceilingRates: ceiling,
-        effectiveFrom: new Date(rules.effectiveFrom),
-        effectiveTo: new Date(rules.effectiveTo),
+        revenueShareMechanism: rules.revenueShareMechanism ?? prev?.revenueShareMechanism,
+        revenueSharePercent: rules.revenueSharePercent ?? prev?.revenueSharePercent,
+        effectiveFrom: rules.effectiveFrom
+          ? new Date(rules.effectiveFrom)
+          : prev?.effectiveFrom,
+        effectiveTo: rules.effectiveTo ? new Date(rules.effectiveTo) : prev?.effectiveTo,
       };
+    }
+    if (dto.royaltyMaster) {
+      const prev = existing?.royaltyMaster ?? {};
+      const next: NonNullable<BillingSettings['royaltyMaster']> = { ...prev };
+      for (const side of ['net', 'gross'] as const) {
+        const incoming = dto.royaltyMaster[side];
+        if (!incoming) continue;
+        next[side] = {
+          percent: incoming.percent,
+          effectiveFrom: new Date(incoming.effectiveFrom),
+          effectiveTo: new Date(incoming.effectiveTo),
+        };
+      }
+      setPayload.royaltyMaster = next;
     }
     if (setPayload.approvalRequired === undefined) {
       setPayload.approvalRequired = true;

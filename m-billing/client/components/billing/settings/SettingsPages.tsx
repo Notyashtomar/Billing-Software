@@ -277,24 +277,11 @@ export function StationProfilePage({ api }: Props) {
               </dd>
             </div>
             <div>
-              <dt className="text-gray-500">Revenue share</dt>
-              <dd className="font-medium">
-                {airportCommercial.revenueSharePercent}% on {airportCommercial.revenueShareMechanism}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-gray-500">Minimum revenue share</dt>
+              <dt className="text-gray-500">MAG rates</dt>
               <dd className="font-medium">
                 {airportCommercial.minRevenueShareApplicable
-                  ? `Yes · ${airportCommercial.ceilingRates?.length ?? 0} ceiling amounts`
+                  ? `Yes — (MAG rates applicable) · ${airportCommercial.ceilingRates?.length ?? 0} rates`
                   : 'No'}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-gray-500">Valid</dt>
-              <dd className="font-medium">
-                {formatBillingDate(airportCommercial.effectiveFrom)} –{' '}
-                {formatBillingDate(airportCommercial.effectiveTo)}
               </dd>
             </div>
           </dl>

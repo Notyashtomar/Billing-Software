@@ -169,24 +169,52 @@ export class AirportCeilingRateDto {
   amount: number;
 }
 
-export class AirportCommercialRulesDto {
-  @IsEnum(['private', 'aai'])
-  ownership: 'private' | 'aai';
-
-  @IsEnum(['gross', 'net'])
-  revenueShareMechanism: 'gross' | 'net';
-
+export class RoyaltyConcessionDto {
   @IsNumber()
-  revenueSharePercent: number;
-
-  @IsBoolean()
-  minRevenueShareApplicable: boolean;
+  percent: number;
 
   @IsDateString()
   effectiveFrom: string;
 
   @IsDateString()
   effectiveTo: string;
+}
+
+export class RoyaltyMasterDto {
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => RoyaltyConcessionDto)
+  net?: RoyaltyConcessionDto;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => RoyaltyConcessionDto)
+  gross?: RoyaltyConcessionDto;
+}
+
+export class AirportCommercialRulesDto {
+  @IsEnum(['private', 'aai'])
+  ownership: 'private' | 'aai';
+
+  /** Kept for older saved rules. Concession % and mechanism are set on Royalty Master. */
+  @IsOptional()
+  @IsEnum(['gross', 'net'])
+  revenueShareMechanism?: 'gross' | 'net';
+
+  @IsOptional()
+  @IsNumber()
+  revenueSharePercent?: number;
+
+  @IsBoolean()
+  minRevenueShareApplicable: boolean;
+
+  @IsOptional()
+  @IsDateString()
+  effectiveFrom?: string;
+
+  @IsOptional()
+  @IsDateString()
+  effectiveTo?: string;
 
   @IsOptional()
   @IsArray()
@@ -227,4 +255,10 @@ export class UpdateBillingSettingsDto {
   @ValidateNested()
   @Type(() => AirportCommercialRulesDto)
   airportCommercial?: AirportCommercialRulesDto;
+
+  /** Concession percentages saved from Royalty Master. Not used by invoice generation. */
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => RoyaltyMasterDto)
+  royaltyMaster?: RoyaltyMasterDto;
 }

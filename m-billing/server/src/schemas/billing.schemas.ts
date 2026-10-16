@@ -943,6 +943,16 @@ export class BillingSettings {
     }>;
   };
 
+  /**
+   * Royalty Master concessions (net and gross). Stored only.
+   * Invoice generation does not read this field.
+   */
+  @Prop({ type: Object })
+  royaltyMaster?: {
+    net?: { percent: number; effectiveFrom?: Date; effectiveTo?: Date };
+    gross?: { percent: number; effectiveFrom?: Date; effectiveTo?: Date };
+  };
+
   /** When false, legacy PATCH navision-export should be blocked (integration guard). */
   @Prop({ default: true })
   legacyNavExportEnabled?: boolean;

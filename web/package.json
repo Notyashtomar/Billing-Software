@@ -3,10 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "predev": "node ../scripts/ensure-module-mounts.mjs",
     "dev": "next dev --hostname 0.0.0.0 --webpack",
     "dev:fast": "next dev --hostname 0.0.0.0 --webpack",
     "dev:turbo": "next dev --hostname 0.0.0.0",
     "dev:webpack": "next dev --webpack",
+    "prebuild": "node ../scripts/ensure-module-mounts.mjs",
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint .",
