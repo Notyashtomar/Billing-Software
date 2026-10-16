@@ -145,3 +145,49 @@ for (const { name, source } of mounts) {
 }
 
 console.log(`module mounts ready (${mounted} new)`);
+
+function mountReexport(sourceFile, destFile) {
+  fs.mkdirSync(path.dirname(destFile), { recursive: true });
+  const spec = path
+    .relative(path.dirname(destFile), sourceFile)
+    .replace(/\\/g, '/')
+    .replace(/\.(tsx|ts)$/, '');
+  const body = `export { default } from '${spec}';\n`;
+  const current = fs.existsSync(destFile) ? fs.readFileSync(destFile, 'utf8') : '';
+  if (current !== body) {
+    fs.writeFileSync(destFile, body);
+    return true;
+  }
+  return false;
+}
+
+function mountRouteTree(sourceRoot, destRoot) {
+  if (!fs.existsSync(sourceRoot)) return 0;
+  let wrote = 0;
+  function walk(dir) {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        walk(full);
+        continue;
+      }
+      if (!/\.(tsx|ts)$/.test(entry.name)) continue;
+      const dest = path.join(destRoot, path.relative(sourceRoot, full));
+      if (mountReexport(full, dest)) wrote += 1;
+    }
+  }
+  walk(sourceRoot);
+  return wrote;
+}
+
+const loginWrote = mountReexport(
+  path.join(repo, 'm-platform', 'client', 'app', 'login', 'page.tsx'),
+  path.join(repo, 'web', 'app', 'login', 'page.tsx'),
+);
+if (loginWrote) console.log('mounted web/app/login/page.tsx');
+
+const billingWrote = mountRouteTree(
+  path.join(repo, 'm-billing', 'client', 'app', 'billing'),
+  path.join(repo, 'web', 'app', 'billing'),
+);
+if (billingWrote) console.log(`mounted web/app/billing (${billingWrote} files)`);
