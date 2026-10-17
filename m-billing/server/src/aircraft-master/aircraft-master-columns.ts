@@ -2,25 +2,30 @@
 export const AIRCRAFT_MASTER_COLUMN_LABELS = [
   'S_No_',
   'Aircraft Type',
+  'Description',
+  'Manufacturer',
+  'Category',
+  'Ceiling rate',
+  'Aera rates',
+  'Valid till',
   'ICAO Code',
   'MTOW (kg)',
   'Passenger Capacity',
-  'Manufacturer',
   'Aircraft Body',
   'Wingspan (m)',
-  'Description',
-  'Active',
-  'Category',
-  'Active',
-  'Ceiling rate',
-  'array rate',
+  'Status',
+  'Status',
 ] as const;
 
 export function normalizeAircraftHeader(value: unknown): string {
-  return String(value ?? '')
+  const key = String(value ?? '')
     .replace(/\s+/g, ' ')
     .trim()
     .toLowerCase();
+  if (key === 'array rate' || key === 'aera rate') return 'aera rates';
+  if (key === 'active') return 'status';
+  if (key === 'valid until' || key === 'valid to' || key === 'validity') return 'valid till';
+  return key;
 }
 
 /** Returns the missing column labels. Values may be blank; headers may not. */

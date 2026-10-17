@@ -9,11 +9,7 @@ const GROUPS = {
     { href: '/billing/customers', label: 'Customers', pageId: 'customers' },
     { href: '/billing/service-catalog', label: 'Service catalog', pageId: 'service-catalog' },
   ],
-  rates: [
-    { href: '/billing/rate-cards', label: 'Rate cards', pageId: 'rate-cards' },
-    { href: '/billing/concessions', label: 'Concessions', pageId: 'concessions' },
-    { href: '/billing/conversion-rates', label: 'Conversion rates', pageId: 'conversion-rates' },
-  ],
+  rates: [{ href: '/billing/rate-cards', label: 'Rate cards', pageId: 'rate-cards' }],
 } as const;
 
 export function MasterSectionTabs({ group }: { group: keyof typeof GROUPS }) {

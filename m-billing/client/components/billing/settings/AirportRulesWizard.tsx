@@ -12,6 +12,8 @@ const TEMPLATE_SERVICES = [
   'Cargo Ramp Handling',
 ];
 
+export type MagCurrency = 'INR' | 'USD' | 'EUR';
+
 export type CeilingRate = {
   aircraftCode: string;
   serviceType: string;
@@ -20,13 +22,42 @@ export type CeilingRate = {
 
 export type AirportCommercial = {
   ownership: 'private' | 'aai';
-  revenueShareMechanism: 'gross' | 'net';
+  /** Chosen on a private station. Royalty Master shows only this card. */
+  revenueShareMechanism?: 'gross' | 'net';
   revenueSharePercent: number;
   minRevenueShareApplicable: boolean;
+  /** Currency of the uploaded MAG workbook. */
+  magCurrency?: MagCurrency;
   effectiveFrom: string;
   effectiveTo: string;
   ceilingRates?: CeilingRate[];
 };
+
+export function magCurrencySymbol(currency: MagCurrency = 'INR'): string {
+  if (currency === 'USD') return '$';
+  if (currency === 'EUR') return '€';
+  return '₹';
+}
+
+export function magCurrencyName(currency: MagCurrency = 'INR'): string {
+  if (currency === 'USD') return 'USD';
+  if (currency === 'EUR') return 'Euro';
+  return 'INR';
+}
+
+/** INR is a whole number. USD and Euro are a whole number or exactly two decimal places. */
+export function formatMagRate(amount: number, currency: MagCurrency = 'INR'): string {
+  const symbol = magCurrencySymbol(currency);
+  if (currency === 'INR') {
+    return `${symbol}${Math.round(amount).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
+  }
+  const rounded = Math.round(amount * 100) / 100;
+  const whole = Math.abs(rounded - Math.trunc(rounded)) < 1e-9;
+  const text = whole
+    ? rounded.toLocaleString('en-US', { maximumFractionDigits: 0 })
+    : rounded.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return `${symbol}${text}`;
+}
 
 type Props = {
   api: BillingApi;
@@ -98,6 +129,7 @@ function workbookAircraft(rates: CeilingRate[]): string[] {
 export async function downloadMagRatesWorkbook(
   rates: CeilingRate[] = [],
   fileName = 'airport-mag-rates.xlsx',
+  currency: MagCurrency = 'INR',
 ) {
   const ExcelJS = await getExcelJSModule();
   const services = workbookServices(rates);
@@ -150,7 +182,7 @@ export async function downloadMagRatesWorkbook(
         cell.font = { name: 'Calibri', bold: true, size: 12, color: { argb: 'FF1E3A5F' } };
         cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8EEF6' } };
       } else {
-        cell.numFmt = '#,##0.00';
+        cell.numFmt = currency === 'INR' ? '#,##0' : '#,##0.00';
         cell.font = { name: 'Calibri', size: 11 };
       }
     });
@@ -193,11 +225,41 @@ export async function downloadMagRatesWorkbook(
   URL.revokeObjectURL(url);
 }
 
-async function downloadTemplate() {
-  await downloadMagRatesWorkbook([], 'airport-mag-rates-template.xlsx');
+function normalizeMagAmount(amount: number, currency: MagCurrency): number {
+  if (currency === 'INR') return Math.round(amount);
+  return Math.round(amount * 100) / 100;
 }
 
-async function parseCeilingWorkbook(file: File): Promise<CeilingRate[]> {
+export function parseMagRateInput(
+  raw: string,
+  currency: MagCurrency,
+): { amount: number } | { error: string } {
+  const cleaned = raw.replace(/,/g, '').replace(/[₹$€]/g, '').trim();
+  if (!cleaned) return { error: 'Enter a MAG rate.' };
+  const amount = Number(cleaned);
+  const problem = magAmountError(amount, currency, 'MAG rate');
+  if (problem) return { error: problem };
+  return { amount: normalizeMagAmount(amount, currency) };
+}
+
+function magAmountError(amount: number, currency: MagCurrency, label: string): string | null {
+  if (!Number.isFinite(amount) || amount < 0) {
+    return `${label} is not a valid amount.`;
+  }
+  const nearestHundredth = Math.round(amount * 100) / 100;
+  if (currency === 'INR') {
+    if (Math.abs(amount - Math.round(amount)) > 1e-6) {
+      return `${label} must be a whole number for INR.`;
+    }
+    return null;
+  }
+  if (Math.abs(amount - nearestHundredth) > 1e-6) {
+    return `${label} can be a whole number or a number with 2 decimal places for ${magCurrencyName(currency)}.`;
+  }
+  return null;
+}
+
+async function parseCeilingWorkbook(file: File, currency: MagCurrency): Promise<CeilingRate[]> {
   const XLSX = await getXLSXModule();
   const buffer = await file.arrayBuffer();
   const book = XLSX.read(buffer, { type: 'array' });
@@ -231,7 +293,9 @@ async function parseCeilingWorkbook(file: File): Promise<CeilingRate[]> {
       if (!Number.isFinite(amount)) {
         throw new Error(`Amount for ${aircraftCode} / ${label} is not a number.`);
       }
-      rates.push({ aircraftCode, serviceType: label, amount });
+      const problem = magAmountError(amount, currency, `Amount for ${aircraftCode} / ${label}`);
+      if (problem) throw new Error(problem);
+      rates.push({ aircraftCode, serviceType: label, amount: normalizeMagAmount(amount, currency) });
     });
   }
   if (rates.length === 0) {
@@ -243,7 +307,9 @@ async function parseCeilingWorkbook(file: File): Promise<CeilingRate[]> {
 export function AirportRulesWizard({ api, initial, onClose, onSaved }: Props) {
   const [step, setStep] = useState(0);
   const [ownership, setOwnership] = useState<'private' | 'aai'>(initial?.ownership ?? 'private');
+  const [mechanism, setMechanism] = useState<'gross' | 'net' | ''>(initial?.revenueShareMechanism ?? '');
   const [minShare, setMinShare] = useState(initial?.minRevenueShareApplicable ?? false);
+  const [magCurrency, setMagCurrency] = useState<MagCurrency>(initial?.magCurrency ?? 'INR');
   const [ceilingRates, setCeilingRates] = useState<CeilingRate[]>(initial?.ceilingRates ?? []);
   const [fileName, setFileName] = useState('');
   const [error, setError] = useState('');
@@ -257,7 +323,9 @@ export function AirportRulesWizard({ api, initial, onClose, onSaved }: Props) {
         ?.airportCommercial;
       if (cancelled || !commercial) return;
       setOwnership(commercial.ownership ?? 'private');
+      setMechanism(commercial.revenueShareMechanism ?? '');
       setMinShare(Boolean(commercial.minRevenueShareApplicable));
+      setMagCurrency(commercial.magCurrency ?? 'INR');
       setCeilingRates(commercial.ceilingRates ?? []);
     });
     return () => {
@@ -266,11 +334,12 @@ export function AirportRulesWizard({ api, initial, onClose, onSaved }: Props) {
   }, [api, initial]);
 
   const needsWorkbook = ownership === 'private' && minShare;
-  const steps: { id: 'ownership' | 'minimum' | 'mag'; label: string }[] =
+  const steps: { id: 'ownership' | 'royalty' | 'minimum' | 'mag'; label: string }[] =
     ownership === 'aai'
       ? [{ id: 'ownership', label: 'Ownership' }]
       : [
           { id: 'ownership', label: 'Ownership' },
+          { id: 'royalty', label: 'Royalty' },
           { id: 'minimum', label: 'Minimum share' },
           { id: 'mag', label: 'MAG rates' },
         ];
@@ -290,22 +359,45 @@ export function AirportRulesWizard({ api, initial, onClose, onSaved }: Props) {
   const goNext = () => {
     setError('');
     if (currentStep.id === 'ownership' && ownership === 'aai') return;
+    if (currentStep.id === 'royalty' && !mechanism) {
+      setError('Choose Royalty on Net or Royalty on Gross.');
+      return;
+    }
     if (currentStep.id === 'minimum' && !minShare) return;
     setStep(stepIndex + 1);
   };
 
   const save = async () => {
     setError('');
+    if (ownership === 'private' && !mechanism) {
+      setError('Choose Royalty on Net or Royalty on Gross.');
+      return;
+    }
     if (needsWorkbook && ceilingRates.length === 0) {
       setError('Upload the MAG rates workbook before saving.');
       return;
+    }
+    if (needsWorkbook) {
+      for (const rate of ceilingRates) {
+        const problem = magAmountError(
+          rate.amount,
+          magCurrency,
+          `Amount for ${rate.aircraftCode} / ${rate.serviceType}`,
+        );
+        if (problem) {
+          setError(problem);
+          return;
+        }
+      }
     }
     setSaving(true);
     try {
       await api.updateSettings({
         airportCommercial: {
           ownership,
+          revenueShareMechanism: ownership === 'private' ? mechanism : undefined,
           minRevenueShareApplicable: needsWorkbook,
+          magCurrency: needsWorkbook ? magCurrency : undefined,
           ceilingRates: needsWorkbook ? ceilingRates : [],
         },
       });
@@ -388,6 +480,33 @@ export function AirportRulesWizard({ api, initial, onClose, onSaved }: Props) {
           </fieldset>
         ) : null}
 
+        {currentStep.id === 'royalty' ? (
+          <fieldset className="mt-4 grid gap-2">
+            <legend className="text-sm font-medium text-[color:var(--billing-heading)]">
+              Which royalty applies at this private station?
+            </legend>
+            <p className="text-sm text-[color:var(--billing-text-muted)]">
+              Royalty Master shows only the card you choose here.
+            </p>
+            {(
+              [
+                ['net', 'Royalty on Net'],
+                ['gross', 'Royalty on Gross'],
+              ] as const
+            ).map(([value, label]) => (
+              <label key={value} className="flex min-h-11 items-center gap-2 rounded-lg border border-[color:var(--billing-border)] px-3 text-sm">
+                <input
+                  type="radio"
+                  name="royaltyMechanism"
+                  checked={mechanism === value}
+                  onChange={() => setMechanism(value)}
+                />
+                {label}
+              </label>
+            ))}
+          </fieldset>
+        ) : null}
+
         {currentStep.id === 'minimum' ? (
           <fieldset className="mt-4 grid gap-2">
             <legend className="text-sm font-medium text-[color:var(--billing-heading)]">
@@ -424,12 +543,37 @@ export function AirportRulesWizard({ api, initial, onClose, onSaved }: Props) {
               <div className="grid gap-2 rounded-lg border border-[color:var(--billing-border)] p-3">
                 <p className="text-sm font-medium text-[color:var(--billing-heading)]">Upload MAG rates</p>
                 <p className="text-sm text-[color:var(--billing-text-muted)]">
-                  The header row is the service type. The first column is the aircraft code (B–F).
+                  The header row is the service type. The first column is the aircraft code (B–F). INR amounts are whole numbers. USD and Euro amounts are whole numbers or use 2 decimal places.
                 </p>
+                <fieldset className="grid gap-2">
+                  <legend className="text-sm font-medium text-[color:var(--billing-heading)]">Currency</legend>
+                  {(
+                    [
+                      ['INR', 'INR (₹)'],
+                      ['USD', 'USD ($)'],
+                      ['EUR', 'Euro (€)'],
+                    ] as const
+                  ).map(([value, label]) => (
+                    <label key={value} className="flex min-h-11 items-center gap-2 rounded-lg border border-[color:var(--billing-border)] px-3 text-sm">
+                      <input
+                        type="radio"
+                        name="magCurrency"
+                        checked={magCurrency === value}
+                        onChange={() => {
+                          setMagCurrency(value);
+                          setCeilingRates([]);
+                          setFileName('');
+                          setError('');
+                        }}
+                      />
+                      {label}
+                    </label>
+                  ))}
+                </fieldset>
                 <button
                   type="button"
                   className="min-h-10 w-fit rounded-lg border border-[color:var(--billing-border)] px-3 text-sm font-semibold"
-                  onClick={() => void downloadTemplate()}
+                  onClick={() => void downloadMagRatesWorkbook([], 'airport-mag-rates-template.xlsx', magCurrency)}
                 >
                   Download template
                 </button>
@@ -444,7 +588,7 @@ export function AirportRulesWizard({ api, initial, onClose, onSaved }: Props) {
                       if (!file) return;
                       setError('');
                       setFileName(file.name);
-                      void parseCeilingWorkbook(file)
+                      void parseCeilingWorkbook(file, magCurrency)
                         .then(setCeilingRates)
                         .catch((err: unknown) => {
                           setCeilingRates([]);

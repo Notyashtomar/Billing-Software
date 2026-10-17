@@ -65,7 +65,11 @@ export function BillingPageAccessGate({ children }: { children: ReactNode }) {
           clientMayUseBwmsAppPage('billing-finance', 'prep-dashboard')
         );
       }
-      if (path === '/billing/royalty-setup' || path === '/billing/aircraft-master') {
+      if (
+        path === '/billing/royalty-setup' ||
+        path === '/billing/aircraft-master' ||
+        path === '/billing/equipment-master'
+      ) {
         const pageId = billingPageIdFromHref(path);
         return (
           (pageId != null && clientMayUseBwmsAppPage('billing-finance', pageId)) ||

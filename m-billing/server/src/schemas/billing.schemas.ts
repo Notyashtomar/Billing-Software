@@ -934,6 +934,7 @@ export class BillingSettings {
     revenueShareMechanism: 'gross' | 'net';
     revenueSharePercent: number;
     minRevenueShareApplicable: boolean;
+    magCurrency?: 'INR' | 'USD' | 'EUR';
     effectiveFrom: Date;
     effectiveTo: Date;
     ceilingRates?: Array<{
@@ -944,13 +945,25 @@ export class BillingSettings {
   };
 
   /**
-   * Royalty Master concessions (net and gross). Stored only.
+   * Royalty Master concessions (net and gross). Each side stores three flight concessions.
    * Invoice generation does not read this field.
    */
   @Prop({ type: Object })
   royaltyMaster?: {
-    net?: { percent: number; effectiveFrom?: Date; effectiveTo?: Date };
-    gross?: { percent: number; effectiveFrom?: Date; effectiveTo?: Date };
+    net?: {
+      effectiveFrom?: Date;
+      effectiveTo?: Date;
+      scheduledInternational?: { percent: number; effectiveFrom?: Date; effectiveTo?: Date };
+      scheduledDomestic?: { percent: number; effectiveFrom?: Date; effectiveTo?: Date };
+      generalAviation?: { percent: number; effectiveFrom?: Date; effectiveTo?: Date };
+    };
+    gross?: {
+      effectiveFrom?: Date;
+      effectiveTo?: Date;
+      scheduledInternational?: { percent: number; effectiveFrom?: Date; effectiveTo?: Date };
+      scheduledDomestic?: { percent: number; effectiveFrom?: Date; effectiveTo?: Date };
+      generalAviation?: { percent: number; effectiveFrom?: Date; effectiveTo?: Date };
+    };
   };
 
   /** When false, legacy PATCH navision-export should be blocked (integration guard). */

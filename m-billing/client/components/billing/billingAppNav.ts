@@ -8,12 +8,14 @@ export type BillingAppNavLink = {
 };
 
 export const BILLING_MASTER_NAV: readonly BillingAppNavLink[] = [
-  { href: '/billing/settings', label: 'Airport Setup' },
-  { href: '/billing/royalty-setup', label: 'Royalty Setup' },
   { href: '/billing/aircraft-master', label: 'Aircraft Master' },
-  { href: '/billing/customers', label: 'Customers' },
+  { href: '/billing/settings', label: 'Airport Setup' },
   { href: '/billing/contracts', label: 'Contracts' },
+  { href: '/billing/customers', label: 'Customers' },
+  { href: '/billing/equipment-master', label: 'Equipment Master' },
   { href: '/billing/rate-cards', label: 'Rate cards' },
+  { href: '/billing/conversion-rates', label: 'ROE Master' },
+  { href: '/billing/royalty-setup', label: 'Royalty Setup' },
 ];
 
 export const BILLING_WORKFLOW_NAV: readonly BillingAppNavLink[] = [
