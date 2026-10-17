@@ -214,7 +214,8 @@
   color: var(--billing-primary) !important;
 }
 
-.billing-app nav.billing-nav-chrome .billing-nav-item-idle {
+.billing-app nav.billing-nav-chrome .billing-nav-item-idle,
+.billing-app nav.billing-nav-chrome .billing-nav-station {
   color: var(--billing-text-secondary) !important;
 }
 

@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { BillingPageHeader } from '../BillingLayout';
-import { MasterSectionTabs } from '../MasterSectionTabs';
 import { BillingDataTable } from '../BillingDataTable';
 import { StatusBadge } from '../StatusBadge';
 import { TableEditButton } from '../TableEditButton';
@@ -194,7 +193,6 @@ export function ConcessionsPage({ api }: Props) {
 
   return (
     <div className="concessions-workspace w-full max-w-full pb-8">
-      <MasterSectionTabs group="rates" />
       <div className="mb-3 shrink-0">
         <BillingPageHeader
           title="Concessions"

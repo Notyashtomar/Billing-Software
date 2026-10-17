@@ -276,6 +276,18 @@ export function StationProfilePage({ api }: Props) {
                 {airportCommercial.ownership === 'private' ? 'Private airport' : 'Airport Authority'}
               </dd>
             </div>
+            {airportCommercial.ownership === 'private' ? (
+              <div>
+                <dt className="text-gray-500">Royalty</dt>
+                <dd className="font-medium">
+                  {airportCommercial.revenueShareMechanism === 'net'
+                    ? 'Royalty on Net'
+                    : airportCommercial.revenueShareMechanism === 'gross'
+                      ? 'Royalty on Gross'
+                      : 'Not chosen'}
+                </dd>
+              </div>
+            ) : null}
             <div>
               <dt className="text-gray-500">MAG rates</dt>
               <dd className="font-medium">

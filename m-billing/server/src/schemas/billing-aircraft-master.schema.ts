@@ -54,6 +54,10 @@ export class BillingAircraftMaster {
 
   @Prop({ default: '' })
   arrayRate: string;
+
+  /** Date the ceiling and Aera rates apply until. */
+  @Prop({ default: '' })
+  validTill: string;
 }
 
 export const BillingAircraftMasterSchema =

@@ -21,6 +21,7 @@ import {
   CreateSequenceDto,
   CreateTaxRuleDto,
   EffectiveExchangeRateQueryDto,
+  RoyaltySideDto,
   UpdateBillingSettingsDto,
   UpdateExchangeRateDto,
   UpdateSequenceDto,
@@ -34,6 +35,16 @@ import {
   defaultSequencePrefix,
   documentTypeFromSequenceCode,
 } from '../common/billing-fiscal-year.util';
+
+function storeRoyaltySide(side: RoyaltySideDto) {
+  return {
+    effectiveFrom: new Date(side.effectiveFrom),
+    effectiveTo: new Date(side.effectiveTo),
+    scheduledInternational: { percent: side.scheduledInternational.percent },
+    scheduledDomestic: { percent: side.scheduledDomestic.percent },
+    generalAviation: { percent: side.generalAviation.percent },
+  };
+}
 
 @Injectable()
 export class BillingSettingsService {
@@ -86,8 +97,12 @@ export class BillingSettingsService {
       setPayload.airportCommercial = {
         ownership: rules.ownership,
         minRevenueShareApplicable: mag,
+        magCurrency: mag ? (rules.magCurrency ?? prev?.magCurrency ?? 'INR') : undefined,
         ceilingRates: ceiling,
-        revenueShareMechanism: rules.revenueShareMechanism ?? prev?.revenueShareMechanism,
+        revenueShareMechanism:
+          rules.ownership === 'private'
+            ? (rules.revenueShareMechanism ?? prev?.revenueShareMechanism)
+            : undefined,
         revenueSharePercent: rules.revenueSharePercent ?? prev?.revenueSharePercent,
         effectiveFrom: rules.effectiveFrom
           ? new Date(rules.effectiveFrom)
@@ -101,11 +116,7 @@ export class BillingSettingsService {
       for (const side of ['net', 'gross'] as const) {
         const incoming = dto.royaltyMaster[side];
         if (!incoming) continue;
-        next[side] = {
-          percent: incoming.percent,
-          effectiveFrom: new Date(incoming.effectiveFrom),
-          effectiveTo: new Date(incoming.effectiveTo),
-        };
+        next[side] = storeRoyaltySide(incoming);
       }
       setPayload.royaltyMaster = next;
     }

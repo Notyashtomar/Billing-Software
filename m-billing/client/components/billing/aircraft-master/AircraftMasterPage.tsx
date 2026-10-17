@@ -4,7 +4,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { BillingPageHeader } from '../BillingLayout';
 import { BillingDataTable } from '../BillingDataTable';
 import { billingUi } from '../billingUi';
-import { getXLSXModule } from '@/lib/dynamic-imports';
+import { getExcelJSModule, getXLSXModule } from '@/lib/dynamic-imports';
+import { formatBillingDate } from '@/lib/billing-shared/billing-date-format';
 import type { BillingApi } from '@/lib/billing-api';
 
 type AircraftMasterRow = {
@@ -23,23 +24,25 @@ type AircraftMasterRow = {
   activeSecondary: string;
   ceilingRate: string;
   arrayRate: string;
+  validTill: string;
 };
 
 const COLUMN_LABELS = [
   'S_No_',
   'Aircraft Type',
+  'Description',
+  'Manufacturer',
+  'Category',
+  'Ceiling rate',
+  'Aera rates',
+  'Valid till',
   'ICAO Code',
   'MTOW (kg)',
   'Passenger Capacity',
-  'Manufacturer',
   'Aircraft Body',
   'Wingspan (m)',
-  'Description',
-  'Active',
-  'Category',
-  'Active',
-  'Ceiling rate',
-  'array rate',
+  'Status',
+  'Status',
 ] as const;
 
 const FIELD_BY_HEADER: Record<string, keyof Omit<AircraftMasterRow, '_id'> | 'activeSecondary'> = {
@@ -52,17 +55,23 @@ const FIELD_BY_HEADER: Record<string, keyof Omit<AircraftMasterRow, '_id'> | 'ac
   'aircraft body': 'aircraftBody',
   'wingspan (m)': 'wingspanM',
   description: 'description',
-  active: 'active',
   category: 'category',
+  'valid till': 'validTill',
   'ceiling rate': 'ceilingRate',
   'array rate': 'arrayRate',
+  'aera rate': 'arrayRate',
+  'aera rates': 'arrayRate',
 };
 
 function normalizeHeader(value: unknown): string {
-  return String(value ?? '')
+  const key = String(value ?? '')
     .replace(/\s+/g, ' ')
     .trim()
     .toLowerCase();
+  if (key === 'array rate' || key === 'aera rate') return 'aera rates';
+  if (key === 'active') return 'status';
+  if (key === 'valid until' || key === 'valid to' || key === 'validity') return 'valid till';
+  return key;
 }
 
 function missingHeaders(headers: unknown[]): string[] {
@@ -88,6 +97,40 @@ function missingHeaders(headers: unknown[]): string[] {
   return missing;
 }
 
+async function downloadAircraftMasterTemplate() {
+  const ExcelJS = await getExcelJSModule();
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = 'FRIS Billing';
+  const sheet = workbook.addWorksheet('Aircraft master', {
+    views: [{ state: 'frozen', ySplit: 1 }],
+    properties: { tabColor: { argb: 'FF1E3A5F' } },
+  });
+  sheet.columns = COLUMN_LABELS.map((header) => ({
+    header,
+    key: header,
+    width: Math.max(16, header.length + 4),
+  }));
+  const header = sheet.getRow(1);
+  header.height = 32;
+  header.eachCell((cell) => {
+    cell.font = { name: 'Calibri', bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A5F' } };
+    cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+  });
+  const validTillColumn = COLUMN_LABELS.indexOf('Valid till') + 1;
+  if (validTillColumn > 0) sheet.getColumn(validTillColumn).numFmt = 'dd-mm-yyyy';
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'aircraft-master-template.xlsx';
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 function textCell(value: unknown): string {
   if (value == null) return '';
   if (value instanceof Date) return value.toISOString().slice(0, 10);
@@ -97,18 +140,19 @@ function textCell(value: unknown): string {
 const TABLE_COLUMNS: Array<{ key: keyof AircraftMasterRow; header: string }> = [
   { key: 'serialNo', header: 'S_No_' },
   { key: 'aircraftType', header: 'Aircraft Type' },
+  { key: 'description', header: 'Description' },
+  { key: 'manufacturer', header: 'Manufacturer' },
+  { key: 'category', header: 'Category' },
+  { key: 'ceilingRate', header: 'Ceiling rate' },
+  { key: 'arrayRate', header: 'Aera rates' },
+  { key: 'validTill', header: 'Valid till' },
   { key: 'icaoCode', header: 'ICAO Code' },
   { key: 'mtowKg', header: 'MTOW (kg)' },
   { key: 'passengerCapacity', header: 'Passenger Capacity' },
-  { key: 'manufacturer', header: 'Manufacturer' },
   { key: 'aircraftBody', header: 'Aircraft Body' },
   { key: 'wingspanM', header: 'Wingspan (m)' },
-  { key: 'description', header: 'Description' },
-  { key: 'active', header: 'Active' },
-  { key: 'category', header: 'Category' },
-  { key: 'activeSecondary', header: 'Active' },
-  { key: 'ceilingRate', header: 'Ceiling rate' },
-  { key: 'arrayRate', header: 'array rate' },
+  { key: 'active', header: 'Status' },
+  { key: 'activeSecondary', header: 'Status' },
 ];
 
 export function AircraftMasterPage({ api }: { api: BillingApi }) {
@@ -116,6 +160,8 @@ export function AircraftMasterPage({ api }: { api: BillingApi }) {
   const [rows, setRows] = useState<AircraftMasterRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);
+  const [templateOpen, setTemplateOpen] = useState(false);
+  const [downloadingTemplate, setDownloadingTemplate] = useState(false);
   const [error, setError] = useState('');
 
   const load = useCallback(async () => {
@@ -171,7 +217,7 @@ export function AircraftMasterPage({ api }: { api: BillingApi }) {
         for (const column of headerIndexes) {
           if (!column.key) continue;
           const field =
-            column.key === 'active'
+            column.key === 'status'
               ? activeSeen++ === 0
                 ? 'active'
                 : 'activeSecondary'
@@ -200,22 +246,95 @@ export function AircraftMasterPage({ api }: { api: BillingApi }) {
         title="Aircraft Master"
         description="Import an Excel sheet with the aircraft master column names. Blank cell values are allowed. Missing column names are rejected."
         actions={
-          <label className={billingUi.btnPrimary}>
-            {importing ? 'Importing…' : 'Import Excel'}
-            <input
-              ref={fileRef}
-              type="file"
-              accept=".xlsx,.xls,.csv"
-              className="sr-only"
-              disabled={importing}
-              onChange={(event) => {
-                const file = event.target.files?.[0];
-                if (file) void onFile(file);
-              }}
-            />
-          </label>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              className={billingUi.btnSecondary}
+              onClick={() => setTemplateOpen(true)}
+            >
+              Excel template
+            </button>
+            <label className={billingUi.btnPrimary}>
+              {importing ? 'Importing…' : 'Import Excel'}
+              <input
+                ref={fileRef}
+                type="file"
+                accept=".xlsx,.xls,.csv"
+                className="sr-only"
+                disabled={importing}
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file) void onFile(file);
+                }}
+              />
+            </label>
+          </div>
         }
       />
+      {templateOpen ? (
+        <div
+          className="fixed inset-0 z-[80] flex items-end justify-center bg-black/40 p-4 sm:items-center"
+          role="presentation"
+          onClick={() => setTemplateOpen(false)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="aircraft-template-title"
+            className="max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-xl border border-[color:var(--billing-border)] bg-[color:var(--billing-surface)] p-4 shadow-lg sm:p-5"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 id="aircraft-template-title" className="text-base font-semibold text-[color:var(--billing-heading)]">
+                  Aircraft master template
+                </h2>
+                <p className="mt-1 text-xs text-[color:var(--billing-text-muted)]">
+                  Use this header row. Cell values may be blank. Both Status columns are required. Valid till is a date.
+                </p>
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                <button
+                  type="button"
+                  disabled={downloadingTemplate}
+                  className={billingUi.btnSecondary}
+                  onClick={() => {
+                    setDownloadingTemplate(true);
+                    void downloadAircraftMasterTemplate().finally(() => setDownloadingTemplate(false));
+                  }}
+                >
+                  {downloadingTemplate ? 'Downloading…' : 'Download'}
+                </button>
+                <button type="button" className="text-sm text-[color:var(--billing-text-muted)]" onClick={() => setTemplateOpen(false)}>
+                  Close
+                </button>
+              </div>
+            </div>
+            <div className="mt-4 overflow-x-auto rounded-lg border border-[color:var(--billing-border)]">
+              <table className="min-w-full text-left text-sm">
+                <thead className="bg-[color:var(--billing-surface-muted)] text-[color:var(--billing-text-muted)]">
+                  <tr>
+                    {COLUMN_LABELS.map((label, index) => (
+                      <th key={`${label}-${index}`} className="whitespace-nowrap px-3 py-2 font-medium">
+                        {label}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-t border-[color:var(--billing-border)]">
+                    {COLUMN_LABELS.map((label, index) => (
+                      <td key={`${label}-blank-${index}`} className="px-3 py-3 text-[color:var(--billing-text-muted)]">
+                        {label === 'Valid till' ? 'dd-mm-yyyy' : ''}
+                      </td>
+                    ))}
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      ) : null}
       {error ? (
         <p className="mb-4 rounded-[var(--billing-radius)] border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
           {error}
@@ -225,7 +344,12 @@ export function AircraftMasterPage({ api }: { api: BillingApi }) {
         columns={TABLE_COLUMNS.map((column) => ({
           key: column.key,
           header: column.header,
-          render: (row: AircraftMasterRow) => row[column.key] || '—',
+          render: (row: AircraftMasterRow) => {
+            const value = row[column.key];
+            if (!value) return '—';
+            if (column.key === 'validTill') return formatBillingDate(value, value);
+            return value;
+          },
         }))}
         rows={rows}
         loading={loading}

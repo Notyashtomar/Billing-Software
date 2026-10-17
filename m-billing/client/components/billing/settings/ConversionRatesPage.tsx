@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { BillingApi } from '@/lib/billing-api';
 import { BillingPageHeader } from '../BillingLayout';
-import { MasterSectionTabs } from '../MasterSectionTabs';
 import { BillingDataTable } from '../BillingDataTable';
 import { FieldGroup, TextInput } from './SettingsFormFields';
 import { ExchangeRateEditDialog } from './SettingsEditDialogs';
@@ -119,9 +118,8 @@ export function ConversionRatesPage({ api }: Props) {
 
   return (
     <>
-      <MasterSectionTabs group="rates" />
       <BillingPageHeader
-        title="Conversion Rates"
+        title="ROE Master"
         description="Month-wise USD to INR rates applied automatically to airline invoices for the month of flights sent to preparation."
       />
 

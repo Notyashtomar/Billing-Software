@@ -23,6 +23,7 @@ export type AircraftMasterImportRow = {
   activeSecondary?: string;
   ceilingRate?: string;
   arrayRate?: string;
+  validTill?: string;
 };
 
 function cell(value: unknown): string {
@@ -73,6 +74,7 @@ export class BillingAircraftMasterService {
         activeSecondary: cell(row.activeSecondary),
         ceilingRate: cell(row.ceilingRate),
         arrayRate: cell(row.arrayRate),
+        validTill: cell(row.validTill),
       }))
       .filter((row) =>
         [
@@ -90,6 +92,7 @@ export class BillingAircraftMasterService {
           row.activeSecondary,
           row.ceilingRate,
           row.arrayRate,
+          row.validTill,
         ].some(Boolean),
       )
       .map((row, index) =>

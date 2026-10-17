@@ -175,7 +175,11 @@ function mayUseBillingHref(href: string): boolean {
       clientMayUseBwmsAppPage('billing-finance', 'prep-dashboard')
     );
   }
-  if (path === '/billing/royalty-setup' || path === '/billing/aircraft-master') {
+  if (
+    path === '/billing/royalty-setup' ||
+    path === '/billing/aircraft-master' ||
+    path === '/billing/equipment-master'
+  ) {
     const pageId = billingPageIdFromHref(path);
     return (
       (pageId != null && clientMayUseBwmsAppPage('billing-finance', pageId)) ||
@@ -199,14 +203,7 @@ function filterBillingNavLinks(
       return [];
     }
     if (link.href === '/billing/rate-cards') {
-      if (mayUseBillingHref('/billing/rate-cards')) return [link];
-      if (mayUseBillingHref('/billing/concessions')) {
-        return [{ ...link, href: '/billing/concessions' }];
-      }
-      if (mayUseBillingHref('/billing/conversion-rates')) {
-        return [{ ...link, href: '/billing/conversion-rates' }];
-      }
-      return [];
+      return mayUseBillingHref('/billing/rate-cards') ? [link] : [];
     }
     return mayUseBillingHref(link.href) ? [link] : [];
   });
@@ -253,6 +250,7 @@ function billingDropdownIcon(href: string): React.ReactNode {
     case '/billing/invoice-bin':
       return <Trash2 className={cls} />;
     case '/billing/equipment':
+    case '/billing/equipment-master':
     case '/billing/cleaning':
       return <Wrench className={cls} />;
     case '/billing/manpower':
@@ -326,7 +324,9 @@ interface NavItem {
 
 /** Billing chrome top tabs — filtered by admin page grants. */
 function buildBillingChromeNavItems(): NavItem[] {
-  const master = filterBillingNavLinks(BILLING_MASTER_NAV);
+  const master = [...filterBillingNavLinks(BILLING_MASTER_NAV)].sort((a, b) =>
+    a.label.localeCompare(b.label, undefined, { sensitivity: 'base' }),
+  );
   const workflow = filterBillingNavLinks(BILLING_WORKFLOW_NAV);
   const sources = filterBillingNavLinks(BILLING_SOURCES_NAV);
   const others = filterBillingNavLinks(BILLING_OTHERS_NAV);
@@ -934,15 +934,6 @@ const Navbar: React.FC = () => {
       ) {
         return true;
       }
-      if (
-        path === '/billing/rate-cards' &&
-        (activePath === '/billing/concessions' ||
-          activePath.startsWith('/billing/concessions/') ||
-          activePath === '/billing/conversion-rates' ||
-          activePath.startsWith('/billing/conversion-rates/'))
-      ) {
-        return true;
-      }
       // Billing child routes keep parent dropdown item highlighted.
       if (path.startsWith('/billing/') && activePath.startsWith(`${path}/`)) {
         return true;
@@ -1114,8 +1105,11 @@ const Navbar: React.FC = () => {
   useEffect(() => {
     const refresh = () => {
       setStationDisplayName(resolveStationDisplayName());
+      const ctx = getStoredLoginStationContext();
       setSessionStationCode(
-        localStorage.getItem('userStationCode')?.trim().toUpperCase() || '',
+        String(ctx.stationCode ?? '').trim().toUpperCase() ||
+          localStorage.getItem('userStationCode')?.trim().toUpperCase() ||
+          '',
       );
     };
     refresh();
@@ -1242,6 +1236,11 @@ const Navbar: React.FC = () => {
 
         {/* Navigation links - Desktop - Moved to center */}
         <div className="hidden nav-desktop:flex items-center justify-center flex-1 px-10">
+          {billingNavbarChrome && sessionStationCode ? (
+            <span className="billing-nav-station relative -left-[30%] shrink-0 px-3 lg:px-4 font-bold text-sm lg:text-base text-gray-700">
+              {sessionStationCode}
+            </span>
+          ) : null}
           {navItems.map((item) => (
             <div
               key={item.id}

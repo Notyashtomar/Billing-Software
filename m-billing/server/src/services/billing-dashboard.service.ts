@@ -430,7 +430,7 @@ export class BillingDashboardService {
       },
       {
         id: 'exchange-rates',
-        label: 'Conversion rates',
+        label: 'ROE Master',
         href: '/billing/conversion-rates',
         status: setupStatus(exchangeRateCount > 0, false),
         detail: exchangeRateCount ? `${exchangeRateCount} rate(s)` : 'No exchange rates',
