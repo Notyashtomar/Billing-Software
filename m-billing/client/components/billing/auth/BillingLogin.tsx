@@ -40,7 +40,7 @@ import { parseUserNavFlags, type UserNavFlags } from '@/lib/nav-permissions';
 import BillingLoginBurst from './BillingLoginBurst';
 
 const REMEMBER_KEY = 'billing.rememberUserId';
-const BILLING_DESTINATION = '/billing/insights/payables';
+const BILLING_DESTINATION = '/billing/dashboard';
 const GENERIC_LOGIN_ERROR = 'Unable to sign in. Check your details and try again.';
 
 /** Billing brand — Color Hunt navy + lemon (Finance suite). */
