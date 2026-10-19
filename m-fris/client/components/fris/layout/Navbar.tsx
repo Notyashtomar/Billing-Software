@@ -1205,7 +1205,7 @@ const Navbar: React.FC = () => {
     >
       <div className="flex items-center justify-between h-full px-4 md:px-6">
         {/* Left side - Logo — .billing-logo-plate + inline #fff (nav often outside .billing-app) */}
-        <div className="flex min-w-0 shrink-0 items-center gap-2 sm:gap-3 h-full">
+        <div className="flex min-w-0 shrink-0 items-center h-full">
           <div
             className={
               billingNavbarChrome
@@ -1219,7 +1219,7 @@ const Navbar: React.FC = () => {
             }
           >
             <StationCompanyLogo
-              className="h-12 w-auto max-w-[40vw] sm:max-w-none"
+              className="h-12 w-auto max-w-[34vw] sm:max-w-none"
               alt="Company logo"
               onError={(e) => {
                 e.currentTarget.style.display = 'none';
@@ -1232,15 +1232,22 @@ const Navbar: React.FC = () => {
               }}
             />
           </div>
-          {billingNavbarChrome && sessionStationCode ? (
-            <span className="billing-nav-station min-w-0 truncate whitespace-nowrap font-bold text-sm lg:text-base text-gray-700">
-              {sessionStationCode}
-            </span>
-          ) : null}
         </div>
 
+        {billingNavbarChrome && sessionStationCode ? (
+          <div className="flex min-w-0 flex-1 items-center justify-center px-2">
+            <span className="billing-nav-station max-w-full truncate whitespace-nowrap text-center font-bold text-sm lg:text-base text-gray-700">
+              {sessionStationCode}
+            </span>
+          </div>
+        ) : null}
+
         {/* Navigation links - Desktop - Moved to center */}
-        <div className="hidden nav-desktop:flex min-w-0 items-center justify-center flex-1 px-4 lg:px-10">
+        <div
+          className={`hidden nav-desktop:flex min-w-0 items-center justify-center ${
+            billingNavbarChrome && sessionStationCode ? 'shrink-0 px-2' : 'flex-1 px-4 lg:px-10'
+          }`}
+        >
           {navItems.map((item) => (
             <div
               key={item.id}
@@ -1537,6 +1544,10 @@ const Navbar: React.FC = () => {
             </div>
           ))}
         </div>
+
+        {billingNavbarChrome && sessionStationCode ? (
+          <div className="hidden nav-desktop:block min-w-0 flex-1" aria-hidden />
+        ) : null}
 
         {/* Right side - User Profile */}
         <div className="flex items-center space-x-4">
