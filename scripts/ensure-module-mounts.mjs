@@ -137,7 +137,13 @@ for (const { name, source } of mounts) {
   const dest = path.join(apiSrc, name);
   if (fs.existsSync(dest)) {
     if (sameTarget(dest, source)) continue;
-    throw new Error(`Refusing to replace existing path: ${dest}`);
+    const stat = fs.lstatSync(dest);
+    if (stat.isSymbolicLink() || path.resolve(fs.realpathSync(dest)) !== path.resolve(dest)) {
+      removeJunction(dest);
+    } else {
+      fs.rmSync(dest, { recursive: true, force: true });
+    }
+    console.log(`replaced ${path.relative(repo, dest)}`);
   }
   fs.symlinkSync(source, dest, 'junction');
   mounted += 1;

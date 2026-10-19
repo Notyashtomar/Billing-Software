@@ -38,6 +38,97 @@ import { AuditEngineService } from '../engines/audit-engine.service';
 
 type CountByKey = Record<string, number>;
 
+function roundMoney(n: number): number {
+  return Math.round(n * 100) / 100;
+}
+
+function changePercent(current: number, previous: number): number | null {
+  if (previous === 0) return current === 0 ? 0 : null;
+  return Math.round(((current - previous) / previous) * 1000) / 10;
+}
+
+function draftInr(
+  row: {
+    subtotalExclTax?: number;
+    concessionFeeAmount?: number;
+    totalInclTax?: number;
+    currencyCode?: string;
+    currencyFactor?: number;
+  },
+  kind: 'preTax' | 'inclTax',
+): number {
+  const amount =
+    kind === 'preTax'
+      ? Number(row.subtotalExclTax ?? 0) + Number(row.concessionFeeAmount ?? 0)
+      : Number(row.totalInclTax ?? 0);
+  if (!Number.isFinite(amount)) return 0;
+  if (String(row.currencyCode ?? 'INR').toUpperCase() !== 'USD') return amount;
+  const factor = Number(row.currencyFactor);
+  return factor > 0 ? amount * factor : amount;
+}
+
+function sumDrafts(
+  rows: Array<{
+    invoiceCategory?: string;
+    subtotalExclTax?: number;
+    concessionFeeAmount?: number;
+    totalInclTax?: number;
+    currencyCode?: string;
+    currencyFactor?: number;
+  }>,
+  categories: string[],
+  kind: 'preTax' | 'inclTax',
+): number {
+  const allow = new Set(categories);
+  return roundMoney(
+    rows.reduce((sum, row) => {
+      const category = String(row.invoiceCategory ?? 'BHS').trim().toUpperCase() || 'BHS';
+      if (!allow.has(category)) return sum;
+      return sum + draftInr(row, kind);
+    }, 0),
+  );
+}
+
+function executiveWindows(period?: string) {
+  const now = new Date();
+  const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const key = String(period ?? 'this_month');
+  if (key === 'last_month') {
+    const from = new Date(thisMonth.getFullYear(), thisMonth.getMonth() - 1, 1);
+    const previousFrom = new Date(thisMonth.getFullYear(), thisMonth.getMonth() - 2, 1);
+    return {
+      current: { from, to: thisMonth },
+      previous: { from: previousFrom, to: from },
+      periodLabel: monthLabel(from),
+      compareLabel: monthLabel(previousFrom),
+    };
+  }
+  if (key === 'this_quarter') {
+    const quarterStartMonth = Math.floor(now.getMonth() / 3) * 3;
+    const from = new Date(now.getFullYear(), quarterStartMonth, 1);
+    const to = new Date(now.getFullYear(), quarterStartMonth + 3, 1);
+    const previousFrom = new Date(now.getFullYear(), quarterStartMonth - 3, 1);
+    return {
+      current: { from, to },
+      previous: { from: previousFrom, to: from },
+      periodLabel: `${monthLabel(from)} – ${monthLabel(new Date(to.getFullYear(), to.getMonth() - 1, 1))}`,
+      compareLabel: `${monthLabel(previousFrom)} – ${monthLabel(new Date(from.getFullYear(), from.getMonth() - 1, 1))}`,
+    };
+  }
+  const next = new Date(thisMonth.getFullYear(), thisMonth.getMonth() + 1, 1);
+  const previousFrom = new Date(thisMonth.getFullYear(), thisMonth.getMonth() - 1, 1);
+  return {
+    current: { from: thisMonth, to: next },
+    previous: { from: previousFrom, to: thisMonth },
+    periodLabel: monthLabel(thisMonth),
+    compareLabel: monthLabel(previousFrom),
+  };
+}
+
+function monthLabel(date: Date): string {
+  return date.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+}
+
 function countMap(rows: { _id: string; count: number }[]): CountByKey {
   return rows.reduce<CountByKey>((acc, row) => {
     acc[row._id] = row.count;
@@ -447,5 +538,92 @@ export class BillingDashboardService {
           : 'No invoice sequence',
       },
     ];
+  }
+
+  async getExecutive(
+    ctx: StationScopeContext,
+    query: { period?: string; airline?: string; service?: string },
+  ) {
+    const windows = executiveWindows(query.period);
+    const airline = String(query.airline ?? '').trim().toUpperCase();
+    const service = String(query.service ?? 'All').trim().toUpperCase();
+    const categories =
+      service === 'BHS' || service === 'ADS' || service === 'RAF' ? [service] : ['BHS', 'ADS', 'RAF'];
+    const customer = airline && airline !== 'ALL AIRLINES' ? airline : '';
+
+    const [currentDrafts, previousDrafts, flights, previousFlights, eligible, invoiced] =
+      await Promise.all([
+        this.loadDrafts(ctx, windows.current, customer),
+        this.loadDrafts(ctx, windows.previous, customer),
+        this.countFlights(ctx, windows.current, customer),
+        this.countFlights(ctx, windows.previous, customer),
+        this.countFlights(ctx, windows.current, customer, ['eligible', 'ready_for_invoice', 'invoiced']),
+        this.countFlights(ctx, windows.current, customer, ['invoiced']),
+      ]);
+
+    const grossExclTax = sumDrafts(currentDrafts, categories, 'preTax');
+    const previousGrossExclTax = sumDrafts(previousDrafts, categories, 'preTax');
+    const additionalExclTax = sumDrafts(currentDrafts, ['ADS'], 'preTax');
+    const invoicedInclTax = sumDrafts(currentDrafts, categories, 'inclTax');
+    const completionPercent =
+      eligible > 0 ? Math.round((invoiced / eligible) * 1000) / 10 : 0;
+
+    return successResponse({
+      periodLabel: windows.periodLabel,
+      compareLabel: windows.compareLabel,
+      grossExclTax,
+      previousGrossExclTax,
+      grossChangeAmount: roundMoney(grossExclTax - previousGrossExclTax),
+      grossChangePercent: changePercent(grossExclTax, previousGrossExclTax),
+      flights,
+      previousFlights,
+      eligibleFlights: eligible,
+      invoicedFlights: invoiced,
+      completionPercent,
+      additionalExclTax,
+      invoicedInclTax,
+    });
+  }
+
+  private loadDrafts(
+    ctx: StationScopeContext,
+    range: { from: Date; to: Date },
+    customerCode: string,
+  ) {
+    return this.invoiceModel
+      .find(
+        StationScope.filter(
+          {
+            ...NOT_IN_BIN_FILTER,
+            status: { $in: ['draft', 'pending_approval', 'approved', 'generated'] },
+            billingPeriodStart: { $gte: range.from, $lt: range.to },
+            ...(customerCode ? { customerCode } : {}),
+          },
+          ctx,
+        ),
+      )
+      .select(
+        'invoiceCategory subtotalExclTax concessionFeeAmount totalInclTax currencyCode currencyFactor',
+      )
+      .lean();
+  }
+
+  private countFlights(
+    ctx: StationScopeContext,
+    range: { from: Date; to: Date },
+    customerCode: string,
+    statuses?: string[],
+  ) {
+    return this.preparationModel.countDocuments(
+      StationScope.filter(
+        {
+          sourceType: 'scheduled_flight',
+          billingPeriodStart: { $gte: range.from, $lt: range.to },
+          ...(customerCode ? { customerCode } : {}),
+          ...(statuses ? { status: { $in: statuses } } : {}),
+        },
+        ctx,
+      ),
+    );
   }
 }

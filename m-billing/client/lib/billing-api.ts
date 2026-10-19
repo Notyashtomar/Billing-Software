@@ -366,6 +366,15 @@ export function createBillingApi({ getApiBase, fetch }: BillingApiConfig) {
     getDashboard: () =>
       request('/billing/dashboard').then((r) => parseJson<{ data: unknown }>(r)),
 
+    getExecutiveDashboard: (params: { period: string; airline?: string; service?: string }) => {
+      const qs = new URLSearchParams({ period: params.period });
+      if (params.airline && params.airline !== 'All airlines') qs.set('airline', params.airline);
+      if (params.service && params.service !== 'All') qs.set('service', params.service);
+      return request(`/billing/dashboard/executive?${qs.toString()}`).then((r) =>
+        parseJson<{ data: ExecutiveDashboardMetrics }>(r),
+      );
+    },
+
     listCustomers: (params?: {
       search?: string;
       page?: number;
@@ -1610,6 +1619,22 @@ export function createBillingApi({ getApiBase, fetch }: BillingApiConfig) {
       request('/billing/customers/sync-from-advance', { method: 'POST' }).then((r) => parseJson(r)),
   };
 }
+
+export type ExecutiveDashboardMetrics = {
+  periodLabel: string;
+  compareLabel: string;
+  grossExclTax: number;
+  previousGrossExclTax: number;
+  grossChangeAmount: number;
+  grossChangePercent: number | null;
+  flights: number;
+  previousFlights: number;
+  eligibleFlights: number;
+  invoicedFlights: number;
+  completionPercent: number;
+  additionalExclTax: number;
+  invoicedInclTax: number;
+};
 
 export type BillingApi = ReturnType<typeof createBillingApi>;
 
