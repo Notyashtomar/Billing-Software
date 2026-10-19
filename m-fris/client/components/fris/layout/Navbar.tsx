@@ -1205,12 +1205,12 @@ const Navbar: React.FC = () => {
     >
       <div className="flex items-center justify-between h-full px-4 md:px-6">
         {/* Left side - Logo — .billing-logo-plate + inline #fff (nav often outside .billing-app) */}
-        <div className="flex items-center h-full">
+        <div className="flex min-w-0 shrink-0 items-center gap-2 sm:gap-3 h-full">
           <div
             className={
               billingNavbarChrome
-                ? 'billing-logo-plate relative flex items-center rounded-md px-2 py-0.5 !bg-[#ffffff]'
-                : 'relative flex h-full items-center'
+                ? 'billing-logo-plate relative flex shrink-0 items-center rounded-md px-2 py-0.5 !bg-[#ffffff]'
+                : 'relative flex h-full shrink-0 items-center'
             }
             style={
               billingNavbarChrome
@@ -1219,7 +1219,7 @@ const Navbar: React.FC = () => {
             }
           >
             <StationCompanyLogo
-              className="h-12 w-auto"
+              className="h-12 w-auto max-w-[40vw] sm:max-w-none"
               alt="Company logo"
               onError={(e) => {
                 e.currentTarget.style.display = 'none';
@@ -1232,15 +1232,15 @@ const Navbar: React.FC = () => {
               }}
             />
           </div>
-        </div>
-
-        {/* Navigation links - Desktop - Moved to center */}
-        <div className="hidden nav-desktop:flex items-center justify-center flex-1 px-10">
           {billingNavbarChrome && sessionStationCode ? (
-            <span className="billing-nav-station relative -left-[30%] shrink-0 px-3 lg:px-4 font-bold text-sm lg:text-base text-gray-700">
+            <span className="billing-nav-station min-w-0 truncate whitespace-nowrap font-bold text-sm lg:text-base text-gray-700">
               {sessionStationCode}
             </span>
           ) : null}
+        </div>
+
+        {/* Navigation links - Desktop - Moved to center */}
+        <div className="hidden nav-desktop:flex min-w-0 items-center justify-center flex-1 px-4 lg:px-10">
           {navItems.map((item) => (
             <div
               key={item.id}
