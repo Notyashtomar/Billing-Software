@@ -332,6 +332,15 @@ function buildBillingChromeNavItems(): NavItem[] {
   const others = filterBillingNavLinks(BILLING_OTHERS_NAV);
   const insights = filterBillingNavLinks(BILLING_INSIGHTS_NAV);
   const items: NavItem[] = [];
+  if (mayUseBillingHref('/billing/dashboard')) {
+    items.push({
+      id: 900,
+      label: 'Dashboard',
+      path: '/billing/dashboard',
+      icon: <LayoutDashboard className="w-4 h-4" />,
+      roles: ['employee', 'manager', 'superadmin'],
+    });
+  }
   if (master.length > 0) {
     items.push({
       id: 901,
@@ -841,7 +850,7 @@ const Navbar: React.FC = () => {
 
   // Panel users with admin-assigned flags use permission-based nav.
   // Superadmins always get the full navbar (new pages included by default).
-  // Billing chrome: Master / Workflow / Billed Services / Insights / Others + Advance / Flights / MIS.
+  // Billing chrome: Dashboard + Master / Workflow / Billed Services / Insights / Others + Advance / Flights / MIS.
   const navItems = useMemo(() => {
     if (!user) return [];
 
@@ -1235,11 +1244,15 @@ const Navbar: React.FC = () => {
         </div>
 
         {billingNavbarChrome && sessionStationCode ? (
-          <div className="flex min-w-0 flex-1 items-center justify-center px-2">
-            <span className="billing-nav-station max-w-full truncate whitespace-nowrap text-center font-bold text-sm lg:text-base text-gray-700">
+          <div className="flex shrink-0 items-center px-3">
+            <span className="billing-nav-station whitespace-nowrap text-center font-bold text-sm lg:text-base text-gray-700">
               {sessionStationCode}
             </span>
           </div>
+        ) : null}
+
+        {billingNavbarChrome && sessionStationCode ? (
+          <div className="hidden nav-desktop:block min-w-0 flex-1" aria-hidden />
         ) : null}
 
         {/* Navigation links - Desktop - Moved to center */}
@@ -1544,10 +1557,6 @@ const Navbar: React.FC = () => {
             </div>
           ))}
         </div>
-
-        {billingNavbarChrome && sessionStationCode ? (
-          <div className="hidden nav-desktop:block min-w-0 flex-1" aria-hidden />
-        ) : null}
 
         {/* Right side - User Profile */}
         <div className="flex items-center space-x-4">

@@ -14,6 +14,7 @@ type ExecutiveMetrics = {
   periodLabel: string;
   compareLabel: string;
   grossExclTax: number;
+  previousGrossExclTax: number;
   grossChangeAmount: number;
   grossChangePercent: number | null;
   flights: number;
@@ -24,6 +25,26 @@ type ExecutiveMetrics = {
   additionalExclTax: number;
   invoicedInclTax: number;
 };
+
+function currentMonthValue(date = new Date()): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function shiftMonthValue(value: string, delta: number): string {
+  const match = /^(\d{4})-(\d{2})$/.exec(value);
+  if (!match) return currentMonthValue();
+  const date = new Date(Number(match[1]), Number(match[2]) - 1 + delta, 1);
+  return currentMonthValue(date);
+}
+
+function formatMonthValue(value: string): string {
+  const match = /^(\d{4})-(\d{2})$/.exec(value);
+  if (!match) return value;
+  return new Date(Number(match[1]), Number(match[2]) - 1, 1).toLocaleDateString('en-IN', {
+    month: 'long',
+    year: 'numeric',
+  });
+}
 
 function formatInr(amount: number, signed = false): string {
   const sign = amount < 0 ? '-' : signed ? '+' : '';
@@ -43,26 +64,25 @@ function formatPercent(value: number | null, compareLabel: string): string {
   return `${sign}${value.toFixed(1)}% vs ${compareLabel}`;
 }
 
-const SAMPLE = {
-  periodLabel: 'October 2026',
-  compareLabel: 'September',
-  billedRevenue: '₹4.82 Cr',
-  billedDelta: '+6.4% vs Sep',
-  revenueGrowth: '+₹29 L',
-  revenueGrowthDelta: '+6.4% vs Sep',
-  flights: '1,284',
-  flightsDelta: '-2.1% vs Sep',
-  completion: 91,
-  additional: '₹64 L',
-  invoicedGst: '₹5.69 Cr',
-  versus: {
-    current: '₹4.82 Cr',
-    previous: '₹4.53 Cr',
-    change: '+₹29 L',
-    flights: '-28',
-    yield: '+₹3,010',
-  },
-};
+function yieldPerFlight(gross: number, flights: number): number | null {
+  if (!flights) return null;
+  return gross / flights;
+}
+
+function formatYieldChange(metrics: ExecutiveMetrics): string {
+  const current = yieldPerFlight(metrics.grossExclTax, metrics.flights);
+  const previous = yieldPerFlight(metrics.previousGrossExclTax, metrics.previousFlights);
+  if (current == null || previous == null) return '—';
+  return formatInr(current - previous, true);
+}
+
+function yieldTone(metrics: ExecutiveMetrics | null): 'positive' | 'negative' | undefined {
+  if (!metrics) return undefined;
+  const current = yieldPerFlight(metrics.grossExclTax, metrics.flights);
+  const previous = yieldPerFlight(metrics.previousGrossExclTax, metrics.previousFlights);
+  if (current == null || previous == null) return undefined;
+  return current - previous < 0 ? 'negative' : 'positive';
+}
 
 const TREND = [
   { month: 'May', current: 42, prior: 28 },
@@ -115,6 +135,7 @@ function linePath(values: number[]) {
 
 export function ExecutiveDashboard() {
   const [period, setPeriod] = useState('This month');
+  const [pickedMonth, setPickedMonth] = useState('');
   const [airline, setAirline] = useState('All airlines');
   const [service, setService] = useState('All');
   const [grain, setGrain] = useState<'Month' | 'Week' | 'Day'>('Month');
@@ -166,7 +187,7 @@ export function ExecutiveDashboard() {
     setMetricsError('');
     void billingApi
       .getExecutiveDashboard({
-        period: PERIOD_KEY[period] ?? 'this_month',
+        period: pickedMonth || PERIOD_KEY[period] || 'this_month',
         airline,
         service,
       })
@@ -185,7 +206,7 @@ export function ExecutiveDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [period, airline, service]);
+  }, [period, pickedMonth, airline, service]);
 
   const airlineOptions = useMemo(
     () => ['All airlines', ...airlines.map((row) => row.code)],
@@ -197,9 +218,22 @@ export function ExecutiveDashboard() {
 
   const clearFilters = () => {
     setPeriod('This month');
+    setPickedMonth('');
     setAirline('All airlines');
     setService('All');
   };
+
+  const selectedMonthValue =
+    pickedMonth ||
+    (period === 'Last month' ? shiftMonthValue(currentMonthValue(), -1) : currentMonthValue());
+  const selectedMonthLabel = pickedMonth
+    ? formatMonthValue(pickedMonth)
+    : period === 'This quarter'
+      ? 'This quarter'
+      : formatMonthValue(selectedMonthValue);
+  const periodOptions = pickedMonth
+    ? [formatMonthValue(pickedMonth), 'This month', 'Last month', 'This quarter']
+    : ['This month', 'Last month', 'This quarter'];
 
   return (
     <div className="-m-3 min-h-[calc(100dvh-4.5rem)] bg-[#f4f6f3] px-4 py-4 text-[#1c2430] sm:-m-6 sm:px-6">
@@ -208,17 +242,35 @@ export function ExecutiveDashboard() {
             <h1 className="text-2xl font-semibold tracking-tight">Executive</h1>
             <p className="text-sm text-[#667066]">Billing performance for station leadership</p>
           </div>
-          <button
-            type="button"
-            className="inline-flex items-center gap-2 rounded-lg border border-[#e1e4de] bg-white px-3 py-2 text-sm text-[#3d463f] shadow-sm transition hover:-translate-y-0.5 hover:border-[#1f8a3b] hover:shadow-md"
-          >
-            Month close
+          <label className="relative inline-flex cursor-pointer items-center gap-2 rounded-lg border border-[#e1e4de] bg-white px-3 py-2 text-sm text-[#3d463f] shadow-sm transition hover:-translate-y-0.5 hover:border-[#1f8a3b] hover:shadow-md">
+            <span>{selectedMonthLabel}</span>
             <Calendar className="h-4 w-4" />
-          </button>
+            <input
+              type="month"
+              aria-label="Select month"
+              min="2000-01"
+              max="2100-12"
+              value={selectedMonthValue}
+              onChange={(event) => {
+                const value = event.target.value;
+                if (/^\d{4}-\d{2}$/.test(value)) setPickedMonth(value);
+              }}
+              className="absolute inset-0 cursor-pointer opacity-0"
+            />
+          </label>
         </header>
 
         <div className="mb-3 flex flex-wrap items-end gap-3 rounded-xl border border-[#e6e8e3] bg-white p-3 shadow-sm transition-shadow hover:shadow-md">
-          <Filter label="Period" value={period} options={['This month', 'Last month', 'This quarter']} onChange={setPeriod} />
+          <Filter
+            label="Period"
+            value={pickedMonth ? formatMonthValue(pickedMonth) : period}
+            options={periodOptions}
+            onChange={(value) => {
+              if (pickedMonth && value === formatMonthValue(pickedMonth)) return;
+              setPickedMonth('');
+              setPeriod(value);
+            }}
+          />
           <Filter
             label="Airline"
             value={airline}
@@ -243,13 +295,15 @@ export function ExecutiveDashboard() {
         ) : null}
 
         <p className="mb-3 text-sm text-[#667066]">
-          {metrics
-            ? `${metrics.periodLabel} compared with ${metrics.compareLabel}. Gross revenue excludes GST.`
-            : 'Loading station billing totals.'}
+          {metricsLoading
+            ? `Loading totals for ${selectedMonthLabel}.`
+            : metrics
+              ? `${metrics.periodLabel} compared with ${metrics.compareLabel}. Gross revenue excludes GST.`
+              : 'Station billing totals are unavailable.'}
         </p>
         {metricsError ? <p className="mb-3 text-sm text-[#9a5b12]">{metricsError}</p> : null}
 
-        <div key={`${period}-${airline}-${service}`} className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <div key={`${pickedMonth || period}-${airline}-${service}`} className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           <Kpi
             title="Gross revenue"
             value={metricsLoading || !metrics ? '—' : formatInr(metrics.grossExclTax)}
@@ -366,16 +420,32 @@ export function ExecutiveDashboard() {
           </article>
 
           <article className="flex h-full flex-col rounded-xl border border-[#e6e8e3] bg-white p-4 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md">
-            <h2 className="text-base font-semibold">Versus {SAMPLE.compareLabel}</h2>
+            <h2 className="text-base font-semibold">Versus {metrics?.compareLabel ?? 'previous month'}</h2>
             <dl className="mt-4 space-y-3 text-sm">
-              <Row label="This period" value={SAMPLE.versus.current} />
-              <Row label="Previous" value={SAMPLE.versus.previous} />
-              <Row label="Change" value={SAMPLE.versus.change} tone="positive" />
-              <Row label="Flights" value={SAMPLE.versus.flights} tone="negative" />
-              <Row label="Yield" value={SAMPLE.versus.yield} tone="positive" />
+              <Row label="This period" value={metrics ? formatInr(metrics.grossExclTax) : '—'} />
+              <Row label="Previous" value={metrics ? formatInr(metrics.previousGrossExclTax) : '—'} />
+              <Row
+                label="Change"
+                value={metrics ? formatInr(metrics.grossChangeAmount, true) : '—'}
+                tone={metrics && metrics.grossChangeAmount < 0 ? 'negative' : 'positive'}
+              />
+              <Row
+                label="Flights"
+                value={
+                  metrics
+                    ? `${(metrics.flights ?? 0) - (metrics.previousFlights ?? 0) >= 0 ? '+' : ''}${((metrics.flights ?? 0) - (metrics.previousFlights ?? 0)).toLocaleString('en-IN')}`
+                    : '—'
+                }
+                tone={metrics && metrics.flights - metrics.previousFlights < 0 ? 'negative' : 'positive'}
+              />
+              <Row
+                label="Yield"
+                value={metrics ? formatYieldChange(metrics) : '—'}
+                tone={yieldTone(metrics)}
+              />
             </dl>
-            <p className="mt-6 text-sm text-[#1f8a3b]">
-              Growth is from higher yield and additional services, not more flights.
+            <p className="mt-6 text-sm text-[#667066]">
+              Yield is gross revenue excluding GST divided by flights handled.
             </p>
           </article>
 
