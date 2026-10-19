@@ -89,19 +89,34 @@ function sumDrafts(
   );
 }
 
+function parseYearMonth(key: string): Date | null {
+  const match = /^(\d{4})-(\d{2})$/.exec(key);
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  if (year < 2000 || year > 2100 || month < 1 || month > 12) return null;
+  return new Date(year, month - 1, 1);
+}
+
+function monthWindow(from: Date) {
+  const to = new Date(from.getFullYear(), from.getMonth() + 1, 1);
+  const previousFrom = new Date(from.getFullYear(), from.getMonth() - 1, 1);
+  return {
+    current: { from, to },
+    previous: { from: previousFrom, to: from },
+    periodLabel: monthLabel(from),
+    compareLabel: monthLabel(previousFrom),
+  };
+}
+
 function executiveWindows(period?: string) {
   const now = new Date();
   const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const key = String(period ?? 'this_month');
+  const key = String(period ?? 'this_month').trim();
+  const selectedMonth = parseYearMonth(key);
+  if (selectedMonth) return monthWindow(selectedMonth);
   if (key === 'last_month') {
-    const from = new Date(thisMonth.getFullYear(), thisMonth.getMonth() - 1, 1);
-    const previousFrom = new Date(thisMonth.getFullYear(), thisMonth.getMonth() - 2, 1);
-    return {
-      current: { from, to: thisMonth },
-      previous: { from: previousFrom, to: from },
-      periodLabel: monthLabel(from),
-      compareLabel: monthLabel(previousFrom),
-    };
+    return monthWindow(new Date(thisMonth.getFullYear(), thisMonth.getMonth() - 1, 1));
   }
   if (key === 'this_quarter') {
     const quarterStartMonth = Math.floor(now.getMonth() / 3) * 3;
@@ -115,14 +130,7 @@ function executiveWindows(period?: string) {
       compareLabel: `${monthLabel(previousFrom)} – ${monthLabel(new Date(from.getFullYear(), from.getMonth() - 1, 1))}`,
     };
   }
-  const next = new Date(thisMonth.getFullYear(), thisMonth.getMonth() + 1, 1);
-  const previousFrom = new Date(thisMonth.getFullYear(), thisMonth.getMonth() - 1, 1);
-  return {
-    current: { from: thisMonth, to: next },
-    previous: { from: previousFrom, to: thisMonth },
-    periodLabel: monthLabel(thisMonth),
-    compareLabel: monthLabel(previousFrom),
-  };
+  return monthWindow(thisMonth);
 }
 
 function monthLabel(date: Date): string {

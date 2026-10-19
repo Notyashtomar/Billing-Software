@@ -155,7 +155,6 @@ export function RoyaltySetupPage({ api }: Props) {
     <div>
       <BillingPageHeader
         title="Royalty Setup"
-        description="Concession fees for the royalty card chosen on Airport Setup. A private station shows only Royalty on Net or Royalty on Gross."
         actions={
           <>
             <button
@@ -341,10 +340,6 @@ function MagRatesDialog({
             <h2 id="mag-rates-title" className="text-base font-semibold text-[color:var(--billing-heading)]">
               MAG rates
             </h2>
-            <p className="mt-1 text-xs text-[color:var(--billing-text-muted)]">
-              Currency: {magCurrencyName(currency)} ({magCurrencySymbol(currency)}). Uploaded on Airport Setup. For a flight, use the higher of the concession fee for that flight type and the MAG rate
-              for that aircraft type and service. Invoice generation does not apply this yet.
-            </p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
             <button
@@ -500,17 +495,17 @@ function RoyaltyCard({
         {CONCESSION_KINDS.map((kind) => {
           const concession = concessions?.[kind.key];
           return (
-            <div key={kind.key}>
+            <div key={kind.key} className="flex items-baseline justify-between gap-4">
               <dt className="text-[color:var(--billing-text-muted)]">{kind.label}</dt>
-              <dd className="mt-0.5 font-medium text-[color:var(--billing-heading)]">
+              <dd className="shrink-0 text-right font-medium text-[color:var(--billing-heading)]">
                 {concession ? `${concession.percent}%` : 'Not set'}
               </dd>
             </div>
           );
         })}
-        <div>
+        <div className="flex items-baseline justify-between gap-4">
           <dt className="text-[color:var(--billing-text-muted)]">Valid</dt>
-          <dd className="mt-0.5 font-medium text-[color:var(--billing-heading)]">
+          <dd className="shrink-0 text-right font-medium text-[color:var(--billing-heading)]">
             {concessions?.effectiveFrom && concessions.effectiveTo
               ? `${formatBillingDate(concessions.effectiveFrom)} – ${formatBillingDate(concessions.effectiveTo)}`
               : 'Not set'}
