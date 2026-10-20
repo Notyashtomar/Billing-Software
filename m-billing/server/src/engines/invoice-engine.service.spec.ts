@@ -1071,6 +1071,114 @@ describe('InvoiceEngineService', () => {
     expect(composed.lines[0].sourceRef?.chargedQuantity).toBe(1);
   });
 
+  it('ADS: free count is once per flight when FHR has several lines of the same equipment', async () => {
+    const contract = {
+      adsBillingEnabled: true,
+      aircraftTypes: ['A320'],
+      adsEquipmentRules: [
+        {
+          serviceCode: 'WCHR',
+          includedForAds: true,
+          freePerFlight: 1,
+          unitPriceINR: 1050,
+          uom: 'Per Usage',
+          aircraftTypes: ['A320'],
+        },
+      ],
+    };
+    const line = (usageRowId: string, qty: number) => ({
+      _id: new Types.ObjectId(),
+      customerCode: 'TG',
+      customerName: 'Thai',
+      billingPeriodStart: new Date('2026-09-01'),
+      billingPeriodEnd: new Date('2026-09-30'),
+      sourceType: 'ads',
+      sourceRef: { serialNo: '9001', usageRowId, flightNo: 'TG315' },
+      operationalSnapshot: {
+        aircraftType: 'A320',
+        equipment_name: 'Wheel Chair - WCHR',
+        adsParticular: 'Wheel Chair - WCHR',
+        qty,
+        serialNumber: '9001',
+      },
+      rateMatch: {
+        serviceCode: 'WCHR',
+        unitPrice: 1050,
+        usedUnits: qty,
+        freeAllowance: 0,
+        particular: 'Wheel Chair - WCHR',
+        aircraftType: 'A320',
+        uom: 'Per Usage',
+        pricingBasis: 'rate_card',
+      },
+    });
+    const composed = await service.composeFromPreparation(
+      {} as never,
+      [line('9001:0', 1), line('9001:1', 1)] as never,
+      new Date('2026-10-01'),
+      'INR',
+      contract,
+    );
+    // Two uses on one flight, one free → one chargeable × 1050.
+    expect(composed.lines).toHaveLength(1);
+    expect(composed.lines[0].quantity).toBe(1);
+    expect(composed.lines[0].unitPrice).toBe(1050);
+    expect(composed.lines[0].lineAmountExclTax).toBe(1050);
+    expect(composed.lines[0].uom).toBe('Per Usage');
+  });
+
+  it('ADS: equipment on an aircraft that is not on the contract rule is not billed', async () => {
+    const contract = {
+      adsBillingEnabled: true,
+      adsEquipmentRules: [
+        {
+          serviceCode: 'GPU-NB',
+          includedForAds: true,
+          freePerFlight: 0,
+          unitPriceINR: 9500,
+          uom: 'Per Hour',
+          aircraftTypes: ['A320'],
+        },
+      ],
+    };
+    const records = [
+      {
+        _id: new Types.ObjectId(),
+        customerCode: 'TG',
+        customerName: 'Thai',
+        billingPeriodStart: new Date('2026-09-01'),
+        billingPeriodEnd: new Date('2026-09-30'),
+        sourceType: 'ads',
+        sourceRef: { serialNo: '44', usageRowId: '44:0' },
+        operationalSnapshot: {
+          aircraftType: 'A330',
+          equipment_name: 'GPU-NB',
+          qty: 1,
+          usageHours: 1,
+        },
+        rateMatch: {
+          serviceCode: 'GPU-NB',
+          unitPrice: 9500,
+          usedUnits: 1,
+          freeAllowance: 0,
+          particular: 'GPU-NB',
+          aircraftType: 'A330',
+          uom: 'Per Hour',
+          pricingBasis: 'rate_card',
+        },
+      },
+    ] as never;
+    await expect(
+      service.composeFromPreparation(
+        {} as never,
+        records,
+        new Date('2026-10-01'),
+        'INR',
+        contract,
+      ),
+    ).rejects.toThrow(/No billable invoice lines/);
+  });
+
   it('ADS: turnaround Crew Coach charges at most 1 per flight (ARR+DEP lines)', async () => {
     const mkCrew = (usageRowId: string, remarks: string) => ({
       _id: new Types.ObjectId(),

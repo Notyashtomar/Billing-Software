@@ -60,6 +60,7 @@ import {
   calculateInvoiceConcessionFromLines,
   resolveActiveContractForInvoice,
 } from '../utils/invoice-concession.util';
+import { billingSettingsForInvoicing } from '../shared/ignored-billing-masters';
 import { resolveBillingCustomerAddress } from '../utils/customer-address.util';
 import { formatBillingPeriodLabel } from '../engines/invoice-pdf.mapper';
 import {
@@ -826,8 +827,11 @@ export class BillingInvoicesService {
       throw new BadRequestException('Invoice has no lines — cannot build PDF');
     }
 
-    const [settings, customer, serviceCatalog, contract] = await Promise.all([
-      this.settingsModel.findOne({ stationCode: header.stationCode }).lean(),
+    const [settingsDoc, customer, serviceCatalog, contract] = await Promise.all([
+      this.settingsModel
+        .findOne({ stationCode: header.stationCode })
+        .select('-airportCommercial -royaltyMaster')
+        .lean(),
       this.customerModel
         .findOne({ stationCode: header.stationCode, customerCode: header.customerCode })
         .lean(),
@@ -876,6 +880,7 @@ export class BillingInvoicesService {
       },
     );
 
+    const settings = billingSettingsForInvoicing(settingsDoc);
     return this.pdfEngine.buildInvoiceSnapshot({
       header,
       lines,

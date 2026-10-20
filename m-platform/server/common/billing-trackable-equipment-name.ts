@@ -493,6 +493,11 @@ const MANPOWER_ENTRIES: readonly NameEntry[] = [
     kind: 'manpower',
     aliases: ['WC', 'White Collar'],
   },
+  {
+    full: 'Blue Collar',
+    kind: 'manpower',
+    aliases: ['BC', 'Blue Collar', 'Blue collar'],
+  },
 ];
 
 function normKey(raw: string): string {

@@ -48,7 +48,7 @@ const DEFINITIONS = [
   { key: 'ts', label: 'TS', aliases: ['TS', 'Toilet Service', 'Toilet service'] },
   { key: 'wc', label: 'WC', aliases: ['WC', 'Water Cart', 'White Collar'] },
   { key: 'ww', label: 'WW', aliases: ['WW', 'Wing Walking', 'Wing Walker'] },
-  { key: 'asuNb', label: 'ASU-NB', aliases: ['ASU-NB', 'ASUNB', 'Air Start Unit Narrow Body', 'Air Start Unit - Narrow Body', 'Air start unit - narrow body'] },
+  { key: 'asuNb', label: 'ASU-NB', aliases: ['ASU-NB', 'ASUNB', 'PST-ASU-NB', 'Air Start Unit Narrow Body', 'Air Start Unit - Narrow Body', 'Air start unit - narrow body', 'Air Start Unit-Narrow Body', 'Air Start Unit (ASU) Narrow Body', 'Air Start Unit (ASU) - Narrow Body'] },
   { key: 'amb', label: 'AMB', aliases: ['AMB', 'Ambulift', 'Ambuilift', 'AMB/Ambulift', 'AMB/Ambuilift'] },
   { key: 'wch', label: 'WCH', aliases: ['WCHR', 'WCHS', 'WCHC', 'Wheel Chair (R)', 'Wheel Chair (S)', 'Wheel Chair (C)', 'Wheel Chair R', 'Wheel Chair S', 'Wheel Chair C', 'Wheelchair (R)', 'Wheelchair (S)', 'Wheelchair (C)', 'Wheelchair R', 'Wheelchair S', 'Wheelchair C', 'Wheelchair', 'Wheel Chair', 'Wheel Chair -WCHR', 'Wheel Chair - WCHR', 'Wheel Chair -WCHS', 'Wheel Chair - WCHS', 'Wheel Chair -WCHC', 'Wheel Chair - WCHC'] },
   { key: 'bflTowable', label: 'BFL-Towable', aliases: ['BFL-Towable', 'BFL Towable', 'Baggage Freight Loader', 'Baggage Frieght Loader', 'Baggage Freight Loader Towable', 'Conveyor Belt Towable', 'Conveyor Belt Loader Towable'] },
@@ -69,7 +69,7 @@ const DEFINITIONS = [
   { key: 'pbwb', label: 'PBWB', aliases: ['PBWB', 'Push Back Wide Body', 'Pushback Wide Body', 'Push Back-Wide Body', 'Push Back - Wide Body'] },
   { key: 'acuWb', label: 'ACU-WB', aliases: ['ACU-WB', 'ACUWB', 'Air Conditioner Unit Wide Body', 'Air Conditioner Unit-Wide Body', 'Air Conditioner Unit - Wide Body', 'Air Conditioning Unit Wide Body', 'Air Conditioning Unit - Wide Body'] },
   { key: 'gpuWb', label: 'GPU-WB', aliases: ['GPU-WB', 'GPUWB', 'GPU WB', 'GPU/WB', 'Ground Power Unit Wide Body', 'Ground Power Unit - Wide Body', 'Ground power unit - wide body', 'GPU-180KV', 'GPU-180 KV', 'GPU 180KV', 'GPU 180 KV', 'GPU180KV', 'GPU-280KV', 'GPU-280 KV', 'GPU 280KV', 'GPU 280 KV', 'GPU280KV', 'Ground Power Unit -180KV', 'Ground Power Unit - 180KV', 'Ground Power Unit 180KV', 'Ground Power Unit 180 KV', 'Ground Power Unit -280KV', 'Ground Power Unit - 280KV', 'Ground Power Unit 280KV', 'Ground Power Unit 280 KV'] },
-  { key: 'asuWb', label: 'ASU-WB', aliases: ['ASU-WB', 'ASUWB', 'Air Start Unit Wide Body', 'Air Start Unit - Wide Body', 'Air start unit - wide body'] },
+  { key: 'asuWb', label: 'ASU-WB', aliases: ['ASU-WB', 'ASUWB', 'PST-ASU-WB', 'Air Start Unit Wide Body', 'Air Start Unit - Wide Body', 'Air start unit - wide body', 'Air Start Unit-Wide Body', 'Air Start Unit (ASU) Wide Body', 'Air Start Unit (ASU) - Wide Body'] },
   { key: 'rc', label: 'RC', aliases: ['RC', 'Remote Control', 'Ramp Car'] },
   { key: 'tow', label: 'Tow', aliases: ['Tow', 'Towbar', 'Tow Bar'] },
   { key: 'bt', label: 'BT', aliases: ['BT', 'Baggage Trolly', 'Baggage Trolley', 'Baggage Trollies', 'Baggage Trollys', 'Baggage Trolleys'] },
@@ -86,8 +86,16 @@ const DEFINITIONS = [
   { key: 'ecNb', label: 'EC-NB', aliases: ['EC-NB', 'EC NB', 'ECNB'] },
   { key: 'cbm', label: 'CBM', aliases: ['CBM'] },
   { key: 'urb', label: 'URB', aliases: ['URB'] },
-  { key: 'cd', label: 'CD', aliases: ['CD'] },
+  { key: 'cd', label: 'CD', aliases: ['CD', 'Container Dollies', 'Container Dolly'] },
   { key: 'm', label: 'M', aliases: ['M'] },
+  { key: 'ctt', label: 'CTT', aliases: ['CTT', 'Cargo Transfer Trailer'] },
+  { key: 'ws', label: 'WS', aliases: ['WS', 'Water Service'] },
+  { key: 'pin', label: 'PIN', aliases: ['PIN', 'Aircraft Pin'] },
+  { key: 'pw', label: 'PW', aliases: ['PW', 'Potable Water'] },
+  { key: 'baggageCart', label: 'BC', aliases: ['BC', 'Baggage Cart'] },
+  { key: 'exteriorCleaning', label: 'Exterior Cleaning', aliases: ['Exterior Cleaning', 'Exterior Cleaning Narrow Body', 'Exterior Cleaning Wide Body'] },
+  { key: 'wcb', label: 'WBC', aliases: ['WBC', 'Wheel Chair Battery', 'Wheelchair Battery'] },
+  { key: 'pd', label: 'PD', aliases: ['PD', 'Pallet Dollies', 'Pallet Dolly'] },
 ];
 
 function normalizeBriefName(value) {
@@ -147,7 +155,7 @@ function hasFuzzyAliasMatch(candidates, aliases) {
     for (const alias of aliases) {
       const ac = compactBriefName(alias);
       if (ac.length < 4) continue;
-      if (cc === ac || cc.includes(ac) || ac.includes(cc)) return true;
+      if (cc === ac || cc.includes(ac)) return true;
     }
   }
   return false;
@@ -179,16 +187,33 @@ function inferAcu(candidates) {
   if (keys.size === 0) keys.add('acuNb');
   return [...keys];
 }
+function inferAsu(candidates) {
+  const blob = [...candidates].join(' ');
+  const compact = compactBriefName(blob);
+  const isAsu = /\bASU\b/.test(blob) || compact.includes('AIRSTART') || compact.includes('ASUNB') || compact.includes('ASUWB');
+  if (!isAsu) return [];
+  const explicitWb = /\bWIDE\s*BODY\b/.test(blob) || compact.includes('ASUWB') || compact.includes('WIDEBODY');
+  const explicitNb = /\bNARROW\s*BODY\b/.test(blob) || compact.includes('ASUNB') || compact.includes('NARROWBODY');
+  if (explicitWb && !explicitNb) return ['asuWb'];
+  if (explicitNb && !explicitWb) return ['asuNb'];
+  return ['asuNb'];
+}
 function matchKeys(rawName) {
   const candidates = candidatesFor(rawName);
-  const matches = [];
+  const exact = [];
+  const fuzzy = [];
   for (const item of DEFINITIONS) {
     const aliases = NORMALIZED_ALIASES.get(item.key);
-    const hit = hasMatchingAlias(candidates, aliases) || ((item.key === 'gpuNb' || item.key === 'gpuWb') && hasFuzzyAliasMatch(candidates, aliases));
-    if (hit) matches.push(item.key);
+    if (hasMatchingAlias(candidates, aliases)) exact.push(item.key);
+    else if ((item.key === 'gpuNb' || item.key === 'gpuWb') && hasFuzzyAliasMatch(candidates, aliases)) fuzzy.push(item.key);
   }
+  const matches = exact.length > 0 ? [...exact] : [...fuzzy];
   for (const k of inferGpu(candidates)) if (!matches.includes(k)) matches.push(k);
   for (const k of inferAcu(candidates)) if (!matches.includes(k)) matches.push(k);
+  for (const k of inferAsu(candidates)) if (!matches.includes(k)) matches.push(k);
+  if (matches.includes('asuNb') || matches.includes('asuWb')) {
+    return matches.filter((k) => k !== 'gpuNb' && k !== 'gpuWb' && k !== 'acu' && k !== 'acuNb' && k !== 'acuWb');
+  }
   return matches;
 }
 

@@ -22,6 +22,7 @@ import {
   usdToInr,
 } from '@/lib/billing-shared/currency-convert';
 import {
+  adsEquipmentIdentity,
   collapseAdsEquipmentRules,
 } from '@/lib/billing-shared/ads-equipment-rules-validity';
 
@@ -315,6 +316,8 @@ export function ContractAdsEquipmentRulesEditor({
     [services, adsServices, displayRules],
   );
 
+  const [duplicateError, setDuplicateError] = useState('');
+
   const resolvedRate = resolveRateToInr(rateToInr);
 
   const emitRules = (next: BillingContractAdsEquipmentRule[]) => {
@@ -368,6 +371,21 @@ export function ContractAdsEquipmentRulesEditor({
   };
 
   const onServiceChange = (index: number, serviceCode: string) => {
+    const identity = adsEquipmentIdentity(serviceCode);
+    if (
+      identity &&
+      displayRules.some(
+        (row, rowIndex) =>
+          rowIndex !== index && adsEquipmentIdentity(row.serviceCode) === identity,
+      )
+    ) {
+      const label =
+        adsServices.find((service) => service.value === serviceCode)?.label ||
+        serviceCode;
+      setDuplicateError(`${label} is already in the equipment rules.`);
+      return;
+    }
+    setDuplicateError('');
     const selected = adsServices.find((s) => s.value === serviceCode);
     const wheelchair = isWheelchairAdsService(serviceCode);
     const current = displayRules[index];
@@ -443,6 +461,11 @@ export function ContractAdsEquipmentRulesEditor({
               Add equipment rule
             </button>
           </div>
+          {duplicateError ? (
+            <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+              {duplicateError}
+            </p>
+          ) : null}
 
           <div className="relative max-h-[22rem] overflow-x-auto overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-sm [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
             <table className="min-w-full divide-y divide-gray-200 text-sm">

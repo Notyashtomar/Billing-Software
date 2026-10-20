@@ -14,7 +14,6 @@ import {
 import { hasBillingAppAccess, setBwmsEntryApp } from '@/lib/bwms-app-tools';
 import {
   buildLandingMapSelectUrl,
-  buildLoginAppsHref,
   findAdminStationForAirportCode,
   parseLoginStationQuery,
   persistLoginStationSelection,
@@ -58,16 +57,6 @@ const BILLING_GLASS_THEME = {
   accentMuted: 'rgba(241,255,94,0.35)',
   cardBorder: 'rgba(241,255,94,0.45)',
 };
-
-function AppsToggleIcon({ className }: { className?: string }) {
-  return (
-    <span className={`grid grid-cols-3 gap-[3px] ${className ?? ''}`} aria-hidden>
-      {Array.from({ length: 9 }, (_, i) => (
-        <span key={i} className="h-[3px] w-[3px] rounded-full bg-current" />
-      ))}
-    </span>
-  );
-}
 
 function resolveLoginStation(
   searchParams: Pick<URLSearchParams, 'get'>,
@@ -350,12 +339,12 @@ export default function BillingLogin() {
 
   return (
     <div
-      className="relative flex min-h-dvh flex-col overflow-hidden"
+      className="relative flex h-dvh flex-col overflow-hidden"
       style={{ background: BILLING_SURFACE_DARK }}
     >
       <BillingLoginBurst />
 
-      <header className="relative z-10 flex items-center justify-between px-4 py-4 sm:px-6">
+      <header className="relative z-10 flex shrink-0 items-center justify-between px-4 py-2 sm:px-6">
         <Link
           href={buildLandingMapSelectUrl()}
           className="inline-flex items-center gap-2 text-base text-white/80 transition hover:text-[#F1FF5E]"
@@ -363,27 +352,17 @@ export default function BillingLogin() {
           <ArrowLeft className="size-5" aria-hidden />
           Stations
         </Link>
-        <div className="flex items-center gap-2 sm:gap-3">
-          <div className="inline-flex items-center gap-2 text-[#F1FF5E]">
-            <Receipt className="size-6" aria-hidden />
-            <span className="text-base font-semibold tracking-wide text-white">
-              Billing
-            </span>
-          </div>
-          <Link
-            href={buildLoginAppsHref(loginStation)}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-white/25 bg-white/10 px-3 py-2 text-sm font-medium text-white transition hover:border-[#F1FF5E] hover:bg-[#F1FF5E]/20 hover:text-[#F1FF5E]"
-            aria-label="Open BWMS Apps"
-            title="Apps"
-          >
-            <AppsToggleIcon />
-            <span className="hidden sm:inline">Apps</span>
-          </Link>
+        <div className="inline-flex items-center gap-2 text-[#F1FF5E]">
+          <Receipt className="size-6" aria-hidden />
+          <span className="text-base font-semibold tracking-wide text-white">
+            Billing
+          </span>
         </div>
       </header>
 
-      <main className="relative z-10 flex flex-1 items-center justify-center px-4 pb-10">
+      <main className="relative z-10 flex min-h-0 flex-1 items-center justify-center overflow-hidden px-4 py-2">
         <ModuleGlassLoginCard
+          compact
           theme={BILLING_GLASS_THEME}
           title="Billing Login"
           subtitle="Access your account securely"

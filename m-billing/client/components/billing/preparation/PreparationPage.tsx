@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import {
@@ -8,7 +8,7 @@ import {
   isDelhiStation,
   readLoginStationCode,
 } from '@/lib/billing-default-period';
-import { ChevronDown, ChevronRight, FileStack, Loader2, RefreshCw } from 'lucide-react';
+import { Calendar, ChevronDown, ChevronRight, FileStack, Loader2, RefreshCw } from 'lucide-react';
 import { BillingPageHeader } from '../BillingLayout';
 import { StatusBadge } from '../StatusBadge';
 import { MatchIndicator, ValidationIndicator } from '../sources/ValidationIndicator';
@@ -138,6 +138,44 @@ const PREPARATION_LIST_LIMIT = 10000;
 const BULK_READY_CHUNK = 500;
 
 const PREPARATION_PERIOD_KEY = 'preparation.period';
+const DEFAULT_FLIGHT_MONTH_KEY = 'billing.preparation.defaultFlightMonth';
+
+function defaultFlightMonthStorageKey(): string {
+  const station = readLoginStationCode()?.trim().toUpperCase() || 'station';
+  return `${DEFAULT_FLIGHT_MONTH_KEY}:${station}`;
+}
+
+function readStoredDefaultFlightMonth(): string | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem(defaultFlightMonthStorageKey())?.trim() ?? '';
+    return /^\d{4}-\d{2}$/.test(raw) ? raw : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredDefaultFlightMonth(month: string): void {
+  try {
+    localStorage.setItem(defaultFlightMonthStorageKey(), month);
+  } catch {
+    /* private mode — the current page range still updates */
+  }
+}
+
+function monthBounds(month: string): { from: string; to: string } | null {
+  const match = /^(\d{4})-(\d{2})$/.exec(month);
+  if (!match) return null;
+  const year = Number(match[1]);
+  const monthIndex = Number(match[2]);
+  if (monthIndex < 1 || monthIndex > 12) return null;
+  const lastDay = new Date(year, monthIndex, 0).getDate();
+  const mm = String(monthIndex).padStart(2, '0');
+  return {
+    from: `${year}-${mm}-01`,
+    to: `${year}-${mm}-${String(lastDay).padStart(2, '0')}`,
+  };
+}
 
 type PreparationPeriodSlice = {
   from: string;
@@ -172,6 +210,7 @@ export function PreparationPage({ api }: Props) {
   const [tabCounts, setTabCounts] = useState<Record<string, number>>({});
   const [scopedTotal, setScopedTotal] = useState(0);
   const [scopedReadyCount, setScopedReadyCount] = useState(0);
+  const [fetchedLineTotal, setFetchedLineTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -185,12 +224,12 @@ export function PreparationPage({ api }: Props) {
   const [selectingAll, setSelectingAll] = useState(false);
   const [markingReadyRowId, setMarkingReadyRowId] = useState<string | null>(null);
   const [creatingDrafts, setCreatingDrafts] = useState(false);
+  const [draftProgress, setDraftProgress] = useState('');
   const [draftingRowId, setDraftingRowId] = useState<string | null>(null);
 
   const activeTab = isCustomTab
     ? CUSTOM_TAB
     : (TABS.find((t) => t.id === resolvedTab) ?? TABS[0]);
-  const readyInPeriod = scopedReadyCount;
 
   const periodStatusSummary = useMemo(() => {
     if (scopedTotal <= 0) return '';
@@ -232,6 +271,24 @@ export function PreparationPage({ api }: Props) {
     [flightGroups],
   );
 
+  const currentTabFlightCount =
+    !isCustomTab &&
+    rows.length > 0 &&
+    fetchedLineTotal > 0 &&
+    rows.length >= fetchedLineTotal
+      ? flightGroups.length
+      : null;
+
+  const tabBadgeCount = (id: string) =>
+    id === resolvedTab && currentTabFlightCount != null
+      ? currentTabFlightCount
+      : (tabCounts[id] ?? 0);
+
+  const readyInPeriod =
+    resolvedTab === 'ready_for_invoice' && currentTabFlightCount != null
+      ? currentTabFlightCount
+      : scopedReadyCount;
+
   const linesByGroupKey = useMemo(() => {
     const map = new Map<string, BillingPreparationRecord[]>();
     for (const g of flightGroups) map.set(g.key, g.lines);
@@ -271,6 +328,7 @@ export function PreparationPage({ api }: Props) {
           : Number(meta.scopedTotal ?? 0) || 0,
       );
       setScopedReadyCount(Number(meta.scopedReadyCount ?? 0) || 0);
+      setFetchedLineTotal(Number(meta.total ?? 0) || 0);
       setSelected(new Set());
       setSelectAllMatching(false);
     } catch (e) {
@@ -289,13 +347,22 @@ export function PreparationPage({ api }: Props) {
     const saved = getBillingWorkspacePageSlice<PreparationPeriodSlice>(
       PREPARATION_PERIOD_KEY,
     );
-    if (!searchParams.get('from')?.trim() && saved?.from) setFrom(saved.from);
-    if (!searchParams.get('to')?.trim() && saved?.to) setTo(saved.to);
+    const storedMonth = readStoredDefaultFlightMonth();
+    const storedRange = storedMonth ? monthBounds(storedMonth) : null;
+    if (!searchParams.get('from')?.trim()) {
+      if (storedRange) setFrom(storedRange.from);
+      else if (saved?.from) setFrom(saved.from);
+    }
+    if (!searchParams.get('to')?.trim()) {
+      if (storedRange) setTo(storedRange.to);
+      else if (saved?.to) setTo(saved.to);
+    }
     if (!searchParams.get('customer')?.trim() && saved?.customerCode) {
       setCustomerCode(saved.customerCode);
     }
     if (!searchParams.get('tab')?.trim() && saved?.tab) setRestoredTab(saved.tab);
     if (
+      !storedRange &&
       !saved?.from &&
       !searchParams.get('from')?.trim() &&
       !isDelhiStation(readLoginStationCode())
@@ -375,6 +442,35 @@ export function PreparationPage({ api }: Props) {
     router.replace(`/billing/preparation?${params.toString()}`);
   };
 
+  const applyDefaultFlightMonth = (month: string) => {
+    const range = monthBounds(month);
+    if (!range) return;
+    writeStoredDefaultFlightMonth(month);
+    setFrom(range.from);
+    setTo(range.to);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('tab', resolvedTab);
+    params.set('from', range.from);
+    params.set('to', range.to);
+    if (customerCode.trim()) params.set('customer', customerCode.trim());
+    else params.delete('customer');
+    router.replace(`/billing/preparation?${params.toString()}`);
+  };
+
+  const defaultFlightMonthValue = /^\d{4}-\d{2}/.test(from) ? from.slice(0, 7) : '';
+  const defaultMonthInputRef = useRef<HTMLInputElement>(null);
+
+  const openDefaultMonthPicker = () => {
+    const input = defaultMonthInputRef.current;
+    if (!input) return;
+    input.focus();
+    try {
+      input.showPicker();
+    } catch {
+      input.click();
+    }
+  };
+
   const syncPeriodToUrl = useCallback(() => {
     const params = new URLSearchParams(searchParams.toString());
     params.set('tab', resolvedTab);
@@ -427,16 +523,11 @@ export function PreparationPage({ api }: Props) {
       setSelected(new Set(flightGroups.map((g) => g.key)));
       setSelectAllMatching(!kindFilterActive);
       const flights = flightGroups.length;
-      const lines = flightGroups.reduce((sum, group) => sum + group.lineCount, 0);
       setActionMsg(
         flights > 0
           ? `Selected all ${flights} flight${flights === 1 ? '' : 's'}${
               kindFilterActive ? ` in ${flightKind}` : ' in this tab'
-            }${lines > flights ? ` (${lines} lines)` : ''}.${
-              kindFilterActive
-                ? ''
-                : ' Delete removes every matching row in this tab for the current period filter.'
-            }`
+            }.`
           : '',
       );
     } finally {
@@ -473,9 +564,7 @@ export function PreparationPage({ api }: Props) {
       selectAllMatching &&
       TABS.some((t) => t.id === tab);
 
-    const flightLabel = useFilterDelete
-      ? `all ${selectedCount} flight${selectedCount === 1 ? '' : 's'} in this tab (${tabTotal} line${tabTotal === 1 ? '' : 's'})`
-      : `${selectedCount} flight${selectedCount === 1 ? '' : 's'} (${lineIdsForSelectedFlights().length} line${lineIdsForSelectedFlights().length === 1 ? '' : 's'})`;
+    const flightLabel = `${selectedCount} flight${selectedCount === 1 ? '' : 's'}`;
     const confirmed = window.confirm(
       `Delete ${flightLabel} from preparation? This cannot be undone.`,
     );
@@ -485,12 +574,11 @@ export function PreparationPage({ api }: Props) {
     setActionMsg('');
     setError('');
     try {
-      let deleted = 0;
       let failedCount = 0;
       const failed: Array<{ id: string; message: string }> = [];
 
       if (useFilterDelete) {
-        setActionMsg('Deleting every matching row in this tab…');
+        setActionMsg(`Deleting ${selectedCount} flight${selectedCount === 1 ? '' : 's'}…`);
         const res = await api.bulkDeletePreparationByFilter({
           status: tab as
             | 'pending'
@@ -502,7 +590,6 @@ export function PreparationPage({ api }: Props) {
           to,
           customerCode: customerCode || undefined,
         });
-        deleted = res.data?.deleted ?? 0;
         failedCount = res.data?.failedCount ?? res.data?.failed?.length ?? 0;
         failed.push(...(res.data?.failed ?? []));
       } else {
@@ -510,7 +597,6 @@ export function PreparationPage({ api }: Props) {
         for (let i = 0; i < ids.length; i += BULK_READY_CHUNK) {
           const chunk = ids.slice(i, i + BULK_READY_CHUNK);
           const res = await api.bulkDeletePreparation(chunk);
-          deleted += res.data?.deleted ?? 0;
           failed.push(...(res.data?.failed ?? []));
         }
         failedCount = failed.length;
@@ -520,15 +606,16 @@ export function PreparationPage({ api }: Props) {
       setSelectAllMatching(false);
       await load();
 
+      const flightWord = `${selectedCount} flight${selectedCount === 1 ? '' : 's'}`;
       if (failedCount === 0) {
-        setActionMsg(`Deleted ${deleted} row${deleted === 1 ? '' : 's'}.`);
+        setActionMsg(`Deleted ${flightWord}.`);
       } else {
         const sample = failed
           .slice(0, 2)
           .map((f) => f.message)
           .join('; ');
         setActionMsg(
-          `Deleted ${deleted} row${deleted === 1 ? '' : 's'}. ${failedCount} could not be deleted${sample ? `: ${sample}` : ''}.`,
+          `Could not delete every one of the ${flightWord}${sample ? `: ${sample}` : ''}.`,
         );
       }
     } catch (e) {
@@ -548,7 +635,6 @@ export function PreparationPage({ api }: Props) {
     setActionMsg('');
     setError('');
     try {
-      let succeeded = 0;
       let failed = 0;
       let results: Array<{ id: string; ok: boolean; message?: string }> = [];
 
@@ -564,7 +650,6 @@ export function PreparationPage({ api }: Props) {
           customerCode: customerCode || undefined,
         });
         const data = res.data;
-        succeeded = data?.succeeded ?? 0;
         failed = data?.failed ?? 0;
         results = data?.results ?? [];
       } else {
@@ -573,7 +658,6 @@ export function PreparationPage({ api }: Props) {
           const chunk = ids.slice(i, i + BULK_READY_CHUNK);
           const res = await api.bulkMarkPreparationReady(chunk);
           const data = res.data;
-          succeeded += data?.succeeded ?? 0;
           failed += data?.failed ?? 0;
           results = results.concat(data?.results ?? []);
         }
@@ -586,17 +670,15 @@ export function PreparationPage({ api }: Props) {
       setRows((prev) => prev.filter((row) => failedIds.has(String(row._id))));
       setSelected(new Set());
       setSelectAllMatching(false);
-      setTabCounts((prev) => ({
-        ...prev,
-        [tab]: Math.max(0, (prev[tab] ?? 0) - succeeded),
-        ready_for_invoice: (prev.ready_for_invoice ?? 0) + succeeded,
-      }));
-      setScopedReadyCount((prev) => prev + succeeded);
-      setScopedTotal((prev) => Math.max(0, prev - succeeded));
-
       if (failed === 0) {
+        setTabCounts((prev) => ({
+          ...prev,
+          [tab]: Math.max(0, (prev[tab] ?? 0) - count),
+          ready_for_invoice: (prev.ready_for_invoice ?? 0) + count,
+        }));
+        setScopedReadyCount((prev) => prev + count);
         setActionMsg(
-          `Marked ${count} flight${count === 1 ? '' : 's'} ready for invoice (${succeeded} line${succeeded === 1 ? '' : 's'}).`,
+          `Marked ${count} flight${count === 1 ? '' : 's'} ready for invoice.`,
         );
       } else {
         const failMessages = results
@@ -605,12 +687,9 @@ export function PreparationPage({ api }: Props) {
           .filter(Boolean) as string[];
         const uniqueReasons = [...new Set(failMessages)].slice(0, 3);
         const sample = uniqueReasons.join(' · ');
-        const summary = `Marked ${succeeded} line${succeeded === 1 ? '' : 's'} ready across ${count} flight${count === 1 ? '' : 's'}.${failed > 0 ? ` ${failed} line${failed === 1 ? '' : 's'} failed${sample ? `: ${sample}` : ''}.` : ''}`;
-        if (succeeded === 0) {
-          setError(summary);
-        } else {
-          setActionMsg(summary);
-        }
+        const summary = `Could not mark every one of the ${count} flight${count === 1 ? '' : 's'} ready for invoice${sample ? `: ${sample}` : ''}.`;
+        setError(summary);
+        await load();
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Mark ready failed');
@@ -626,36 +705,29 @@ export function PreparationPage({ api }: Props) {
     setMarkingReadyRowId(group.key);
     setActionMsg('');
     try {
-      let succeeded = 0;
       let failed = 0;
       for (let i = 0; i < ids.length; i += BULK_READY_CHUNK) {
         const chunk = ids.slice(i, i + BULK_READY_CHUNK);
         const res = await api.bulkMarkPreparationReady(chunk);
-        succeeded += res.data?.succeeded ?? 0;
         failed += res.data?.failed ?? 0;
       }
       setSelectAllMatching(false);
-      setTabCounts((prev) => ({
-        ...prev,
-        [tab]: Math.max(0, (prev[tab] ?? 0) - succeeded),
-        ready_for_invoice: (prev.ready_for_invoice ?? 0) + succeeded,
-      }));
-      setScopedReadyCount((prev) => prev + succeeded);
-      setScopedTotal((prev) => Math.max(0, prev - succeeded));
       if (failed === 0) {
+        setTabCounts((prev) => ({
+          ...prev,
+          [tab]: Math.max(0, (prev[tab] ?? 0) - 1),
+          ready_for_invoice: (prev.ready_for_invoice ?? 0) + 1,
+        }));
+        setScopedReadyCount((prev) => prev + 1);
         setRows((prev) => prev.filter((row) => !ids.includes(String(row._id))));
         setSelected((prev) => {
           const next = new Set(prev);
           next.delete(group.key);
           return next;
         });
-        setActionMsg(
-          `Marked flight ready for invoice (${succeeded} line${succeeded === 1 ? '' : 's'}).`,
-        );
+        setActionMsg('Marked this flight ready for invoice.');
       } else {
-        setError(
-          `Marked ${succeeded} of ${ids.length} lines ready; ${failed} failed. Expand the flight to fix remaining lines.`,
-        );
+        setError('This flight could not be marked ready for invoice.');
         await load();
       }
     } catch (e) {
@@ -671,11 +743,7 @@ export function PreparationPage({ api }: Props) {
       for (const line of group.lines) {
         await api.validatePreparation(String(line._id));
       }
-      setActionMsg(
-        group.lineCount > 1
-          ? `Re-validated ${group.lineCount} lines for this flight`
-          : 'Re-validated',
-      );
+      setActionMsg('Re-validated this flight.');
       await load();
     } catch (e) {
       setActionMsg(e instanceof Error ? e.message : 'Action failed');
@@ -689,11 +757,7 @@ export function PreparationPage({ api }: Props) {
       for (const line of group.lines) {
         await api.rejectPreparation(String(line._id), reason ?? undefined);
       }
-      setActionMsg(
-        group.lineCount > 1
-          ? `Rejected ${group.lineCount} lines for this flight`
-          : 'Rejected',
-      );
+      setActionMsg('Rejected this flight.');
       await load();
     } catch (e) {
       setActionMsg(e instanceof Error ? e.message : 'Action failed');
@@ -716,20 +780,17 @@ export function PreparationPage({ api }: Props) {
       const failed = res.data?.failed ?? 0;
 
       if (refreshed === 0 && failed === 0) {
-        setActionMsg('No preparation rows to refresh for this tab and period.');
+        setActionMsg('No flights to refresh for this tab and period.');
+      } else if (failed > 0) {
+        setActionMsg(
+          'Flights were refreshed. Some flights could not be updated.',
+        );
       } else {
-        let msg =
-          'Preparation rows are refreshed and updated with the latest contracts, rate cards, and validation rules.';
-        if (refreshed > 0) {
-          msg += ` (${refreshed} row${refreshed === 1 ? '' : 's'})`;
-        }
-        if (statusChanged > 0) {
-          msg += ` ${statusChanged} moved to a different tab.`;
-        }
-        if (failed > 0) {
-          msg += ` ${failed} failed.`;
-        }
-        setActionMsg(msg);
+        setActionMsg(
+          statusChanged > 0
+            ? 'Flights were refreshed. Some moved to a different tab.'
+            : 'Flights were refreshed with the latest contracts, rate cards, and validation rules.',
+        );
       }
       await load();
     } catch (e) {
@@ -801,33 +862,96 @@ export function PreparationPage({ api }: Props) {
                   void (async () => {
                     if (creatingDrafts || draftingRowId != null) return;
                     setCreatingDrafts(true);
+                    setDraftProgress('');
                     setActionMsg('');
                     setError('');
                     try {
-                      const res = await api.createDraftsFromPreparation({
-                        billingPeriodStart: from,
-                        billingPeriodEnd: to,
+                      const listed = await api.listReadyInvoiceCustomers({
+                        from,
+                        to,
                         customerCode: customerCode || undefined,
-                        groupByCustomer: true,
-                        mergeOpenDraft: false,
                       });
-                      const payload = (
-                        res as {
-                          data?: {
-                            created?: string[];
-                            merged?: string[];
-                            totalFlights?: number;
-                            skippedGroups?: Array<{
-                              customerCode: string;
-                              recordCount: number;
-                              reason: string;
-                            }>;
-                          };
+                      const codes = (listed.data ?? []).filter(Boolean);
+                      const targets = codes.length > 0 ? codes : [customerCode || ''];
+                      const created: string[] = [];
+                      const merged: string[] = [];
+                      const skippedGroups: Array<{
+                        customerCode: string;
+                        recordCount: number;
+                        reason?: string;
+                      }> = [];
+                      let totalFlights = 0;
+                      for (let index = 0; index < targets.length; index += 1) {
+                        const code = targets[index] ?? '';
+                        setDraftProgress(
+                          code
+                            ? `${code} (${index + 1} of ${targets.length})`
+                            : `${index + 1} of ${targets.length}`,
+                        );
+                        try {
+                          const res = await api.createDraftsFromPreparation({
+                            billingPeriodStart: from,
+                            billingPeriodEnd: to,
+                            customerCode: code || undefined,
+                            groupByCustomer: true,
+                            mergeOpenDraft: false,
+                          });
+                          const payload = (
+                            res as {
+                              data?: {
+                                created?: string[];
+                                merged?: string[];
+                                totalFlights?: number;
+                                skippedGroups?: Array<{
+                                  customerCode: string;
+                                  recordCount: number;
+                                  reason: string;
+                                }>;
+                              };
+                            }
+                          ).data;
+                          created.push(...(payload?.created ?? []));
+                          merged.push(...(payload?.merged ?? []));
+                          skippedGroups.push(...(payload?.skippedGroups ?? []));
+                          totalFlights += payload?.totalFlights ?? 0;
+                        } catch (err) {
+                          const message = err instanceof Error ? err.message : 'Create draft failed';
+                          const skippable =
+                            /no ready preparation|no billable|fortnight billing/i.test(message);
+                          if (skippable && code) {
+                            skippedGroups.push({
+                              customerCode: code,
+                              recordCount: 0,
+                              reason: message,
+                            });
+                            continue;
+                          }
+                          if (created.length + merged.length > 0) {
+                            setActionMsg(
+                              draftCreationMessage({
+                                created,
+                                merged,
+                                totalFlights,
+                                skippedGroups,
+                              }),
+                            );
+                          }
+                          throw new Error(
+                            code
+                              ? `${code}: ${message}. Invoices already created for earlier airlines are kept.`
+                              : message,
+                          );
                         }
-                      ).data;
-                      setActionMsg(draftCreationMessage(payload));
-                      const skipped = Boolean(payload?.skippedGroups?.length);
-                      if (!skipped) {
+                      }
+                      setActionMsg(
+                        draftCreationMessage({
+                          created,
+                          merged,
+                          totalFlights,
+                          skippedGroups,
+                        }),
+                      );
+                      if (skippedGroups.length === 0 && created.length + merged.length > 0) {
                         setScopedReadyCount(0);
                         setTabCounts((prev) => ({
                           ...prev,
@@ -839,8 +963,10 @@ export function PreparationPage({ api }: Props) {
                       }
                     } catch (e) {
                       setError(e instanceof Error ? e.message : 'Create draft failed');
+                      await load();
                     } finally {
                       setCreatingDrafts(false);
+                      setDraftProgress('');
                     }
                   })()
                 }
@@ -849,13 +975,37 @@ export function PreparationPage({ api }: Props) {
                 {creatingDrafts ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                    Creating invoice…
+                    {draftProgress ? `Creating ${draftProgress}…` : 'Creating invoice…'}
                   </>
                 ) : (
                   `Create invoice (${readyInPeriod} flights)`
                 )}
               </button>
             ) : null}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={openDefaultMonthPicker}
+                className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                <Calendar className="h-4 w-4" aria-hidden />
+                Set default month for flights
+              </button>
+              <input
+                ref={defaultMonthInputRef}
+                type="month"
+                aria-label="Set default month for flights"
+                min="2000-01"
+                max="2100-12"
+                value={defaultFlightMonthValue}
+                onChange={(event) => {
+                  const month = event.target.value;
+                  if (/^\d{4}-\d{2}$/.test(month)) applyDefaultFlightMonth(month);
+                }}
+                tabIndex={-1}
+                className="pointer-events-none absolute h-px w-px opacity-0"
+              />
+            </div>
           </div>
         }
       />
@@ -881,7 +1031,7 @@ export function PreparationPage({ api }: Props) {
           >
             {t.label}
             <span className="ml-1.5 rounded-full bg-black/10 px-1.5 py-0.5 text-xs">
-              {tabCounts[t.id] ?? 0}
+              {tabBadgeCount(t.id)}
             </span>
           </button>
         ))}
@@ -943,10 +1093,9 @@ export function PreparationPage({ api }: Props) {
       {selectAllMatching && flightGroups.length > 0 && !isCustomTab ? (
         <p className="mb-3 rounded-lg border border-[color:var(--billing-accent-border)] bg-[color:var(--billing-accent-soft)] px-3 py-2 text-sm text-[color:var(--billing-heading)]">
           All <strong>{flightGroups.length}</strong> flight
-          {flightGroups.length === 1 ? '' : 's'} in this tab selected
-          {tabTotal > 0 ? ` (${tabTotal} line${tabTotal === 1 ? '' : 's'})` : ''}
-          . <strong>Delete selected</strong> removes every matching row in this
-          tab for the current period/customer filter
+          {flightGroups.length === 1 ? '' : 's'} in this tab selected.
+          <strong> Delete selected</strong> removes those flights for the
+          current period and customer filter
           {canBulkReady
             ? '; Mark ready sends them to Ready for invoice'
             : ''}
@@ -1061,9 +1210,14 @@ export function PreparationPage({ api }: Props) {
         >
           <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
           <span>
-            Creating invoice draft{readyInPeriod === 1 ? '' : 's'} from{' '}
-            <strong>{readyInPeriod}</strong> ready flight{readyInPeriod === 1 ? '' : 's'}.
-            Keep this page open until the operation finishes.
+            Creating invoice drafts one airline at a time
+            {draftProgress ? (
+              <>
+                {' '}
+                — <strong>{draftProgress}</strong>
+              </>
+            ) : null}
+            . Keep this page open until the operation finishes.
           </span>
         </div>
       ) : null}
@@ -1272,11 +1426,6 @@ export function PreparationPage({ api }: Props) {
                         </td>
                         <td className="px-4 py-3 capitalize text-gray-800">
                           {row.sourceType.replace(/_/g, ' ')}
-                          {isAdsFamily && lineCount > 1 ? (
-                            <span className="mt-0.5 block text-xs font-normal normal-case text-gray-500">
-                              {lineCount} equipment / manpower lines
-                            </span>
-                          ) : null}
                         </td>
                         <td className="px-4 py-3 text-gray-800">
                           {serialHref ? (
@@ -1348,11 +1497,6 @@ export function PreparationPage({ api }: Props) {
                               const c = getChecklistSummary(line);
                               return n + (c.total - c.confirmed);
                             }, 0)}
-                            progressLabel={
-                              checklist.total > 0
-                                ? `${lines.filter((l) => getChecklistSummary(l).allConfirmed).length}/${lineCount}`
-                                : undefined
-                            }
                             onClick={!allLinesReady ? () => toggleExpand(groupKey) : undefined}
                           />
                         </td>
@@ -1380,10 +1524,8 @@ export function PreparationPage({ api }: Props) {
                                 }
                                 title={
                                   allLinesReady
-                                    ? lineCount > 1
-                                      ? `Mark all ${lineCount} lines ready for invoice`
-                                      : 'Mark ready for invoice'
-                                    : 'Complete the billing readiness checklist on all lines first'
+                                    ? 'Mark this flight ready for invoice'
+                                    : 'Complete the billing readiness checklist for this flight first'
                                 }
                                 onClick={() => void markReadyGroup(group)}
                                 className="inline-flex items-center gap-1 rounded border border-[color:var(--billing-accent)] px-2 py-1 text-xs text-[color:var(--billing-accent-strong)] hover:bg-[color:var(--billing-accent-soft)] disabled:cursor-not-allowed disabled:border-gray-300 disabled:text-gray-400 disabled:hover:bg-transparent"

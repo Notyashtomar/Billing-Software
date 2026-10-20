@@ -239,7 +239,11 @@ export function inferCatalogMeta(label: string): {
     lower === 'manpower' ||
     lower.startsWith('manpower -')
   ) {
-    return { category: 'manpower', uom: 'HR' };
+    const isBlueCollar =
+      strippedUpper === 'BC' ||
+      strippedUpper === 'BLUE COLLAR' ||
+      /\bblue collar\b/i.test(raw);
+    return { category: 'manpower', uom: isBlueCollar ? 'Per Hour' : 'HR' };
   }
 
   // 5. Scheduled flights / basic handling

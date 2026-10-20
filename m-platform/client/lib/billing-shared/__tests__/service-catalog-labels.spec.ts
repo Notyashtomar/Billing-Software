@@ -117,6 +117,8 @@ describe('adsCatalogServiceDisplayName', () => {
     expect(adsCatalogServiceDisplayName('Scheduled - Equipment - TS')).toBe('Toilet Service');
     expect(adsCatalogServiceDisplayName('Scheduled - Manpower - WC')).toBe('White Collar');
     expect(adsCatalogServiceDisplayName('Scheduled - Equipment - WC')).toBe('Water Cart');
+    expect(adsCatalogServiceDisplayName('Scheduled - Manpower - BC')).toBe('Blue Collar');
+    expect(adsCatalogServiceDisplayName('Scheduled - Equipment - BC')).toBe('Baggage Cart');
     expect(adsCatalogServiceDisplayName('Scheduled - Equipment - BMW')).toBe('Vehicle - BMW');
     expect(adsCatalogServiceDisplayName('Scheduled - Equipment - MG')).toBe('Vehicle - MG');
     expect(isDroppedAdsCatalogService('Scheduled - Equipment - URB')).toBe(true);
@@ -161,6 +163,24 @@ describe('buildAdsContractCatalogOptions', () => {
     );
     expect(resolveAdsContractCatalogValue('Scheduled - Equipment - c1', options)).toBe('');
     expect(resolveAdsContractCatalogValue('', options)).toBe('');
+  });
+
+  it('lists Blue Collar once under the scheduled manpower code, per hour', () => {
+    const options = buildAdsContractCatalogOptions([
+      { serviceCode: 'Non Scheduled - Manpower - BC', uom: 'Per Hour', category: 'manpower' },
+      { serviceCode: 'RAF - Manpower - BC', uom: 'Per Hour', category: 'manpower' },
+      { serviceCode: 'Scheduled - Manpower - BC', uom: 'Per Hour', category: 'manpower' },
+      { serviceCode: 'Scheduled - Equipment - BC', uom: 'EA', category: 'equipment' },
+    ]);
+    const blue = options.filter((option) => option.label === 'Blue Collar');
+    expect(blue).toHaveLength(1);
+    expect(blue[0]?.value).toBe('Scheduled - Manpower - BC');
+    expect(blue[0]?.uom).toBe('Per Hour');
+    expect(blue[0]?.category).toBe('manpower');
+    expect(options.some((option) => option.label === 'Baggage Cart')).toBe(true);
+    expect(
+      resolveAdsContractCatalogValue('Scheduled - Manpower - BC', options),
+    ).toBe('Scheduled - Manpower - BC');
   });
 });
 

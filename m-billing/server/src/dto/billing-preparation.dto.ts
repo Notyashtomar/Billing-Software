@@ -264,6 +264,11 @@ export class UnsendPreparationBySourceDto {
   @IsDateString()
   billingPeriodStart: string;
 
+  /** Inclusive end of the source-page period. Rows are matched anywhere in this range. */
+  @IsOptional()
+  @IsDateString()
+  billingPeriodEnd?: string;
+
   @IsString()
   sourceType: string;
 

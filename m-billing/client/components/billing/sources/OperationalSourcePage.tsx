@@ -1835,11 +1835,19 @@ export function OperationalSourcePage({ api, config }: Props) {
     const unit = isAds ? 'ADS row' : 'flight';
     const failNote =
       failed.length > 0
-        ? ` ${failed.length} could not be unsent${
-            failed.length <= 3
-              ? `: ${failed.map((f) => `${f.serialNo} (${f.message})`).join('; ')}`
-              : ' — see preparation page for linked drafts or invoiced rows'
-          }.`
+        ? (() => {
+            const reasons = new Map<string, number>();
+            for (const row of failed) {
+              const reason = row.message.trim() || 'Unsend failed';
+              reasons.set(reason, (reasons.get(reason) ?? 0) + 1);
+            }
+            const detail = [...reasons.entries()]
+              .sort((a, b) => b[1] - a[1])
+              .slice(0, 2)
+              .map(([reason, n]) => `${n}× ${reason}`)
+              .join('; ');
+            return ` ${failed.length} could not be unsent (${detail}).`;
+          })()
         : '';
     return `Unsent ${unsent} of ${requested} ${unit}${requested === 1 ? '' : 's'} from preparation.${failNote}`;
   };
@@ -1856,6 +1864,7 @@ export function OperationalSourcePage({ api, config }: Props) {
     try {
       const res = await api.unsendPreparationBySource({
         billingPeriodStart: queryFrom,
+        billingPeriodEnd: queryTo,
         sourceType: uniqueRows[0]?.sourceType ?? (isAds ? 'ads' : 'scheduled_flight'),
         ...(usageRowIds.length > 0 ? { usageRowIds } : { serialNos }),
       });

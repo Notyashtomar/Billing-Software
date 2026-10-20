@@ -69,6 +69,8 @@ export type ModuleGlassLoginCardProps = {
   onSubmit: (e: FormEvent) => void;
   onForgotPassword?: () => void;
   headerExtra?: ReactNode;
+  /** Shrink spacing so the card fits a laptop viewport without scrolling. */
+  compact?: boolean;
 };
 
 function resolveLoginCompanyLogo(station: StationSlot): {
@@ -119,6 +121,7 @@ export default function ModuleGlassLoginCard({
   onShowPasswordChange,
   onSubmit,
   onForgotPassword,
+  compact = false,
 }: ModuleGlassLoginCardProps) {
   const employeeIdField = useId();
   const passwordField = useId();
@@ -156,7 +159,9 @@ export default function ModuleGlassLoginCard({
 
   return (
     <div
-      className="w-full max-w-[460px] rounded-[1.35rem] border bg-[rgba(8,12,28,0.72)] p-6 shadow-[0_0_0_1px_rgba(255,255,255,0.04),0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:p-8"
+      className={`w-full max-w-[460px] rounded-[1.35rem] border bg-[rgba(8,12,28,0.72)] shadow-[0_0_0_1px_rgba(255,255,255,0.04),0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-xl ${
+        compact ? 'p-4 sm:p-5' : 'p-6 sm:p-8'
+      }`}
       style={{
         borderColor: theme.cardBorder,
         boxShadow: `0 0 0 1px ${theme.cardBorder}, 0 0 40px ${theme.accentMuted}, 0 24px 80px rgba(0,0,0,0.45)`,
@@ -164,7 +169,7 @@ export default function ModuleGlassLoginCard({
     >
       <div className="text-center">
         {companyLogo && !logoFailed ? (
-          <div className="mb-4 flex justify-center">
+          <div className={`flex justify-center ${compact ? 'mb-2' : 'mb-4'}`}>
             <div
               className="billing-logo-plate inline-flex max-h-14 items-center justify-center rounded-xl border border-white/15 !bg-[#ffffff] px-4 py-2 shadow-sm"
               style={{ backgroundColor: '#ffffff' }}
@@ -173,23 +178,27 @@ export default function ModuleGlassLoginCard({
                 key={companyLogo.src}
                 src={companyLogo.src}
                 alt={`${companyLogo.brand} company logo`}
-                className="h-10 w-auto max-w-[200px] object-contain sm:h-11"
+                className={`w-auto max-w-[200px] object-contain ${compact ? 'h-8' : 'h-10 sm:h-11'}`}
                 onError={() => setLogoFailed(true)}
               />
             </div>
           </div>
         ) : null}
         <h1
-          className="text-[1.75rem] font-bold uppercase tracking-[0.12em] sm:text-[2rem]"
+          className={`font-bold uppercase tracking-[0.12em] ${
+            compact ? 'text-xl sm:text-2xl' : 'text-[1.75rem] sm:text-[2rem]'
+          }`}
           style={{ color: theme.accent }}
         >
           {title}
         </h1>
-        <p className="mt-2 text-base text-white/55">{subtitle}</p>
+        <p className={`text-white/55 ${compact ? 'mt-1 text-sm' : 'mt-2 text-base'}`}>{subtitle}</p>
       </div>
 
       <div
-        className="mt-5 flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3.5 py-3 text-base text-white/85"
+        className={`flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3.5 text-white/85 ${
+          compact ? 'mt-3 py-2 text-sm' : 'mt-5 py-3 text-base'
+        }`}
       >
         <MapPin
           className="size-5 shrink-0"
@@ -220,7 +229,7 @@ export default function ModuleGlassLoginCard({
         )}
       </div>
 
-      <form className="mt-6 space-y-5" onSubmit={onSubmit}>
+      <form className={compact ? 'mt-3 space-y-2.5' : 'mt-6 space-y-5'} onSubmit={onSubmit}>
         <div>
           <div className="mb-1.5 flex items-center justify-between gap-2">
             <label
@@ -241,7 +250,9 @@ export default function ModuleGlassLoginCard({
             id={employeeIdField}
             autoComplete="username"
             placeholder="Enter your employee ID"
-            className="w-full rounded-xl border border-white/15 bg-[rgba(0,0,0,0.35)] px-3.5 py-3.5 text-base text-white outline-none placeholder:text-white/35 transition focus:border-transparent"
+            className={`w-full rounded-xl border border-white/15 bg-[rgba(0,0,0,0.35)] px-3.5 text-white outline-none placeholder:text-white/35 transition focus:border-transparent ${
+              compact ? 'py-2 text-sm' : 'py-3.5 text-base'
+            }`}
             style={
               {
                 ['--tw-ring-color' as string]: theme.accent,
@@ -283,7 +294,9 @@ export default function ModuleGlassLoginCard({
               type={showPassword ? 'text' : 'password'}
               autoComplete="current-password"
               placeholder="Enter your password"
-              className="w-full rounded-xl border border-white/15 bg-[rgba(0,0,0,0.35)] py-3.5 pl-3.5 pr-12 text-base text-white outline-none placeholder:text-white/35 transition"
+              className={`w-full rounded-xl border border-white/15 bg-[rgba(0,0,0,0.35)] pl-3.5 pr-12 text-white outline-none placeholder:text-white/35 transition ${
+                compact ? 'py-2 text-sm' : 'py-3.5 text-base'
+              }`}
               onFocus={(e) => {
                 e.currentTarget.style.boxShadow = `0 0 0 2px ${theme.accentMuted}`;
                 e.currentTarget.style.borderColor = theme.accent;
@@ -362,7 +375,9 @@ export default function ModuleGlassLoginCard({
         <button
           type="submit"
           disabled={isLoading || submitDisabled}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-full px-4 py-4 text-base font-bold uppercase tracking-[0.14em] transition active:scale-[0.98] disabled:opacity-55 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+          className={`inline-flex w-full items-center justify-center gap-2 rounded-full px-4 font-bold uppercase tracking-[0.14em] transition active:scale-[0.98] disabled:opacity-55 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 ${
+            compact ? 'py-2.5 text-sm' : 'py-4 text-base'
+          }`}
           style={{
             background: theme.accent,
             color: theme.accentFg,

@@ -691,8 +691,23 @@ export class InvoiceEngineService {
     };
 
     const map = new Map<string, AdsBucket>();
-    /** Turnaround flights: at most one Crew Coach charged unit per serial. */
-    const turnaroundCrewCoachChargedByFlight = new Map<string, number>();
+    const pricingCache = new Map<string, ReturnType<typeof resolveAdsPricingFromContractRule>>();
+    type PendingAdsUse = {
+      rec: BillingPreparationRecordDocument;
+      particular: string;
+      aircraftType: string;
+      uom: string;
+      used: number;
+      effectiveFree: number;
+      billedUnitPrice: number;
+      equipmentServiceCode: string;
+      pricingBasis: string;
+      flightKey: string;
+      equipmentKey: string;
+      turnaroundCrew: boolean;
+      feeConcessionPercent: number;
+    };
+    const pending: PendingAdsUse[] = [];
 
     for (const rec of records) {
       const rateMatch = (rec.rateMatch ?? {}) as {
@@ -739,44 +754,77 @@ export class InvoiceEngineService {
       // Re-check live contract first. Stale prep often has package_inclusive /
       // unitPrice 0 when aircraftTypes were polluted with services (HYD toilet
       // cart etc.) even though a priced ADS rule exists for the real airframe.
-      const liveAds = resolveAdsPricingFromContractRule(
-        contract as AdsEquipmentInclusionContract,
-        {
-          serviceCode: String(rateMatch.serviceCode ?? '').trim(),
-          particular,
-          equipmentName: String(
-            snap.equipment_name ??
-              snap.equipmentName ??
-              snap.equipmentCode ??
-              snap.abbr ??
-              '',
-          ),
-          aircraftType,
-          aircraftBody: String(
-            snap.aircraftBody ?? snap.AircraftBody ?? '',
-          ),
-          flightCategory: String(
-            snap.categoryOfFlight ?? snap.Cate_of_Flight ?? snap.flightCategory ?? '',
-          ),
-          billingCurrency,
-        },
+      const equipmentName = String(
+        snap.equipment_name ??
+          snap.equipmentName ??
+          snap.equipmentCode ??
+          snap.abbr ??
+          '',
       );
-      if (contract && liveAds.matched && liveAds.excluded) {
+      const aircraftBody = String(snap.aircraftBody ?? snap.AircraftBody ?? '');
+      const flightCategory = String(
+        snap.categoryOfFlight ?? snap.Cate_of_Flight ?? snap.flightCategory ?? '',
+      );
+      const serviceCode = String(rateMatch.serviceCode ?? '').trim();
+      const pricingKey = [
+        serviceCode,
+        particular,
+        equipmentName,
+        aircraftType,
+        aircraftBody,
+        flightCategory,
+        billingCurrency,
+      ].join('\u001f');
+      let liveAds = pricingCache.get(pricingKey);
+      if (!liveAds) {
+        liveAds = resolveAdsPricingFromContractRule(
+          contract as AdsEquipmentInclusionContract,
+          {
+            serviceCode,
+            particular,
+            equipmentName,
+            aircraftType,
+            aircraftBody,
+            flightCategory,
+            billingCurrency,
+          },
+        );
+        pricingCache.set(pricingKey, liveAds);
+      }
+      const contractRules = contract?.adsEquipmentRules ?? [];
+      const contractDrivesAds = contractRules.length > 0;
+      if (contractDrivesAds) {
+        if (!liveAds.matched || liveAds.excluded || !(liveAds.unitPrice != null && liveAds.unitPrice > 0)) {
+          continue;
+        }
+      } else if (contract && liveAds.matched && liveAds.excluded) {
         continue;
       }
 
       if (liveAds.matched && liveAds.uom) {
         uom = String(liveAds.uom).trim() || uom;
       }
-      const qtyRaw = Number(snap.qty ?? snap.chargeableUnits ?? usedRaw);
+      const remarksText = String(snap.remarks ?? snap.Remarks ?? '').trim();
       const hoursRaw = Number(snap.usageHours);
+      // 00:00–00:00 used to be stored as 24 hours. That is one engagement, not 24.
+      const emptyClock =
+        remarksText === '00:00' || remarksText === '0:00' || remarksText === '00:00:00';
+      const usageHours =
+        emptyClock && hoursRaw === 24
+          ? null
+          : Number.isFinite(hoursRaw) && hoursRaw > 0
+            ? hoursRaw
+            : null;
+      const qtyRaw = Number(
+        snap.qty ?? (emptyClock ? usedRaw : snap.chargeableUnits ?? usedRaw),
+      );
       const remarksQty =
         Number(snap.remarksQuantity) > 0
           ? Number(snap.remarksQuantity)
           : parseAdsRemarksQuantity(snap.remarks ?? snap.Remarks);
       const usedFromContractUom = computeAdsUsedUnits({
         qty: Number.isFinite(qtyRaw) && qtyRaw > 0 ? qtyRaw : Number.isFinite(usedRaw) && usedRaw > 0 ? usedRaw : 1,
-        usageHours: Number.isFinite(hoursRaw) && hoursRaw > 0 ? hoursRaw : null,
+        usageHours,
         uom,
         remarksQuantity: remarksQty && Number.isFinite(remarksQty) ? remarksQty : null,
       });
@@ -798,11 +846,6 @@ export class InvoiceEngineService {
         continue;
       }
 
-      // Per-flight overage — free allowance applies to this flight's used qty only.
-      // Prefer the LIVE contract free-per-flight so editing "Free / flight" takes
-      // effect immediately (stale prep freeAllowance was billing every use, e.g.
-      // PBNB free=1 still charged 33). liveAds.freePerFlight already accounts for
-      // Always-bill / excluded (→ 0). Fall back to prep free when live has no rule.
       const effectiveFree = liveAds.matched
         ? toWholeAdsUnits(
             Number.isFinite(liveAds.freePerFlight) && liveAds.freePerFlight > 0
@@ -810,37 +853,14 @@ export class InvoiceEngineService {
               : 0,
           )
         : freeAllowance;
-      let charged = toWholeAdsUnits(Math.max(0, used - effectiveFree));
-
-      // Turnaround: ARR+DEP Crew Coach lines must not bill twice for one coach.
-      if (
-        charged > 0 &&
-        isCrewCoachEquipmentLabel(particular) &&
-        isTurnaroundFlightContext(snap, snap.flightNo ?? snap.flightNoEquipmentNo)
-      ) {
-        const flightKey = String(
-          (rec.sourceRef as { serialNo?: unknown } | undefined)?.serialNo ??
-            snap.serialNumber ??
-            snap.SerialNo ??
-            '',
-        ).trim();
-        if (flightKey) {
-          const already = turnaroundCrewCoachChargedByFlight.get(flightKey) ?? 0;
-          const room = Math.max(0, 1 - already);
-          charged = Math.min(charged, room);
-          turnaroundCrewCoachChargedByFlight.set(flightKey, already + charged);
-        } else {
-          charged = Math.min(charged, 1);
-        }
-      }
-      if (charged <= 0) continue;
-
       const billedUnitPrice =
         liveAds.matched && liveAds.unitPrice != null && liveAds.unitPrice > 0
           ? liveAds.unitPrice
           : unitPrice;
+      if (!(billedUnitPrice > 0) || !(used > 0)) continue;
+
       const equipmentServiceCode =
-        String(rateMatch.serviceCode ?? particular).trim() || particular;
+        String(liveAds.serviceCode || rateMatch.serviceCode || particular).trim() || particular;
       const sourceRef = {
         ...(rec.sourceRef as Record<string, unknown>),
         operationalSnapshot: snap,
@@ -851,42 +871,79 @@ export class InvoiceEngineService {
         aircraftType: aircraftType || undefined,
       } satisfies Record<string, unknown>;
       const recordLevelContract = contractFromPreparationRecord(rec, contract);
-      // ADS additional: Concessions-page fee % only (Dom/Int/Div fees).
-      // Never apply BHS package conditionalCharges to ADS equipment unit price.
-      const chargePercent = 0;
       const feeConcessionPercent = resolveLineFeeConcessionPercent(
         { sourceRef },
         recordLevelContract,
       );
-      const concessionAppliedToUnitPrice = false;
-      const effectiveUnitPrice = round2(billedUnitPrice);
+      const flightKey = adsInvoiceFlightKey(rec, snap);
+      pending.push({
+        rec,
+        particular,
+        aircraftType,
+        uom,
+        used,
+        effectiveFree,
+        billedUnitPrice,
+        equipmentServiceCode,
+        pricingBasis,
+        flightKey,
+        equipmentKey: `${equipmentServiceCode.toLowerCase()}|${uom.toLowerCase()}|${billedUnitPrice}`,
+        turnaroundCrew:
+          isCrewCoachEquipmentLabel(particular) &&
+          isTurnaroundFlightContext(snap, snap.flightNo ?? snap.flightNoEquipmentNo),
+        feeConcessionPercent,
+      });
+    }
 
-      const key = `${particular.toLowerCase()}|${aircraftType.toLowerCase()}|${billedUnitPrice}|${uom}|${chargePercent}|${feeConcessionPercent}|${concessionAppliedToUnitPrice ? 'unit' : 'header'}`;
+    // One free-of-charge allowance per flight per equipment. Extra units on that
+    // flight (after the contract UOM) are chargeable at the rule's unit price.
+    const flightUses = new Map<string, PendingAdsUse[]>();
+    for (const row of pending) {
+      const groupKey = `${row.flightKey}\u001f${row.equipmentKey}`;
+      const list = flightUses.get(groupKey);
+      if (list) list.push(row);
+      else flightUses.set(groupKey, [row]);
+    }
+
+    for (const rows of flightUses.values()) {
+      const head = rows[0];
+      if (!head) continue;
+      const usedSum = rows.reduce((sum, row) => sum + row.used, 0);
+      let charged = toWholeAdsUnits(Math.max(0, usedSum - head.effectiveFree));
+      if (rows.some((row) => row.turnaroundCrew)) {
+        charged = Math.min(charged, 1);
+      }
+      if (charged <= 0) continue;
+
+      const chargePercent = 0;
+      const concessionAppliedToUnitPrice = false;
+      const effectiveUnitPrice = round2(head.billedUnitPrice);
+      const key = `${head.particular.toLowerCase()}|${head.aircraftType.toLowerCase()}|${head.billedUnitPrice}|${head.uom}|${chargePercent}|${head.feeConcessionPercent}|${concessionAppliedToUnitPrice ? 'unit' : 'header'}`;
       const bucket =
         map.get(key) ??
         ({
-          particular,
+          particular: head.particular,
           serviceCode: 'ADS',
-          equipmentServiceCode,
-          aircraftType,
-          unitPrice: billedUnitPrice,
+          equipmentServiceCode: head.equipmentServiceCode,
+          aircraftType: head.aircraftType,
+          unitPrice: head.billedUnitPrice,
           effectiveUnitPrice,
-          uom,
+          uom: head.uom,
           used: 0,
           charged: 0,
           freeAllowance: 0,
-          pricingBasis,
+          pricingBasis: head.pricingBasis,
           chargePercent,
-          feeConcessionPercent,
+          feeConcessionPercent: head.feeConcessionPercent,
           concessionAppliedToUnitPrice,
           records: [],
         } satisfies AdsBucket);
 
-      bucket.used += used;
+      bucket.used += usedSum;
       bucket.charged += charged;
-      bucket.freeAllowance = Math.max(bucket.freeAllowance, effectiveFree);
-      bucket.records.push(rec);
-      if (!bucket.pricingBasis && pricingBasis) bucket.pricingBasis = pricingBasis;
+      bucket.freeAllowance = Math.max(bucket.freeAllowance, head.effectiveFree);
+      for (const row of rows) bucket.records.push(row.rec);
+      if (!bucket.pricingBasis && head.pricingBasis) bucket.pricingBasis = head.pricingBasis;
       map.set(key, bucket);
     }
 
@@ -1522,6 +1579,26 @@ function uniquePreparationRecords(
     out.push(rec);
   }
   return out;
+}
+
+/** One FHR flight. Several equipment lines on that flight share one free allowance. */
+function adsInvoiceFlightKey(
+  rec: BillingPreparationRecordDocument,
+  snap: Record<string, unknown>,
+): string {
+  const ref = (rec.sourceRef ?? {}) as Record<string, unknown>;
+  const serial = String(
+    ref.serialNo ?? snap.serialNumber ?? snap.serialNo ?? snap.SerialNo ?? '',
+  ).trim();
+  if (serial) return `s:${serial}`;
+  const flight = String(
+    ref.flightNo ?? snap.flightNo ?? snap.flightNoEquipmentNo ?? '',
+  ).trim();
+  const date = String(
+    snap.flightDate ?? snap.atdDate ?? snap.staDate ?? snap.date ?? snap.STA ?? '',
+  ).trim();
+  if (flight) return `f:${flight}|${date}`;
+  return `id:${String(rec._id ?? '')}`;
 }
 
 function preparationSerial(rec: BillingPreparationRecordDocument): number | null {

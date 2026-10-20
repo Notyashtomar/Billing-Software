@@ -52,7 +52,7 @@ function guideFor(
   mag: boolean,
 ): string {
   const fees =
-    'Each card asks for a concession fee for scheduled international flights, scheduled domestic flights, and general aviation flights. Those three fees share one validity. Saving here does not change invoice generation.';
+    'Each card asks for a concession fee for scheduled international flights, scheduled domestic flights, and general aviation flights. Those three fees share one validity. Invoices, including Regenerate invoice, never read this page.';
   if (!ownership) {
     return `Set the station as a private airport or an Airport Authority on Airport Setup first. ${fees}`;
   }

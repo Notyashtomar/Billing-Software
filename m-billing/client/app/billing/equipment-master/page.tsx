@@ -6,7 +6,7 @@ export default function Page() {
   return (
     <BillingPageHeader
       title="Equipment Master"
-      description="Equipment master for this station."
+      description="Equipment master for this station. Invoices and Regenerate invoice do not read this page."
     />
   );
 }

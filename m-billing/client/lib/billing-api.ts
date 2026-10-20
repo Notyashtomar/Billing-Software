@@ -1031,6 +1031,7 @@ export function createBillingApi({ getApiBase, fetch }: BillingApiConfig) {
 
     unsendPreparationBySource: (body: {
       billingPeriodStart: string;
+      billingPeriodEnd?: string;
       sourceType: string;
       serialNos?: string[];
       usageRowIds?: string[];
@@ -1064,7 +1065,23 @@ export function createBillingApi({ getApiBase, fetch }: BillingApiConfig) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
+        timeoutMs: 300_000,
       }).then((r) => parseJson(r)),
+
+    listReadyInvoiceCustomers: (params?: {
+      from?: string;
+      to?: string;
+      customerCode?: string;
+    }) => {
+      const qs = new URLSearchParams();
+      if (params?.from) qs.set('from', params.from);
+      if (params?.to) qs.set('to', params.to);
+      if (params?.customerCode) qs.set('customerCode', params.customerCode);
+      const q = qs.toString();
+      return request(`/billing/preparation/ready-customers${q ? `?${q}` : ''}`).then((r) =>
+        parseJson<{ data: string[] }>(r),
+      );
+    },
 
     preparationPresenceHeartbeat: (body: {
       sessionId: string;

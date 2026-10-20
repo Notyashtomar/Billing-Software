@@ -35,9 +35,20 @@ function sortedAircraft(rule: BillingContractAdsEquipmentRule): string[] {
 }
 
 /** Identity for equipment rules ignoring calendar month (for UI collapse). */
+export function adsEquipmentIdentity(serviceCode: string | undefined | null): string {
+  return String(serviceCode ?? '')
+    .trim()
+    .toUpperCase()
+    .replace(/[\u2013\u2014]/g, '-')
+    .replace(/[^A-Z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/** Identity for equipment rules ignoring calendar month (for UI collapse). */
 export function adsEquipmentRuleSignature(rule: BillingContractAdsEquipmentRule): string {
   return JSON.stringify({
-    serviceCode: String(rule.serviceCode ?? '').trim().toUpperCase(),
+    serviceCode: adsEquipmentIdentity(rule.serviceCode),
     freePerFlight: rule.freePerFlight ?? 0,
     freePerFlightNb: rule.freePerFlightNb ?? null,
     freePerFlightWb: rule.freePerFlightWb ?? null,
@@ -47,29 +58,65 @@ export function adsEquipmentRuleSignature(rule: BillingContractAdsEquipmentRule)
     unitPriceUSD: rule.unitPriceUSD ?? null,
     uom: String(rule.uom ?? '').trim().toUpperCase() || 'EA',
     aircraftTypes: sortedAircraft(rule),
-    category: String(rule.category ?? '').trim(),
-    remarks: String(rule.remarks ?? '').trim(),
   });
+}
+
+function isBothCategory(rule: BillingContractAdsEquipmentRule): boolean {
+  return /^both$/i.test(String(rule.category ?? '').trim());
+}
+
+function mergeAircraft(
+  rules: BillingContractAdsEquipmentRule[],
+): string[] {
+  const aircraft = new Set<string>();
+  for (const rule of rules) {
+    for (const code of sortedAircraft(rule)) aircraft.add(code);
+  }
+  return [...aircraft].sort();
+}
+
+/**
+ * One row per equipment. Domestic / international / both copies of the same
+ * service collapse together. When prices differ, the "Both" copy wins, then
+ * the later copy.
+ */
+function collapseSameEquipment(
+  rules: BillingContractAdsEquipmentRule[],
+): BillingContractAdsEquipmentRule {
+  let chosen = rules[0]!;
+  for (const rule of rules.slice(1)) {
+    const chosenBoth = isBothCategory(chosen);
+    const ruleBoth = isBothCategory(rule);
+    if (ruleBoth && !chosenBoth) chosen = rule;
+    else if (ruleBoth === chosenBoth) chosen = rule;
+  }
+  return {
+    ...chosen,
+    aircraftTypes: mergeAircraft(rules),
+    aircraftType: undefined,
+    category: undefined,
+    effectiveMonth: undefined,
+  };
 }
 
 /** Collapse duplicated monthly copies into one editable rule set. */
 export function collapseAdsEquipmentRules(
   rules: BillingContractAdsEquipmentRule[],
 ): BillingContractAdsEquipmentRule[] {
-  const seen = new Set<string>();
-  const out: BillingContractAdsEquipmentRule[] = [];
-  for (const rule of rules) {
-    const signature = adsEquipmentRuleSignature(rule);
-    if (seen.has(signature)) continue;
-    seen.add(signature);
-    out.push({
-      ...rule,
-      aircraftTypes: sortedAircraft(rule),
-      aircraftType: undefined,
-      effectiveMonth: undefined,
-    });
-  }
-  return out;
+  const groups = new Map<string, BillingContractAdsEquipmentRule[]>();
+  const order: string[] = [];
+  rules.forEach((rule, index) => {
+    const identity = adsEquipmentIdentity(rule.serviceCode);
+    const key = identity || `blank:${index}`;
+    const list = groups.get(key);
+    if (list) {
+      list.push(rule);
+      return;
+    }
+    groups.set(key, [rule]);
+    order.push(key);
+  });
+  return order.map((key) => collapseSameEquipment(groups.get(key)!));
 }
 
 /** Keep one rule row for the whole contract validity (no monthly copies). */
