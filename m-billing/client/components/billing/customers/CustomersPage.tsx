@@ -511,8 +511,9 @@ export function CustomersPage({ api }: Props) {
           if (!open) setAnnexureRecord(null);
         }}
         onUpdated={(updated) => {
-          setRows((prev) => prev.map((row) => (row._id === updated._id ? { ...row, ...updated } : row)));
-          setAnnexureRecord(updated);
+          const next = { ...updated, annexures: updated.annexures || undefined };
+          setRows((prev) => prev.map((row) => (row._id === next._id ? { ...row, ...next } : row)));
+          setAnnexureRecord(next);
         }}
       />
       <CustomerDeleteDialog

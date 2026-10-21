@@ -47,6 +47,7 @@ import { ApprovalWorkflowService } from '../engines/approval-workflow.service';
 import { AuditEngineService } from '../engines/audit-engine.service';
 import type { BillingActor } from './billing-customers.service';
 import type { BillingPreparationService } from './billing-preparation.service';
+import type { BillingSourcesMaaFhrAdsService } from './sources/billing-sources-usage.service';
 import { lazyService } from 'src/common/nestjs/lazy-service.util';
 import {
   AddInvoiceLineDto,
@@ -277,6 +278,14 @@ function splitPreparationGroupByFortnightConfig(
     }));
 }
 
+function periodYmd(value: unknown): string {
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return value.toISOString().slice(0, 10);
+  }
+  const match = String(value ?? '').trim().match(/^(\d{4}-\d{2}-\d{2})/);
+  return match?.[1] ?? '';
+}
+
 @Injectable()
 export class BillingInvoiceDraftsService {
   constructor(
@@ -307,6 +316,16 @@ export class BillingInvoiceDraftsService {
       ),
     )
     private readonly preparationService: BillingPreparationService,
+    @Inject(
+      forwardRef(
+        lazyService(
+          () =>
+            require('./sources/billing-sources-usage.service')
+              .BillingSourcesMaaFhrAdsService as typeof import('./sources/billing-sources-usage.service').BillingSourcesMaaFhrAdsService,
+        ),
+      ),
+    )
+    private readonly adsSources: BillingSourcesMaaFhrAdsService,
     @InjectConnection() private readonly connection: Connection,
   ) {}
 
@@ -1147,9 +1166,124 @@ export class BillingInvoiceDraftsService {
   }
 
   /**
+   * ADS page totals (including wheelchair pax) count every flight in the period.
+   * A draft only had the flights sent earlier, so regenerate under-counted.
+   * Pull the same FHR ADS lines the billed-services page shows and attach any
+   * that are not already on this draft.
+   */
+  private async ingestUnsentAdsUsageForDraft(
+    ctx: StationScopeContext,
+    header: BillingInvoiceHeaderDocument,
+    actor: BillingActor,
+  ): Promise<BillingPreparationRecordDocument[]> {
+    const fromYmd = periodYmd(header.billingPeriodStart);
+    const toYmd = periodYmd(header.billingPeriodEnd);
+    const customerCode = String(header.customerCode ?? '').trim().toUpperCase();
+    if (!fromYmd || !toYmd || !customerCode) return [];
+
+    let rows: Awaited<ReturnType<BillingSourcesMaaFhrAdsService['list']>>['data']['rows'] =
+      [];
+    try {
+      const listed = await this.adsSources.list(
+        ctx,
+        {
+          from: fromYmd,
+          to: toYmd,
+          customerCode,
+          dateBasis: 'schedule-date',
+        },
+        'ads',
+      );
+      rows = listed.data.rows.filter((row) => {
+        if (row.sentToPreparation === true) return false;
+        const code = String(row.operationalData?.customerCode ?? '')
+          .trim()
+          .toUpperCase();
+        return !code || code === customerCode;
+      });
+    } catch {
+      return [];
+    }
+    if (rows.length === 0) return [];
+
+    const usageIds = [
+      ...new Set(
+        rows
+          .map((row) =>
+            String(
+              (row.sourceRef as { usageRowId?: unknown } | undefined)?.usageRowId ?? '',
+            ).trim(),
+          )
+          .filter(Boolean),
+      ),
+    ];
+    if (usageIds.length === 0) return [];
+
+    const ingestRows = rows.map((row) => {
+      const sourceRef = (row.sourceRef ?? {}) as {
+        serialNo?: string;
+        flightNo?: string;
+        usageRowId?: string;
+      };
+      const operationalData = {
+        ...((row.operationalData ?? {}) as Record<string, unknown>),
+      };
+      if (!String(operationalData.customerCode ?? '').trim()) {
+        operationalData.customerCode = customerCode;
+      }
+      const validation = (row.validationStatus ?? {}) as {
+        passed?: boolean;
+        errors?: unknown[];
+      };
+      return {
+        sourceType: String(row.sourceType ?? 'ads'),
+        sourceRef: {
+          serialNo: sourceRef.serialNo,
+          flightNo: sourceRef.flightNo,
+          usageRowId: sourceRef.usageRowId,
+        },
+        operationalData,
+        contractMatch: row.contractMatch as never,
+        rateMatch: row.rateMatch as never,
+        validationStatus: validation,
+        validationResults: validation.errors,
+      };
+    });
+
+    for (let i = 0; i < ingestRows.length; i += 2000) {
+      await this.preparationService.ingest(
+        ctx,
+        {
+          billingPeriodStart: fromYmd,
+          billingPeriodEnd: toYmd,
+          rows: ingestRows.slice(i, i + 2000) as never,
+        },
+        actor,
+      );
+    }
+
+    return this.preparationModel
+      .find({
+        ...StationScope.filter(
+          {
+            'sourceRef.usageRowId': { $in: usageIds },
+            status: { $ne: 'rejected' },
+            $or: [
+              { invoiceDraftId: { $exists: false } },
+              { invoiceDraftId: null },
+              { invoiceDraftId: header._id },
+            ],
+          },
+          ctx,
+        ),
+      })
+      .exec();
+  }
+
+  /**
    * Recompute Invoice: re-enrich linked prep from live contracts / rate cards /
-   * rules for this airline, then rebuild lines. Enrichment is batched (no FHR
-   * reload) so the click stays fast.
+   * rules for this airline, then rebuild lines. ADS drafts also pull unsent
+   * flights from the billed-services ADS page (same FHR wheelchair counts).
    *
    * Royalty Setup, Airport Setup → Configure rules, Aircraft Master, and
    * Equipment Master are never read. See BILLING_INVOICE_IGNORED_MASTERS.
@@ -1193,17 +1327,29 @@ export class BillingInvoiceDraftsService {
       // Still rebuild from current prep + live contract compose.
     }
 
-    const records = await this.preparationModel
+    const linked = await this.preparationModel
       .find({
         _id: { $in: prepIds.map((prepId) => new Types.ObjectId(prepId)) },
         ...StationScope.filter({}, ctx),
       })
       .exec();
 
-    if (records.length === 0) {
+    if (linked.length === 0) {
       throw new BadRequestException(
         'Linked preparation records are missing or outside your station scope',
       );
+    }
+
+    const records: BillingPreparationRecordDocument[] = [...linked];
+    if (String(header.invoiceCategory ?? '').trim().toUpperCase() === 'ADS') {
+      const extras = await this.ingestUnsentAdsUsageForDraft(ctx, header, actor);
+      const seen = new Set(records.map((record) => String(record._id)));
+      for (const extra of extras) {
+        const id = String(extra._id);
+        if (seen.has(id)) continue;
+        seen.add(id);
+        records.push(extra);
+      }
     }
 
     await this.rebuildDraftFromPreparationRecords(

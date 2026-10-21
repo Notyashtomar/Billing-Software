@@ -115,7 +115,7 @@ export interface BillingCustomer {
   annexures?: {
     ads?: BillingCustomerAnnexureFile;
     bhs?: BillingCustomerAnnexureFile;
-  };
+  } | null;
   active: boolean;
   createdAt: string;
   updatedAt: string;
