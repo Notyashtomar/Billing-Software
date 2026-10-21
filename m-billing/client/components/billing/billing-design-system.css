@@ -201,35 +201,106 @@
  * Billing navbar chrome — white bar with Color Hunt accents.
  * Navbar lives inside BillingDesignRoot (.billing-app) on /billing/* routes.
  */
-.billing-app nav.billing-nav-chrome {
-  background-color: color-mix(in srgb, #ffffff 94%, var(--billing-surface-muted)) !important;
-  border-bottom: 1px solid var(--billing-border-strong);
-  box-shadow: var(--billing-shadow-sm);
-  backdrop-filter: blur(12px);
+nav.billing-nav-chrome {
+  height: 3.3rem !important;
+  background: #ffffff !important;
+  border-bottom: 2px solid #1c0770 !important;
+  box-shadow: 0 12px 30px -24px rgba(28, 7, 112, 0.55) !important;
 }
 
-.billing-app nav.billing-nav-chrome .billing-nav-item-active,
-.billing-app nav.billing-nav-chrome .billing-nav-item-active:hover {
-  background-color: var(--billing-primary-soft) !important;
-  color: var(--billing-primary) !important;
+nav.billing-nav-chrome .billing-nav-track {
+  gap: 0.15rem;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
 }
 
-.billing-app nav.billing-nav-chrome .billing-nav-item-idle,
-.billing-app nav.billing-nav-chrome .billing-nav-station {
-  color: var(--billing-text-secondary) !important;
+nav.billing-nav-chrome .billing-nav-station-chip {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0;
+  min-width: 4.5rem;
+  margin-left: 0.35rem;
+  padding: 0.15rem 0.85rem;
+  border: 0;
+  border-left: 1px solid rgba(28, 7, 112, 0.14);
+  border-radius: 0;
+  background: transparent;
+  line-height: 1.05;
+  color: #1c0770 !important;
 }
 
-.billing-app nav.billing-nav-chrome .billing-nav-item-idle:hover {
-  background-color: var(--billing-info-soft) !important;
-  color: var(--billing-secondary) !important;
+nav.billing-nav-chrome .billing-nav-station-kicker {
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #8b84a8;
 }
 
-.billing-app nav.billing-nav-chrome .billing-nav-icon-active {
-  color: var(--billing-primary) !important;
+nav.billing-nav-chrome .billing-nav-station-chip {
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
 }
 
-.billing-app nav.billing-nav-chrome .billing-nav-active-bar {
-  background-color: var(--billing-accent) !important;
+nav.billing-nav-chrome .billing-nav-track > .dropdown-container > div > button,
+nav.billing-nav-chrome .billing-nav-track > .dropdown-container > div > a {
+  position: relative;
+  border-radius: 0.7rem !important;
+  padding: 0.42rem 0.78rem !important;
+  font-size: 0.9rem !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+}
+
+nav.billing-nav-chrome .billing-nav-item-active,
+nav.billing-nav-chrome .billing-nav-item-active:hover {
+  background: #f3efff !important;
+  color: #1c0770 !important;
+  box-shadow: inset 0 -2px 0 #c8f000;
+}
+
+nav.billing-nav-chrome .billing-nav-item-idle,
+nav.billing-nav-chrome .billing-nav-station {
+  color: #4b4568 !important;
+}
+
+nav.billing-nav-chrome .billing-nav-item-idle:hover {
+  background: #f7f5fb !important;
+  color: #1c0770 !important;
+}
+
+nav.billing-nav-chrome .billing-nav-icon-active {
+  color: #1c0770 !important;
+}
+
+nav.billing-nav-chrome .billing-nav-active-bar {
+  display: none !important;
+}
+
+nav.billing-nav-chrome .billing-nav-avatar {
+  height: 2.35rem !important;
+  max-height: 2.35rem !important;
+  border-color: rgba(28, 7, 112, 0.16) !important;
+  background: #faf9ff !important;
+  box-shadow: 0 1px 2px rgba(28, 7, 112, 0.08);
+}
+
+nav.billing-nav-chrome .billing-logo-plate {
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 0.15rem !important;
+}
+
+nav.billing-nav-chrome .billing-logo-plate img {
+  height: 2.55rem !important;
+  max-height: 2.55rem !important;
 }
 
 .billing-app nav.billing-nav-chrome .billing-nav-link-active {
@@ -685,5 +756,201 @@ nav.billing-nav-chrome .billing-logo-plate img {
   .contract-row-card,
   .contract-handling-tile {
     transition: none;
+  }
+}
+
+/*
+ * Dark appearance — system dark, same idea as Chrome and Apple.
+ * Near-black canvas, raised gray cards, white text, blue accent.
+ */
+html[data-billing-night] {
+  --billing-primary: #2f6bff;
+  --billing-primary-hover: #4c82ff;
+  --billing-primary-soft: rgba(47, 107, 255, 0.18);
+  --billing-secondary: #7aa2ff;
+  --billing-secondary-hover: #9bb6ff;
+  --billing-secondary-soft: rgba(122, 162, 255, 0.14);
+  --billing-accent: #2f6bff;
+  --billing-accent-hover: #4c82ff;
+  --billing-accent-strong: #ffffff;
+  --billing-accent-soft: rgba(47, 107, 255, 0.18);
+  --billing-accent-border: rgba(76, 130, 255, 0.55);
+  --billing-accent-muted: rgba(255, 255, 255, 0.62);
+  --billing-success: #30d158;
+  --billing-success-soft: rgba(48, 209, 88, 0.14);
+  --billing-success-border: rgba(48, 209, 88, 0.35);
+  --billing-warning: #ffd60a;
+  --billing-warning-soft: rgba(255, 214, 10, 0.12);
+  --billing-warning-border: rgba(255, 214, 10, 0.35);
+  --billing-danger: #ff453a;
+  --billing-danger-hover: #ff6961;
+  --billing-danger-soft: rgba(255, 69, 58, 0.14);
+  --billing-danger-border: rgba(255, 69, 58, 0.35);
+  --billing-info: #4c8dff;
+  --billing-info-soft: rgba(76, 141, 255, 0.16);
+  --billing-info-border: rgba(76, 141, 255, 0.45);
+  --billing-bg: #1b1d24;
+  --billing-surface: #242733;
+  --billing-surface-muted: #1e212b;
+  --billing-surface-elevated: #2c3140;
+  --billing-border: rgba(120, 150, 210, 0.22);
+  --billing-border-strong: rgba(76, 141, 255, 0.45);
+  --billing-text: #ffffff;
+  --billing-text-secondary: #e6e8ee;
+  --billing-text-muted: #b7bcc8;
+  --billing-text-inverse: #ffffff;
+  --billing-heading: #ffffff;
+  --billing-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --billing-shadow-md: 0 8px 24px -10px rgba(0, 0, 0, 0.55);
+  --billing-shadow-lg: 0 16px 40px -16px rgba(0, 0, 0, 0.65);
+  color-scheme: dark;
+}
+
+html[data-billing-night],
+html[data-billing-night] body {
+  background-color: #1b1d24;
+}
+
+html[data-billing-night] .billing-app {
+  color-scheme: dark;
+  background-color: #1b1d24;
+  color: #ffffff;
+}
+
+html[data-billing-night] .billing-app .bg-white,
+html[data-billing-night] .billing-app [class*='bg-white'],
+html[data-billing-night] .billing-app [class*='bg-[#f4f6f3]'],
+html[data-billing-night] .billing-app [class*='bg-[#f7faf7]'],
+html[data-billing-night] .billing-app [class*='bg-[#f3f5f2]'],
+html[data-billing-night] .billing-app [class*='bg-[#eef0ec]'],
+html[data-billing-night] .billing-app [class*='bg-[#e7f6ea]'] {
+  background-color: #242733 !important;
+}
+
+html[data-billing-night] .billing-app .text-gray-900,
+html[data-billing-night] .billing-app .text-gray-800,
+html[data-billing-night] .billing-app .text-gray-700,
+html[data-billing-night] .billing-app .text-gray-600,
+html[data-billing-night] .billing-app .text-gray-500,
+html[data-billing-night] .billing-app [class*='text-slate-'],
+html[data-billing-night] .billing-app [class*='text-[#1c2430]'],
+html[data-billing-night] .billing-app [class*='text-[#3d463f]'],
+html[data-billing-night] .billing-app [class*='text-[#667066]'],
+html[data-billing-night] .billing-app [class*='text-[#8b9388]'],
+html[data-billing-night] nav.billing-nav-chrome [class*='text-slate-'],
+html[data-billing-night] nav.billing-nav-chrome [class*='text-gray-'] {
+  color: #ffffff !important;
+}
+
+html[data-billing-night] nav.billing-nav-chrome [class*='bg-slate-100'],
+html[data-billing-night] .billing-app [class*='bg-slate-100'],
+html[data-billing-night] .billing-app [class*='bg-slate-50'],
+html[data-billing-night] .billing-app [class*='bg-gray-50'],
+html[data-billing-night] .billing-app [class*='bg-gray-100'],
+html[data-billing-night] .billing-app [class*='bg-gray-200'] {
+  background-color: #2c3140 !important;
+  color: #ffffff !important;
+}
+
+html[data-billing-night] .billing-app [class*='text-[#16803c]'],
+html[data-billing-night] .billing-app [class*='text-[#146c2e]'],
+html[data-billing-night] .billing-app [class*='text-[#1f8a3b]'] {
+  color: #30d158 !important;
+}
+
+html[data-billing-night] .billing-app [class*='text-[#b91c1c]'] {
+  color: #ff453a !important;
+}
+
+html[data-billing-night] .billing-app [class*='border-[#e'],
+html[data-billing-night] .billing-app [class*='border-gray-'] {
+  border-color: rgba(76, 141, 255, 0.28) !important;
+}
+
+html[data-billing-night] .billing-app input,
+html[data-billing-night] .billing-app select,
+html[data-billing-night] .billing-app textarea {
+  background-color: #16181f !important;
+  color: #ffffff !important;
+  border-color: #3d7dff !important;
+}
+
+html[data-billing-night] nav.billing-nav-chrome {
+  background: #241c3d !important;
+  border-bottom: 1px solid rgba(90, 120, 200, 0.35) !important;
+  box-shadow: none !important;
+}
+
+html[data-billing-night] nav.billing-nav-chrome .billing-nav-item-active,
+html[data-billing-night] nav.billing-nav-chrome .billing-nav-item-active:hover {
+  background: #2f6bff !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+html[data-billing-night] nav.billing-nav-chrome .billing-nav-icon-active {
+  color: #ffffff !important;
+}
+
+html[data-billing-night] nav.billing-nav-chrome .billing-nav-item-idle,
+html[data-billing-night] nav.billing-nav-chrome .billing-nav-station,
+html[data-billing-night] nav.billing-nav-chrome .billing-nav-station-chip,
+html[data-billing-night] nav.billing-nav-chrome .billing-nav-station-kicker,
+html[data-billing-night] nav.billing-nav-chrome .billing-nav-icon-idle,
+html[data-billing-night] nav.billing-nav-chrome .billing-nav-dropdown,
+html[data-billing-night] nav.billing-nav-chrome .billing-nav-dropdown a,
+html[data-billing-night] nav.billing-nav-chrome .billing-nav-dropdown button {
+  color: #ffffff !important;
+}
+
+html[data-billing-night] nav.billing-nav-chrome .billing-nav-item-idle:hover {
+  background: #31285a !important;
+  color: #ffffff !important;
+}
+
+html[data-billing-night] nav.billing-nav-chrome .billing-nav-dropdown {
+  background: #242733 !important;
+  color: #ffffff !important;
+  border-color: rgba(76, 141, 255, 0.35) !important;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.45) !important;
+}
+
+html[data-billing-night] nav.billing-nav-chrome .billing-night-toggle {
+  background: #31285a !important;
+  color: #ffffff !important;
+  border-color: rgba(76, 141, 255, 0.4) !important;
+}
+
+html[data-billing-night] .billing-app [class*='bg-[#1f8a3b]'],
+html[data-billing-night] .billing-app [class*='bg-[#146c2e]'] {
+  background-color: #30d158 !important;
+}
+
+@keyframes equipment-filter-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.equipment-filter-drop > * {
+  animation: equipment-filter-drop 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.equipment-filter-drop > *:nth-child(2) {
+  animation-delay: 0.1s;
+}
+
+.equipment-filter-drop > *:nth-child(3) {
+  animation-delay: 0.18s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .equipment-filter-drop > * {
+    animation: none;
   }
 }

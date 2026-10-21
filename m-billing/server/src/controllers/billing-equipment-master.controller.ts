@@ -15,6 +15,11 @@ export class BillingEquipmentMasterController {
     return this.equipmentMaster.list();
   }
 
+  @Post('import')
+  importRows(@Body() body: { rows?: EquipmentMasterWrite[] }) {
+    return this.equipmentMaster.importRows(body?.rows ?? []);
+  }
+
   @Post()
   create(@Body() body: EquipmentMasterWrite) {
     return this.equipmentMaster.create(body ?? {});

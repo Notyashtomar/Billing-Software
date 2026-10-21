@@ -413,6 +413,11 @@ export function createBillingApi({ getApiBase, fetch }: BillingApiConfig) {
             completionPercent: number;
             additionalExclTax: number;
             invoicedInclTax: number;
+            unbilledFlights?: number;
+            missingRateInvoices?: number;
+            trend?: Array<{ label: string; current: number; prior: number }>;
+            serviceMix?: Array<{ name: string; amount: number }>;
+            airlines?: Array<{ code: string; name: string; amount: number }>;
           };
         }>(r),
       );
@@ -515,6 +520,13 @@ export function createBillingApi({ getApiBase, fetch }: BillingApiConfig) {
       request('/billing/equipment-master').then((r) =>
         parseJson<{ data: EquipmentMasterRecord[] }>(r),
       ),
+
+    importEquipmentMaster: (rows: EquipmentMasterWrite[]) =>
+      request('/billing/equipment-master/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rows }),
+      }).then((r) => parseJson<{ data: { created: number; updated: number } }>(r)),
 
     createEquipmentMaster: (body: EquipmentMasterWrite) =>
       request('/billing/equipment-master', {

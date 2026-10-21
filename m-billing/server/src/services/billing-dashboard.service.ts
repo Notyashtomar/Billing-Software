@@ -576,6 +576,8 @@ export class BillingDashboardService {
     const completionPercent =
       eligible > 0 ? Math.round((invoiced / eligible) * 1000) / 10 : 0;
 
+    const insight = await this.executiveInsight(ctx, windows.current.to, customer, categories, currentDrafts);
+
     return successResponse({
       periodLabel: windows.periodLabel,
       compareLabel: windows.compareLabel,
@@ -590,7 +592,87 @@ export class BillingDashboardService {
       completionPercent,
       additionalExclTax,
       invoicedInclTax,
+      unbilledFlights: Math.max(0, eligible - invoiced),
+      ...insight,
     });
+  }
+
+  private async executiveInsight(
+    ctx: StationScopeContext,
+    periodEnd: Date,
+    customerCode: string,
+    categories: string[],
+    currentDrafts: Array<{
+      invoiceCategory?: string;
+      customerCode?: string;
+      customerName?: string;
+      billingPeriodStart?: Date | string;
+      subtotalExclTax?: number;
+      concessionFeeAmount?: number;
+      totalInclTax?: number;
+      currencyCode?: string;
+      currencyFactor?: number;
+    }>,
+  ) {
+    const trendEnd = new Date(periodEnd.getFullYear(), periodEnd.getMonth(), 1);
+    const trendStart = new Date(trendEnd.getFullYear(), trendEnd.getMonth() - 5, 1);
+    const priorStart = new Date(trendStart.getFullYear() - 1, trendStart.getMonth(), 1);
+    const history = await this.loadDrafts(
+      ctx,
+      { from: priorStart, to: trendEnd },
+      customerCode,
+    );
+    const byMonth = new Map<string, number>();
+    for (const row of history) {
+      const category = String(row.invoiceCategory ?? 'BHS').trim().toUpperCase() || 'BHS';
+      if (!categories.includes(category)) continue;
+      const start = row.billingPeriodStart ? new Date(row.billingPeriodStart) : null;
+      if (!start || Number.isNaN(start.getTime())) continue;
+      const key = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}`;
+      byMonth.set(key, roundMoney((byMonth.get(key) ?? 0) + draftInr(row, 'preTax')));
+    }
+    const trend = Array.from({ length: 6 }, (_, index) => {
+      const month = new Date(trendStart.getFullYear(), trendStart.getMonth() + index, 1);
+      const key = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, '0')}`;
+      const prior = new Date(month.getFullYear() - 1, month.getMonth(), 1);
+      const priorKey = `${prior.getFullYear()}-${String(prior.getMonth() + 1).padStart(2, '0')}`;
+      return {
+        label: month.toLocaleDateString('en-IN', { month: 'short' }),
+        current: byMonth.get(key) ?? 0,
+        prior: byMonth.get(priorKey) ?? 0,
+      };
+    });
+
+    const serviceMix = ['BHS', 'ADS', 'RAF'].map((name) => ({
+      name,
+      amount: sumDrafts(currentDrafts, [name], 'preTax'),
+    }));
+
+    const airlineTotals = new Map<string, { name: string; amount: number }>();
+    for (const row of currentDrafts) {
+      const category = String(row.invoiceCategory ?? 'BHS').trim().toUpperCase() || 'BHS';
+      if (!categories.includes(category)) continue;
+      const code = String(row.customerCode ?? '').trim().toUpperCase() || '—';
+      const current = airlineTotals.get(code) ?? {
+        name: String(row.customerName ?? '').trim() || code,
+        amount: 0,
+      };
+      current.amount = roundMoney(current.amount + draftInr(row, 'preTax'));
+      airlineTotals.set(code, current);
+    }
+    const ranked = [...airlineTotals.entries()]
+      .map(([code, row]) => ({ code, name: row.name, amount: row.amount }))
+      .sort((a, b) => b.amount - a.amount);
+    const top = ranked.slice(0, 3);
+    const othersAmount = roundMoney(ranked.slice(3).reduce((sum, row) => sum + row.amount, 0));
+    const airlines = othersAmount > 0 ? [...top, { code: 'OTHERS', name: 'Others', amount: othersAmount }] : top;
+
+    const missingRate = currentDrafts.filter((row) => {
+      const usd = String(row.currencyCode ?? '').toUpperCase() === 'USD';
+      return usd && !(Number(row.currencyFactor) > 0);
+    }).length;
+
+    return { trend, serviceMix, airlines, missingRateInvoices: missingRate };
   }
 
   private loadDrafts(
@@ -611,7 +693,7 @@ export class BillingDashboardService {
         ),
       )
       .select(
-        'invoiceCategory subtotalExclTax concessionFeeAmount totalInclTax currencyCode currencyFactor',
+        'invoiceCategory customerCode customerName billingPeriodStart subtotalExclTax concessionFeeAmount totalInclTax currencyCode currencyFactor',
       )
       .lean();
   }
