@@ -280,4 +280,34 @@ describe('ads-equipment-inclusion.util', () => {
     });
     expect(inferredNb.freePerFlight).toBe(1);
   });
+
+  it('matches B737-800 contract rules to the same airframe on the flight', () => {
+    const priced = resolveAdsPricingFromContractRule(
+      {
+        adsBillingEnabled: true,
+        aircraftTypes: ['B737-800'],
+        adsEquipmentRules: [
+          {
+            serviceCode: 'Scheduled - Equipment - WCHR',
+            includedForAds: true,
+            alwaysChargeable: true,
+            unitPriceINR: 494.29,
+            uom: 'Per Service',
+            aircraftTypes: ['B737-800'],
+            category: 'Dom',
+          },
+        ],
+      },
+      {
+        serviceCode: 'Scheduled Flight - WCHR',
+        particular: 'Wheel Chair -WCHR',
+        equipmentName: 'WCHR',
+        aircraftType: 'B737-800',
+        flightCategory: 'Domestic',
+        billingCurrency: 'INR',
+      },
+    );
+    expect(priced.matched).toBe(true);
+    expect(priced.unitPrice).toBe(494.29);
+  });
 });

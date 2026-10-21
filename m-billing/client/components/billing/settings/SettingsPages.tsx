@@ -269,6 +269,9 @@ export function StationProfilePage({ api }: Props) {
       {airportCommercial ? (
         <section className="mb-6 rounded-xl border border-gray-200 bg-white p-4 sm:p-6">
           <h2 className="text-base font-semibold text-gray-900">Airport rules</h2>
+          <p className="mt-1 text-sm text-gray-500">
+            Configure rules is kept on this page only. Invoices and Regenerate invoice do not read it.
+          </p>
           <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
             <div>
               <dt className="text-gray-500">Ownership</dt>

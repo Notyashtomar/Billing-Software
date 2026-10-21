@@ -244,7 +244,7 @@ export function AircraftMasterPage({ api }: { api: BillingApi }) {
     <div>
       <BillingPageHeader
         title="Aircraft Master"
-        description="Import an Excel sheet with the aircraft master column names. Blank cell values are allowed. Missing column names are rejected."
+        description="Import an Excel sheet with the aircraft master column names. Blank cell values are allowed. Missing column names are rejected. Invoices and Regenerate invoice do not read this page."
         actions={
           <div className="flex flex-wrap gap-2">
             <button

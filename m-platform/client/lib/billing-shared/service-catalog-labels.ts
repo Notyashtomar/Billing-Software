@@ -220,7 +220,11 @@ export function inferCatalogMeta(label: string): {
     lower === 'manpower' ||
     lower.startsWith('manpower -')
   ) {
-    return { category: 'manpower', uom: 'HR' };
+    const isBlueCollar =
+      strippedUpper === 'BC' ||
+      strippedUpper === 'BLUE COLLAR' ||
+      /\bblue collar\b/i.test(raw);
+    return { category: 'manpower', uom: isBlueCollar ? 'Per Hour' : 'HR' };
   }
 
   // 5. Scheduled flights / basic handling
@@ -347,7 +351,8 @@ const ADS_CATALOG_DROPPED_LABELS = new Set([
  * ADS contract dropdown display names (after prefix strip).
  * Stored `serviceCode` values stay unchanged — only UI label changes.
  * Uses billing-trackable full forms; WC is Water Cart for equipment and
- * White Collar for manpower.
+ * White Collar for manpower. BC is Baggage Cart for equipment and Blue Collar
+ * for manpower.
  */
 function adsCatalogDisplayName(rawLabel: string, stripped: string): string {
   const lower = String(rawLabel ?? '').trim().toLowerCase();
@@ -563,14 +568,24 @@ export function buildAdsContractCatalogOptions(
     const display = adsCatalogServiceDisplayName(raw);
     if (!display) continue;
     const key = display.toLowerCase();
+    const meta = inferCatalogMeta(raw);
     const existing = unique.get(key);
+    const incomingUom = String(source.uom ?? '').trim();
     if (existing) {
-      if (!String(existing.uom ?? '').trim() && String(source.uom ?? '').trim()) {
-        existing.uom = String(source.uom).trim();
+      const incomingRank = catalogPrefixRank(raw);
+      const existingRank = catalogPrefixRank(existing.value);
+      if (incomingRank < existingRank) {
+        unique.set(key, {
+          value: raw,
+          label: display,
+          uom: String(existing.uom ?? '').trim() || incomingUom || meta.uom,
+          category: meta.category,
+        });
+      } else if (!String(existing.uom ?? '').trim() && incomingUom) {
+        existing.uom = incomingUom;
       }
       continue;
     }
-    const meta = inferCatalogMeta(raw);
     unique.set(key, {
       value: raw,
       label: display,

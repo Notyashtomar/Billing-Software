@@ -55,6 +55,14 @@ export class BillingPreparationController {
     return this.preparationService.list(station, query);
   }
 
+  @Get('ready-customers')
+  readyCustomers(
+    @CurrentBillingStation() station: StationScopeContext,
+    @Query() query: ListPreparationQueryDto,
+  ) {
+    return this.draftsService.listReadyCustomerCodes(station, query);
+  }
+
   @Post('ingest')
   @SkipTimeout()
   ingest(

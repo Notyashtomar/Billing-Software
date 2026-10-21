@@ -67,6 +67,7 @@ import {
   isCeilingParticularLine,
   resolveActiveContractForInvoice,
 } from '../utils/invoice-concession.util';
+import { BILLING_INVOICE_IGNORED_MASTERS } from '../shared/ignored-billing-masters';
 import {
   inheritForCustomer,
   shapeContractForAdditionalCustomer,
@@ -719,6 +720,34 @@ export class BillingInvoiceDraftsService {
     });
   }
 
+  /** Airlines that still have ready flights for this period. Create-invoice runs one airline at a time. */
+  async listReadyCustomerCodes(
+    ctx: StationScopeContext,
+    query: { from?: string; to?: string; customerCode?: string },
+  ) {
+    const filter: Record<string, unknown> = StationScope.filter(
+      { status: 'ready_for_invoice' },
+      ctx,
+    );
+    const listPeriod = preparationListPeriodFilter(query.from, query.to);
+    if (listPeriod) filter.billingPeriodStart = listPeriod;
+    if (query.customerCode?.trim()) {
+      filter.customerCode = query.customerCode.trim().toUpperCase();
+    }
+    const codes = await this.preparationModel.distinct(
+      'customerCode',
+      withPreparationVisibility(filter),
+    );
+    const data = [
+      ...new Set(
+        codes
+          .map((code) => String(code ?? '').trim().toUpperCase())
+          .filter(Boolean),
+      ),
+    ].sort();
+    return successResponse(data);
+  }
+
   /**
    * Move selected ADS equipment/service lines into a new sibling draft.
    * Unchecked lines remain together on the current draft.
@@ -1121,6 +1150,9 @@ export class BillingInvoiceDraftsService {
    * Recompute Invoice: re-enrich linked prep from live contracts / rate cards /
    * rules for this airline, then rebuild lines. Enrichment is batched (no FHR
    * reload) so the click stays fast.
+   *
+   * Royalty Setup, Airport Setup → Configure rules, Aircraft Master, and
+   * Equipment Master are never read. See BILLING_INVOICE_IGNORED_MASTERS.
    */
   async recomputeFromPreparation(
     ctx: StationScopeContext,
@@ -1185,6 +1217,7 @@ export class BillingInvoiceDraftsService {
         recomputeFromPreparation: true,
         customerCode: header.customerCode,
         source: 'invoice-detail-recompute-button',
+        ignoredMasters: [...BILLING_INVOICE_IGNORED_MASTERS],
       },
     );
 
@@ -2154,16 +2187,31 @@ export class BillingInvoiceDraftsService {
         })
         .exec();
 
-      await this.rebuildDraftFromPreparationRecords(
-        ctx,
-        header,
-        remainingRecords,
-        header.documentDate,
-        actor,
-        {
-          unsentPreparationIds: [...removeIds],
-        },
-      );
+      try {
+        await this.rebuildDraftFromPreparationRecords(
+          ctx,
+          header,
+          remainingRecords,
+          header.documentDate,
+          actor,
+          {
+            unsentPreparationIds: [...removeIds],
+          },
+        );
+      } catch (err) {
+        const message = err instanceof Error ? err.message : '';
+        // Leftover rows produced no billable lines. Drop the open draft so the
+        // selected preparation rows can still leave the station.
+        if (!/no billable/i.test(message)) throw err;
+        await this.lineModel.deleteMany({ invoiceId: header._id });
+        await header.deleteOne();
+        if (remainingIds.length > 0) {
+          await this.preparationModel.updateMany(
+            { _id: { $in: remainingIds.map((id) => new Types.ObjectId(id)) } },
+            { $unset: { invoiceDraftId: '' }, $set: { status: 'pending' } },
+          );
+        }
+      }
     }
 
     const result = await this.preparationModel.deleteMany({

@@ -54,7 +54,6 @@ import {
   parseAdsRemarksQuantity,
 } from '../../shared/fhr-equipment-to-ads-row';
 import {
-  isAdsHourlyUom,
   normalizeBillingScope,
   type RateCardBillingScope,
 } from '../../shared/rate-card-billing-scope';
@@ -879,8 +878,7 @@ export class BillingSourceEnrichmentService {
           usedUnits = this.resolveAdsUsedUnits(input.operationalData, null, adsUom);
         } else {
           adsUom = rulePricing.uom;
-          let alwaysChargeable = rulePricing.alwaysChargeable;
-          if (isAdsHourlyUom(adsUom)) alwaysChargeable = true;
+          const alwaysChargeable = rulePricing.alwaysChargeable;
           freeAllowance = alwaysChargeable ? 0 : rulePricing.freePerFlight;
           fullyPackageIncluded = false;
           usedUnits = this.resolveAdsUsedUnits(input.operationalData, null, adsUom);
@@ -888,10 +886,9 @@ export class BillingSourceEnrichmentService {
           if (rulePricing.unitPrice != null && rulePricing.unitPrice > 0) {
             unitPrice = rulePricing.unitPrice;
             pricingBasis = 'rate_card';
-            if (freeAllowance > 0 && usedUnits <= freeAllowance) {
-              fullyPackageIncluded = true;
-              pricingBasis = 'package_inclusive';
-            }
+            // Free-of-charge is applied once per flight on the invoice, not on
+            // this single FHR line. A line inside the free count still has to
+            // reach the invoice so extra uses on the same flight can be billed.
           } else if (freeAllowance > 0) {
             unitPrice = 0;
             pricingBasis = 'package_inclusive';

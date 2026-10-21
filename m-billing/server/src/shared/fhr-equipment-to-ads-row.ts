@@ -198,6 +198,8 @@ export function engagementHoursFromWindow(
   }
 
   let minutes = dayDiff * 1440 + (toMin - fromMin);
+  // Same clock on the same day (00:00–00:00) is an empty window, not a 24-hour shift.
+  if (minutes === 0 && dayDiff === 0 && toMin === fromMin) return null;
   // to-time before from-time with no spanning dates → assume next-day rollover.
   if (minutes <= 0 && dayDiff === 0) minutes += 1440;
   if (minutes <= 0) return null;

@@ -57,6 +57,16 @@ export const BILLING_ADS_BRIEF_KEYS = [
   'urb',
   'cd',
   'm',
+  // FHR equipmentDetails names that had a billing full form but no palette bucket,
+  // so their quantities never appeared on ADS.
+  'ctt',
+  'ws',
+  'pin',
+  'pw',
+  'baggageCart',
+  'exteriorCleaning',
+  'wcb',
+  'pd',
 ] as const;
 
 export type BillingAdsBriefKey = (typeof BILLING_ADS_BRIEF_KEYS)[number];
@@ -136,6 +146,14 @@ export const BILLING_ADS_BRIEF_FULL_NAMES: Record<BillingAdsBriefKey, string> = 
   urb: 'URB',
   cd: 'Container Dollies',
   m: 'M',
+  ctt: 'Cargo Transfer Trailer',
+  ws: 'Water Service',
+  pin: 'Aircraft Pin',
+  pw: 'Potable Water',
+  baggageCart: 'Baggage Cart',
+  exteriorCleaning: 'Exterior Cleaning',
+  wcb: 'Wheel Chair Battery',
+  pd: 'Pallet Dollies',
 };
 
 export function billingAdsBriefHoverTitle(
@@ -294,9 +312,13 @@ const DEFINITIONS: ReadonlyArray<
     aliases: [
       'ASU-NB',
       'ASUNB',
+      'PST-ASU-NB',
       'Air Start Unit Narrow Body',
       'Air Start Unit - Narrow Body',
       'Air start unit - narrow body',
+      'Air Start Unit-Narrow Body',
+      'Air Start Unit (ASU) Narrow Body',
+      'Air Start Unit (ASU) - Narrow Body',
     ],
   },
   {
@@ -564,9 +586,13 @@ const DEFINITIONS: ReadonlyArray<
     aliases: [
       'ASU-WB',
       'ASUWB',
+      'PST-ASU-WB',
       'Air Start Unit Wide Body',
       'Air Start Unit - Wide Body',
       'Air start unit - wide body',
+      'Air Start Unit-Wide Body',
+      'Air Start Unit (ASU) Wide Body',
+      'Air Start Unit (ASU) - Wide Body',
     ],
   },
   {
@@ -672,6 +698,50 @@ const DEFINITIONS: ReadonlyArray<
   { key: 'urb', label: 'URB', aliases: ['URB'] },
   { key: 'cd', label: 'CD', aliases: ['CD', 'Container Dollies', 'Container Dolly'] },
   { key: 'm', label: 'M', aliases: ['M'] },
+  {
+    key: 'ctt',
+    label: 'CTT',
+    aliases: ['CTT', 'Cargo Transfer Trailer'],
+  },
+  {
+    key: 'ws',
+    label: 'WS',
+    aliases: ['WS', 'Water Service'],
+  },
+  {
+    key: 'pin',
+    label: 'PIN',
+    aliases: ['PIN', 'Aircraft Pin'],
+  },
+  {
+    key: 'pw',
+    label: 'PW',
+    aliases: ['PW', 'Potable Water'],
+  },
+  {
+    key: 'baggageCart',
+    label: 'BC',
+    aliases: ['BC', 'Baggage Cart'],
+  },
+  {
+    key: 'exteriorCleaning',
+    label: 'Exterior Cleaning',
+    aliases: [
+      'Exterior Cleaning',
+      'Exterior Cleaning Narrow Body',
+      'Exterior Cleaning Wide Body',
+    ],
+  },
+  {
+    key: 'wcb',
+    label: 'WBC',
+    aliases: ['WBC', 'Wheel Chair Battery', 'Wheelchair Battery'],
+  },
+  {
+    key: 'pd',
+    label: 'PD',
+    aliases: ['PD', 'Pallet Dollies', 'Pallet Dolly'],
+  },
 ];
 
 export const BILLING_ADS_BRIEF_ITEMS: readonly BillingAdsBriefItem[] = DEFINITIONS.map(
@@ -698,6 +768,7 @@ const ADS_BRIEF_MANPOWER_KEYS: readonly BillingAdsBriefKey[] = [
   'csh',
   'marshaller',
   'ww',
+  'exteriorCleaning',
 ];
 
 const ADS_BRIEF_MOTORISED_KEYS: readonly BillingAdsBriefKey[] = [
@@ -1295,7 +1366,10 @@ function hasFuzzyAliasMatch(
     for (const alias of aliases) {
       const ac = compactBriefName(alias);
       if (ac.length < 4) continue;
-      if (cc === ac || cc.includes(ac) || ac.includes(cc)) return true;
+      // Alias-contains-candidate (`NARROWBODY` inside `GROUNDPOWERUNITNARROWBODY`)
+      // stole ASU / GPU-WB lines onto the wrong chip. The candidate must contain
+      // the alias (KV suffix variants), not the other way around.
+      if (cc === ac || cc.includes(ac)) return true;
     }
   }
   return false;
@@ -1389,6 +1463,34 @@ function inferAcuBriefKeys(
   return [...keys];
 }
 
+/** Map bare / scheduled ASU names onto ASU-NB / ASU-WB palette chips. */
+function inferAsuBriefKeys(
+  row: BillingSourceRow,
+  candidates: ReadonlySet<string>,
+): BillingAdsBriefKey[] {
+  const blob = [...candidates].join(' ');
+  const compact = compactBriefName(blob);
+  const isAsu =
+    /\bASU\b/.test(blob) ||
+    compact.includes('AIRSTART') ||
+    compact.includes('ASUNB') ||
+    compact.includes('ASUWB');
+  if (!isAsu) return [];
+
+  const explicitWb =
+    /\bASU\s*WB\b|\bASUWB\b|\bWIDE\s*BODY\b/.test(blob) ||
+    compact.includes('ASUWB') ||
+    compact.includes('WIDEBODY');
+  const explicitNb =
+    /\bASU\s*NB\b|\bASUNB\b|\bNARROW\s*BODY\b/.test(blob) ||
+    compact.includes('ASUNB') ||
+    compact.includes('NARROWBODY');
+
+  if (explicitWb && !explicitNb) return ['asuWb'];
+  if (explicitNb && !explicitWb) return ['asuNb'];
+  return [aircraftLooksWideBody(row) ? 'asuWb' : 'asuNb'];
+}
+
 /**
  * Split labels like `Air Conditioner Unit - Wide Body` also yield the generic
  * `Air Conditioner Unit` token. Prefer body-specific palettes over the bare code.
@@ -1398,6 +1500,18 @@ function preferSpecificBriefKeys(keys: BillingAdsBriefKey[]): BillingAdsBriefKey
   if (set.has('acuWb') || set.has('acuNb')) set.delete('acu');
   if (set.has('srCsa')) set.delete('csa');
   if (set.has('longTowbar') || set.has('shortTowbar')) set.delete('tow');
+  // One FHR line is one family. Body-class fragments ("Narrow Body") must not
+  // also keep a GPU/ACU chip when the line is an air start or air conditioner.
+  if (set.has('asuNb') || set.has('asuWb')) {
+    set.delete('gpuNb');
+    set.delete('gpuWb');
+    set.delete('acu');
+    set.delete('acuNb');
+    set.delete('acuWb');
+  } else if (set.has('acuNb') || set.has('acuWb')) {
+    set.delete('gpuNb');
+    set.delete('gpuWb');
+  }
   return BILLING_ADS_BRIEF_KEYS.filter((key) => set.has(key));
 }
 
@@ -1460,20 +1574,33 @@ export function inferWheelchairSubtype(
 
 function matchingBriefKeys(row: BillingSourceRow): BillingAdsBriefKey[] {
   const candidates = candidateNames(row);
-  const matches: BillingAdsBriefKey[] = [];
+  const exact: BillingAdsBriefKey[] = [];
+  const fuzzy: BillingAdsBriefKey[] = [];
   for (const item of BILLING_ADS_BRIEF_ITEMS) {
     const aliases = NORMALIZED_ALIASES.get(item.key);
     if (!aliases) continue;
-    const hit =
-      hasMatchingAlias(candidates, aliases) ||
-      ((item.key === 'gpuNb' || item.key === 'gpuWb') &&
-        hasFuzzyAliasMatch(candidates, aliases));
-    if (hit) matches.push(item.key);
+    if (hasMatchingAlias(candidates, aliases)) {
+      exact.push(item.key);
+      continue;
+    }
+    // Fuzzy is only a fallback for GPU KV / spelling variants. An exact hit on
+    // the real equipment (ASU, ACU, GPU-WB, …) must not lose to a fragment
+    // such as "Wide Body" sitting inside a longer GPU alias.
+    if (
+      (item.key === 'gpuNb' || item.key === 'gpuWb') &&
+      hasFuzzyAliasMatch(candidates, aliases)
+    ) {
+      fuzzy.push(item.key);
+    }
   }
+  const matches = exact.length > 0 ? [...exact] : [...fuzzy];
   for (const key of inferGpuBriefKeys(row, candidates)) {
     if (!matches.includes(key)) matches.push(key);
   }
   for (const key of inferAcuBriefKeys(row, candidates)) {
+    if (!matches.includes(key)) matches.push(key);
+  }
+  for (const key of inferAsuBriefKeys(row, candidates)) {
     if (!matches.includes(key)) matches.push(key);
   }
   return preferSpecificBriefKeys(matches);

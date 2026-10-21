@@ -2127,7 +2127,10 @@ export class BillingPreparationService {
     dto: UnsendPreparationBySourceDto,
     actor: BillingActor,
   ) {
-    const periodStart = new Date(dto.billingPeriodStart);
+    const periodStart = preparationPeriodBoundStart(dto.billingPeriodStart);
+    const periodEnd = preparationPeriodBoundEnd(
+      dto.billingPeriodEnd?.trim() || dto.billingPeriodStart,
+    );
     const serials = [
       ...new Set((dto.serialNos ?? []).map((s) => String(s).trim()).filter(Boolean)),
     ];
@@ -2148,24 +2151,34 @@ export class BillingPreparationService {
       identityFilter.push({ 'sourceRef.serialNo': { $in: serials } });
     }
 
-    const docs = await this.preparationModel
-      .find(
-        withPreparationVisibility(
-          StationScope.filter(
-            {
-              sourceType:
-                dto.sourceType === 'ads'
-                  ? { $in: ['ads', 'equipment', 'manpower', 'cleaning'] }
-                  : dto.sourceType,
-              billingPeriodStart: periodStart,
-              status: { $nin: ['rejected'] },
-              $or: identityFilter,
-            },
-            ctx,
+    const sourceTypeFilter =
+      dto.sourceType === 'ads'
+        ? { $in: ['ads', 'equipment', 'manpower', 'cleaning'] }
+        : dto.sourceType;
+
+    const findForUnsend = (period?: { $gte: Date; $lte: Date }) =>
+      this.preparationModel
+        .find(
+          withPreparationVisibility(
+            StationScope.filter(
+              {
+                sourceType: sourceTypeFilter,
+                ...(period ? { billingPeriodStart: period } : {}),
+                status: { $nin: ['rejected'] },
+                $or: identityFilter,
+              },
+              ctx,
+            ),
           ),
-        ),
-      )
-      .exec();
+        )
+        .exec();
+
+    let docs = await findForUnsend({ $gte: periodStart, $lte: periodEnd });
+    // ADS marks a flight sent when its lines fall anywhere in the page range.
+    // A second lookup without the date keeps rows that are still on Preparation.
+    if (docs.length === 0) {
+      docs = await findForUnsend();
+    }
 
     const foundSerials = new Set(
       docs
@@ -2610,11 +2623,135 @@ export class BillingPreparationService {
   private async countByStatusScoped(
     scopeFilter: Record<string, unknown>,
   ): Promise<Record<string, number>> {
-    const grouped = await this.preparationModel.aggregate<{ _id: string; count: number;
+    const grouped = await this.preparationModel.aggregate<{
+      _id: string;
+      count: number;
     }>([
       // Custom bills have their own Preparation tab — keep status badges BHS/ADS-clean.
       { $match: { ...scopeFilter, sourceType: { $ne: 'custom' } } },
-      { $group: { _id: '$status', count: { $sum: 1 } } },
+      {
+        $addFields: {
+          prepSerial: {
+            $trim: {
+              input: {
+                $toString: {
+                  $ifNull: [
+                    '$sourceRef.serialNo',
+                    {
+                      $ifNull: [
+                        '$operationalSnapshot.serialNumber',
+                        { $ifNull: ['$operationalSnapshot.SerialNo', ''] },
+                      ],
+                    },
+                  ],
+                },
+              },
+            },
+          },
+          prepFlightNo: {
+            $trim: {
+              input: {
+                $toString: {
+                  $ifNull: [
+                    '$sourceRef.flightNo',
+                    {
+                      $ifNull: [
+                        '$operationalSnapshot.flightNo',
+                        { $ifNull: ['$operationalSnapshot.flightNoEquipmentNo', ''] },
+                      ],
+                    },
+                  ],
+                },
+              },
+            },
+          },
+          prepFlightDate: {
+            $substrCP: [
+              {
+                $trim: {
+                  input: {
+                    $toString: {
+                      $ifNull: [
+                        '$operationalSnapshot.billingDateYmd',
+                        {
+                          $ifNull: [
+                            '$operationalSnapshot.dateKey',
+                            {
+                              $ifNull: [
+                                '$operationalSnapshot.from_date',
+                                { $ifNull: ['$operationalSnapshot.fromDate', ''] },
+                              ],
+                            },
+                          ],
+                        },
+                      ],
+                    },
+                  },
+                },
+              },
+              0,
+              10,
+            ],
+          },
+          prepCustomer: {
+            $toUpper: {
+              $trim: {
+                input: {
+                  $toString: {
+                    $ifNull: [
+                      '$customerCode',
+                      { $ifNull: ['$operationalSnapshot.customerCode', ''] },
+                    ],
+                  },
+                },
+              },
+            },
+          },
+          prepAdsFamily: { $in: ['$sourceType', ['ads', 'equipment', 'manpower']] },
+        },
+      },
+      {
+        $addFields: {
+          // Same identity as the ADS page: one flight, many equipment lines.
+          flightKey: {
+            $switch: {
+              branches: [
+                {
+                  case: {
+                    $and: [
+                      '$prepAdsFamily',
+                      { $ne: ['$prepSerial', ''] },
+                      { $ne: ['$prepSerial', '0'] },
+                    ],
+                  },
+                  then: { $concat: ['s:', '$prepSerial'] },
+                },
+                {
+                  case: {
+                    $and: [
+                      '$prepAdsFamily',
+                      { $ne: ['$prepFlightNo', ''] },
+                      { $ne: ['$prepFlightDate', ''] },
+                    ],
+                  },
+                  then: {
+                    $concat: ['f:', '$prepFlightDate', '|', '$prepFlightNo', '|', '$prepCustomer'],
+                  },
+                },
+                {
+                  case: {
+                    $and: ['$prepAdsFamily', { $ne: ['$prepFlightNo', ''] }],
+                  },
+                  then: { $concat: ['f:', '$prepFlightNo', '|', '$prepCustomer'] },
+                },
+              ],
+              default: { $concat: ['id:', { $toString: '$_id' }] },
+            },
+          },
+        },
+      },
+      { $group: { _id: { status: '$status', flightKey: '$flightKey' } } },
+      { $group: { _id: '$_id.status', count: { $sum: 1 } } },
     ]);
     const result = Object.fromEntries(
       PREPARATION_STATUSES.map((status) => [status, 0]),

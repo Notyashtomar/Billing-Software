@@ -308,8 +308,18 @@ export function resolveAdsFreePerFlightForRule(
 function aircraftMatchesRule(ruleAircraft: string[], flightAircraft: string): boolean {
   if (ruleAircraft.length === 0) return true;
   const flight = normalizeToken(flightAircraft);
-  if (!flight) return true;
-  return ruleAircraft.some((ac) => tokensMatch(flight, ac));
+  // A rule that names aircraft applies only when the FHR aircraft is one of them.
+  if (!flight) return false;
+  return ruleAircraft.some((ac) => tokensMatch(flight, normalizeToken(ac)));
+}
+
+function ruleListsOwnAircraft(rule: AdsEquipmentInclusionRule): boolean {
+  const multi = sanitizeContractAircraftTypes(rule.aircraftTypes ?? []);
+  if (multi.length > 0) return true;
+  if (rule.aircraftType?.trim()) {
+    return sanitizeContractAircraftTypes([rule.aircraftType]).length > 0;
+  }
+  return false;
 }
 
 function ruleHasUnitPrice(rule: AdsEquipmentInclusionRule): boolean {
@@ -330,6 +340,7 @@ function findMatchingAdsRules(
   },
 ): AdsEquipmentInclusionRule[] {
   if (!contract) return [];
+  // Keep each clauses-tab row. Aircraft on that row decides whether this flight qualifies.
   const rules = contract.adsEquipmentRules ?? [];
   if (rules.length === 0) return [];
 
@@ -370,7 +381,8 @@ function preferAdsRulesForFlightCategory(
 
 /**
  * Match contract ADS equipment rules for a usage row (airline × validity contract).
- * Prefer an excluded rule if any match; else the first included tick-marked rule.
+ * The flight aircraft must be one of the aircraft on that clauses-tab row.
+ * A row that names its own aircraft wins over a row that applies to every aircraft.
  */
 export function matchAdsEquipmentContractRule(
   contract: AdsEquipmentInclusionContract,
@@ -392,12 +404,22 @@ export function matchAdsEquipmentContractRule(
     return { matched: false, excluded: false, rule: null };
   }
   const excluded = matches.find((r) => r.includedForAds === false);
-  if (excluded) {
+  if (excluded && !matches.some((r) => r.includedForAds !== false && ruleHasUnitPrice(r))) {
     return { matched: true, excluded: true, rule: excluded };
   }
   const included = matches.filter((r) => r.includedForAds !== false);
   const priced = included.filter(ruleHasUnitPrice);
-  const rule = priced[priced.length - 1] ?? included[included.length - 1] ?? matches[0];
+  const pool = priced.length > 0 ? priced : included;
+  if (pool.length === 0) {
+    return { matched: true, excluded: true, rule: excluded ?? matches[0] ?? null };
+  }
+  const rule = pool.reduce((best, candidate) => {
+    if (!best) return candidate;
+    const bestOwn = ruleListsOwnAircraft(best);
+    const candidateOwn = ruleListsOwnAircraft(candidate);
+    if (candidateOwn !== bestOwn) return candidateOwn ? candidate : best;
+    return candidate;
+  }, pool[0]);
   return { matched: true, excluded: false, rule: rule ?? null };
 }
 

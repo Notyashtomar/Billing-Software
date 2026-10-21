@@ -1439,9 +1439,10 @@ export function InvoiceDraftsPage({ api }: Props) {
             <AlertDialogTitle>Refresh all open invoice drafts?</AlertDialogTitle>
             <AlertDialogDescription>
               Rebuilds every open draft (not in the bin) from the latest customers, contracts,
-              concessions, rate cards, taxes, and conversion rates — the same pass as
-              Regenerate invoice. Posted invoices are not changed. Custom bill overrides keep
-              their bill-to name and address.
+              concessions, rate cards, service catalog, taxes, and conversion rates — the same
+              pass as Regenerate invoice. Royalty Setup, Airport Setup configure rules, Aircraft
+              Master, and Equipment Master are not read. Posted invoices are not changed. Custom
+              bill overrides keep their bill-to name and address.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -2596,8 +2597,8 @@ export function InvoiceDetailPage({ api, id }: Props & { id: string }) {
           : '';
       setMsg(
         canRecomputeFromPrep
-          ? `Invoice regenerated for ${header.customerCode} from the latest customers, contracts, concessions, rate cards, service catalog, taxes, and conversion rates.${roeNote}`
-          : `Invoice regenerated with the latest customers, taxes, and conversion rates.${roeNote}`,
+          ? `Invoice regenerated for ${header.customerCode} from the latest customers, contracts, concessions, rate cards, service catalog, taxes, and conversion rates. Royalty Setup, Airport Setup configure rules, Aircraft Master, and Equipment Master were not used.${roeNote}`
+          : `Invoice regenerated with the latest customers, taxes, and conversion rates. Royalty Setup, Airport Setup configure rules, Aircraft Master, and Equipment Master were not used.${roeNote}`,
       );
     } catch (e) {
       setMsg(e instanceof Error ? e.message : 'Invoice regeneration failed');

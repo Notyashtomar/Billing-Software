@@ -16,11 +16,7 @@ type GeoFeatureCollection = {
   }>;
 };
 import { INDIA_AIRPORTS } from '@/data/india-airports';
-import { buildLoginStationUrl } from '@/lib/login-station-constants';
-import {
-  appendLoginReturnNext,
-  persistLoginStationSelection,
-} from '@/lib/login-station-client';
+import { persistLoginStationSelection } from '@/lib/login-station-client';
 
 /** Local textures only — avoid CDN 4K/2K maps that bloat browser disk cache. */
 const EARTH_DAY_TEXTURE_URLS = ['/textures/earth-day.jpg'] as const;
@@ -913,7 +909,12 @@ export default function EarthScene({
 
   const navigateToStationLogin = useCallback(
     (airport: (typeof INDIA_AIRPORTS)[number]) => {
-      const url = appendLoginReturnNext(buildLoginStationUrl(airport));
+      const params = new URLSearchParams({
+        stationCode: airport.stationCode.trim(),
+        stationName: airport.airport.trim(),
+        stationCity: airport.city.trim(),
+      });
+      const url = `/billing/login?${params.toString()}`;
       persistLoginStationSelection({
         stationCode: airport.stationCode,
         stationName: airport.airport,
