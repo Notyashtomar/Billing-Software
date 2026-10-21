@@ -70,6 +70,11 @@ export interface PreparationWorkflowNote {
   context?: string;
 }
 
+export interface BillingCustomerAnnexureFile {
+  originalName: string;
+  uploadedAt?: string;
+}
+
 export interface BillingCustomer {
   _id: string;
   customerCode: string;
@@ -106,6 +111,11 @@ export interface BillingCustomer {
   /** When true, print VAT number on this airline's invoices. */
   showVatOnInvoice?: boolean;
   vatNumber?: string;
+  /** Saved annexure PDFs. The invoice page opens the file for ADS or BHS. */
+  annexures?: {
+    ads?: BillingCustomerAnnexureFile;
+    bhs?: BillingCustomerAnnexureFile;
+  };
   active: boolean;
   createdAt: string;
   updatedAt: string;

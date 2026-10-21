@@ -110,4 +110,21 @@ export class FileStorageService {
     const absolute = this.localAbsolutePath(relativePath);
     return fs.existsSync(absolute) ? absolute : null;
   }
+
+  async delete(relativePath: string): Promise<void> {
+    if (this.driver === 's3') {
+      const client = await this.getS3Client();
+      const { DeleteObjectCommand } = await import('@aws-sdk/client-s3');
+      await client.send(
+        new DeleteObjectCommand({
+          Bucket: this.s3Bucket,
+          Key: this.objectKey(relativePath),
+        }),
+      );
+      return;
+    }
+
+    const absolute = this.localAbsolutePath(relativePath);
+    if (fs.existsSync(absolute)) fs.unlinkSync(absolute);
+  }
 }

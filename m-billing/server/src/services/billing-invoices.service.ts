@@ -62,6 +62,7 @@ import {
 } from '../utils/invoice-concession.util';
 import { billingSettingsForInvoicing } from '../shared/ignored-billing-masters';
 import { resolveBillingCustomerAddress } from '../utils/customer-address.util';
+import { publicCustomerAnnexures } from '../utils/customer-annexure.util';
 import { formatBillingPeriodLabel } from '../engines/invoice-pdf.mapper';
 import {
   currentIndianFiscalYear,
@@ -188,6 +189,7 @@ export class BillingInvoicesService {
             name: customerMaster.name,
             address: resolveBillingCustomerAddress(customerMaster),
             gstRegistrationNo: customerMaster.gstRegistrationNo,
+            annexures: publicCustomerAnnexures(customerMaster.annexures),
           }
         : undefined,
     });

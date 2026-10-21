@@ -114,6 +114,20 @@ async function parseJsonWithFallback<T>(res: Response, fallback: T): Promise<T> 
   return data as T;
 }
 
+function annexureFileNameFromDisposition(header: string | null, fallback: string): string {
+  if (!header) return fallback;
+  const encoded = /filename\*=UTF-8''([^;]+)/i.exec(header);
+  if (encoded?.[1]) {
+    try {
+      return decodeURIComponent(encoded[1].trim());
+    } catch {
+      /* use the plain filename */
+    }
+  }
+  const plain = /filename="([^"]+)"/i.exec(header);
+  return plain?.[1]?.trim() || fallback;
+}
+
 export function createBillingApi({ getApiBase, fetch }: BillingApiConfig) {
   const request = async (path: string, init?: FrisFetchInit) => {
     const url = billingUrl(getApiBase(), path);
@@ -418,6 +432,43 @@ export function createBillingApi({ getApiBase, fetch }: BillingApiConfig) {
 
     deleteAllCustomers: () =>
       request('/billing/customers/delete-all', { method: 'POST' }).then((r) => parseJson(r)),
+
+    uploadCustomerAnnexure: (id: string, category: 'ADS' | 'BHS', file: File) => {
+      const body = new FormData();
+      body.append('category', category);
+      body.append('file', file);
+      return request(`/billing/customers/${id}/annexure`, {
+        method: 'POST',
+        body,
+      }).then((r) => parseJson(r));
+    },
+
+    deleteCustomerAnnexure: (id: string, category: 'ADS' | 'BHS') =>
+      request(`/billing/customers/${id}/annexure?category=${category}`, { method: 'DELETE' }).then(
+        (r) => parseJson(r),
+      ),
+
+    openCustomerAnnexure: async (customerCode: string, category: 'ADS' | 'BHS') => {
+      const qs = new URLSearchParams({
+        customerCode: customerCode.trim().toUpperCase(),
+        category,
+      });
+      const res = await request(`/billing/customers/annexure-file?${qs.toString()}`);
+      const type = res.headers.get('content-type') ?? '';
+      if (!res.ok || type.includes('application/json')) {
+        await parseJson(res);
+        return;
+      }
+      const blob = await res.blob();
+      const pdf = blob.type.includes('pdf')
+        ? blob
+        : new Blob([await blob.arrayBuffer()], { type: 'application/pdf' });
+      const fileName = annexureFileNameFromDisposition(
+        res.headers.get('content-disposition'),
+        `${customerCode.trim().toUpperCase()}-${category}-annexure.pdf`,
+      );
+      openPdfBlob(pdf, fileName);
+    },
 
     listAircraftMaster: () =>
       request('/billing/aircraft-master').then((r) =>
