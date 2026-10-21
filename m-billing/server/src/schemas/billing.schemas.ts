@@ -1182,6 +1182,10 @@ export class BillingInvoiceHeader {
   @Prop({ default: 0 })
   subtotalExclTax: number;
 
+  /** Set from the invoice edit screen. Null means the contract percent is used. */
+  @Prop({ type: Number, default: null })
+  concessionPercentOverride?: number | null;
+
   @Prop({ default: 0 })
   concessionFeePercent?: number;
 

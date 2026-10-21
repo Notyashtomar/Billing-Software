@@ -3151,6 +3151,7 @@ export function InvoiceDetailPage({ api, id }: Props & { id: string }) {
             api={api}
             draftId={id}
             currencyCode={header.currencyCode}
+            concessionPercent={header.concessionPercentOverride}
             lines={linesToInvoiceEditLines(lines)}
             onSaved={(message) => {
               setMsg(message);

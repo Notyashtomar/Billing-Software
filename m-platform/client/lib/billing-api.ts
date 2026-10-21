@@ -1298,6 +1298,7 @@ export function createBillingApi({ getApiBase, fetch }: BillingApiConfig) {
           uom?: string;
           usedQuantity?: number;
         }>;
+        concessionPercent?: number | null;
       },
     ) =>
       request(`/billing/invoice-drafts/${id}/lines`, {

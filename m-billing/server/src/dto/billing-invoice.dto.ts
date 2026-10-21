@@ -6,6 +6,8 @@ import {
   IsEnum,
   IsInt,
   IsNumber,
+  Max,
+  Min,
   IsOptional,
   IsString,
   ValidateIf,
@@ -177,6 +179,14 @@ export class UpdateInvoiceLinesDto {
   @ValidateNested({ each: true })
   @Type(() => UpdateInvoiceLineItemDto)
   lines: UpdateInvoiceLineItemDto[];
+
+  /** Invoice edit screen. Null clears the override and uses the contract percent. */
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  concessionPercent?: number | null;
 }
 
 /** Edit Custom Bills draft lines (particulars / used / charged / rate) then recompute. */

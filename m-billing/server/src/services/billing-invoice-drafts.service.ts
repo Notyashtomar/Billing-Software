@@ -549,6 +549,7 @@ export class BillingInvoiceDraftsService {
             start: group[0]?.billingPeriodStart,
             end: group[0]?.billingPeriodEnd,
           },
+          { documentDateFallback: group.every((row) => isAdsFamilySourceType(row.sourceType)) },
         );
         const periodGroups = splitPreparationGroupByFortnightConfig(group, invoiceContract);
         for (const periodGroup of periodGroups) {
@@ -1098,10 +1099,18 @@ export class BillingInvoiceDraftsService {
       await line.save();
     }
 
+    if (dto.concessionPercent !== undefined) {
+      header.concessionPercentOverride =
+        dto.concessionPercent == null
+          ? null
+          : Math.min(100, Math.max(0, Number(dto.concessionPercent)));
+    }
+
     await this.recalculateHeader(header, ctx);
     await this.audit(ctx, header._id, 'updated', actor, {
       updateLines: items.map((item) => item.lineNo),
       source: 'invoice-detail-edit',
+      concessionPercent: dto.concessionPercent,
     });
     return this.findOne(ctx, id);
   }
@@ -1149,7 +1158,14 @@ export class BillingInvoiceDraftsService {
     actor: BillingActor,
   ) {
     const header = await this.getHeaderDoc(ctx, id);
-    await this.lineModel.deleteOne({ invoiceId: header._id, lineNo });
+    if (!this.approvalWorkflow.canEdit(header.status)) {
+      throw new BadRequestException('Invoice cannot be edited in its current status');
+    }
+    if (header.inBin) {
+      throw new BadRequestException('Restore the draft from the invoice bin before editing');
+    }
+    const deleted = await this.lineModel.deleteOne({ invoiceId: header._id, lineNo });
+    if (deleted.deletedCount === 0) throw new NotFoundException('Line not found');
     await this.recalculateHeader(header, ctx);
     await this.audit(ctx, header._id, 'updated', actor, { deleteLine: lineNo });
     return this.findOne(ctx, id);
@@ -3028,6 +3044,7 @@ export class BillingInvoiceDraftsService {
     contract: T,
     documentDate: Date,
     billingPeriod?: { start?: Date | string | null; end?: Date | string | null },
+    options?: { documentDateFallback?: boolean },
   ): Promise<T> {
     const stationCode = String(
       ctx.stationCode ??
@@ -3044,8 +3061,16 @@ export class BillingInvoiceDraftsService {
       documentDate,
       billingPeriod,
     );
-    if (!stationFlightConcession) return contract;
-    return { ...(contract ?? {}), stationFlightConcession } as T;
+    if (stationFlightConcession) {
+      return { ...(contract ?? {}), stationFlightConcession } as T;
+    }
+    if (!options?.documentDateFallback) return contract;
+    const stationFlightConcessionFallback = stationFlightConcessionPercents(settings, documentDate, {
+      start: documentDate,
+      end: documentDate,
+    });
+    if (!stationFlightConcessionFallback) return contract;
+    return { ...(contract ?? {}), stationFlightConcessionFallback } as T;
   }
 
   private async bhsVolumeComposeOptions(
@@ -3140,6 +3165,9 @@ export class BillingInvoiceDraftsService {
       {
         start: header.billingPeriodStart,
         end: header.billingPeriodEnd,
+      },
+      {
+        documentDateFallback: String(header.invoiceCategory ?? '').trim().toUpperCase() === 'ADS',
       },
     );
     const previousCurrency = String(header.currencyCode ?? 'INR').trim().toUpperCase();
@@ -3320,6 +3348,9 @@ export class BillingInvoiceDraftsService {
       {
         start: header.billingPeriodStart,
         end: header.billingPeriodEnd,
+      },
+      {
+        documentDateFallback: String(header.invoiceCategory ?? '').trim().toUpperCase() === 'ADS',
       },
     );
     const currencyCode = await this.resolveCommercialInvoiceCurrency(
@@ -3639,6 +3670,7 @@ export class BillingInvoiceDraftsService {
     if (linkedContract?._id && !header.contractId) {
       header.contractId = linkedContract._id as Types.ObjectId;
     }
+    const adsInvoice = String(header.invoiceCategory ?? '').trim().toUpperCase() === 'ADS';
     const contract = await this.contractWithStationFlightConcession(
       ctx,
       linkedContract,
@@ -3647,6 +3679,7 @@ export class BillingInvoiceDraftsService {
         start: header.billingPeriodStart,
         end: header.billingPeriodEnd,
       },
+      { documentDateFallback: adsInvoice },
     );
 
     const ceilingLineIds = lines
@@ -3660,9 +3693,14 @@ export class BillingInvoiceDraftsService {
     }
 
     const scheduledFlightCount = await this.countInvoiceScheduledFlights(header, lines, options);
+    const typedConcession = Number(header.concessionPercentOverride);
     applyConcessionTotalsToHeader(header, lines, contract, {
       scheduledFlightCount,
-      adsConcession: String(header.invoiceCategory ?? '').trim().toUpperCase() === 'ADS',
+      adsConcession: adsInvoice,
+      concessionPercentOverride:
+        header.concessionPercentOverride == null || !Number.isFinite(typedConcession)
+          ? undefined
+          : typedConcession,
     });
     await header.save({ session: options?.session });
   }
