@@ -499,6 +499,13 @@ export class BillingContract {
   adsBillingEnabled?: boolean;
 
   /**
+   * When true, BME equipment (GPU/ACU/Water Cart with a BME suffix) is eligible
+   * for ADS invoices. Off by default — those lines stay in flight data only.
+   */
+  @Prop({ default: false })
+  billBmeEquipment?: boolean;
+
+  /**
    * ADS conditions — free units per flight, always-chargeable flags, and unit rates.
    * Synced to inclusive/exclusive rate cards for the same airline × aircraft × category.
    */

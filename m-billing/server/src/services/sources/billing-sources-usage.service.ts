@@ -255,7 +255,9 @@ export class BillingSourcesMaaFhrAdsService {
         billingDate: row.billingDate,
       })),
     );
-    return applyIndexedAdsRatesToUsage(usage, adsMisRateMap(samples, enrichedSamples));
+    return applyIndexedAdsRatesToUsage(usage, adsMisRateMap(samples, enrichedSamples)).filter(
+      (row) => row.rateMatch?.omitBmeFromAds !== true,
+    );
   }
 
   /**
@@ -608,13 +610,15 @@ export class BillingSourcesAdsService {
       fromYmd,
       ['ads'],
     );
-    const marked = enrichedRows.map((row) => {
-      const usageRowId = String(row.sourceRef?.usageRowId ?? '').trim();
-      return {
-        ...row,
-        sentToPreparation: Boolean(usageRowId && ingestedUsageIds.has(usageRowId)),
-      };
-    });
+    const marked = enrichedRows
+      .filter((row) => row.rateMatch?.omitBmeFromAds !== true)
+      .map((row) => {
+        const usageRowId = String(row.sourceRef?.usageRowId ?? '').trim();
+        return {
+          ...row,
+          sentToPreparation: Boolean(usageRowId && ingestedUsageIds.has(usageRowId)),
+        };
+      });
 
     return this.enrichment.wrapResponse('ads', marked, fromYmd, toYmd);
   }
@@ -676,7 +680,9 @@ export class BillingSourcesAdsService {
         billingDate: row.billingDate,
       })),
     );
-    return applyIndexedAdsRatesToUsage(usage, adsMisRateMap(samples, enrichedSamples));
+    return applyIndexedAdsRatesToUsage(usage, adsMisRateMap(samples, enrichedSamples)).filter(
+      (row) => row.rateMatch?.omitBmeFromAds !== true,
+    );
   }
 
   async listAircraftTypesForCustomer(

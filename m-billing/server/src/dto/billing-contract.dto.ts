@@ -562,6 +562,10 @@ export class CreateBillingContractDto {
   adsBillingEnabled?: boolean;
 
   @IsOptional()
+  @IsBoolean()
+  billBmeEquipment?: boolean;
+
+  @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => ContractAdsEquipmentRuleDto)
@@ -712,6 +716,10 @@ export class UpdateBillingContractDto {
   @IsOptional()
   @IsBoolean()
   adsBillingEnabled?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  billBmeEquipment?: boolean;
 
   @IsOptional()
   @IsArray()

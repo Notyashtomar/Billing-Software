@@ -31,7 +31,7 @@ import { ContractClausesEditor } from './ContractClausesEditor';
 import { ContractAircraftTypePicker } from './ContractAircraftTypePicker';
 import { ContractPdfPanel, type ContractPdfState } from './ContractPdfPanel';
 import { cn } from '@/lib/utils';
-import type { BillingApi } from '@/lib/billing-api';
+import type { BillingApi, EquipmentMasterRecord } from '@/lib/billing-api';
 import type {
   BillingContract,
   BillingContractAdsEquipmentRule,
@@ -116,6 +116,7 @@ type EditableSnapshotInput = {
   additionalCustomerInherit: AdditionalCustomerInheritChoice[];
   contractCategories: ContractSector[];
   extendedRoyaltyEnabled: boolean;
+  billBmeEquipment: boolean;
   fortnightBillingPartCount: string;
   fortnightBillingRanges: Array<{ startDay: string; endDay: string; exchangeRatePerUsd: string }>;
   fortnightMonthRates: FortnightMonthRateForm[];
@@ -341,6 +342,7 @@ export function ContractFormDialog({
   const [additionalCustomerQuery, setAdditionalCustomerQuery] = useState('');
   const [contractCategories, setContractCategories] = useState<ContractSector[]>(['Int']);
   const [extendedRoyaltyEnabled, setExtendedRoyaltyEnabled] = useState(false);
+  const [billBmeEquipment, setBillBmeEquipment] = useState(false);
   const [fortnightBillingPartCount, setFortnightBillingPartCount] = useState('2');
   const [fortnightBillingRanges, setFortnightBillingRanges] = useState<
     Array<{ startDay: string; endDay: string; exchangeRatePerUsd: string }>
@@ -348,6 +350,7 @@ export function ContractFormDialog({
   const [fortnightMonthRates, setFortnightMonthRates] = useState<FortnightMonthRateForm[]>([]);
   const [roeEditor, setRoeEditor] = useState<FortnightMonthRateForm | null>(null);
   const [adsServices, setAdsServices] = useState<BillingServiceCatalogItem[]>([]);
+  const [equipmentMaster, setEquipmentMaster] = useState<EquipmentMasterRecord[]>([]);
   const [roe, setRoe] = useState<BillingExchangeRate | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -390,6 +393,7 @@ export function ContractFormDialog({
         additionalCustomerInherit,
         contractCategories,
         extendedRoyaltyEnabled,
+        billBmeEquipment,
         fortnightBillingPartCount,
         fortnightBillingRanges,
         fortnightMonthRates,
@@ -419,6 +423,7 @@ export function ContractFormDialog({
       additionalCustomerInherit,
       contractCategories,
       extendedRoyaltyEnabled,
+      billBmeEquipment,
       fortnightBillingPartCount,
       fortnightBillingRanges,
       fortnightMonthRates,
@@ -597,6 +602,15 @@ export function ContractFormDialog({
     }
   }, [api]);
 
+  const loadEquipmentMaster = useCallback(async () => {
+    try {
+      const res = await api.listEquipmentMaster();
+      setEquipmentMaster(res.data ?? []);
+    } catch {
+      setEquipmentMaster([]);
+    }
+  }, [api]);
+
   const loadAdvanceAircraftCatalog = useCallback(async () => {
     setLoadingAdvanceCatalog(true);
     try {
@@ -630,6 +644,7 @@ export function ContractFormDialog({
     setActiveTab(focusCondition ? 'sgha' : 'general');
     void loadCustomers();
     void loadAdsServices();
+    void loadEquipmentMaster();
     void loadAdvanceAircraftCatalog();
     if (record) {
       const nextSelectedAircraftTypes = sanitizeContractAircraftTypes(record.aircraftTypes ?? []);
@@ -796,6 +811,7 @@ export function ContractFormDialog({
       setInheritEditor(null);
       setContractCategories(contractSectorsFromRecord(record));
       setExtendedRoyaltyEnabled(Boolean(record.extendedRoyaltyEnabled));
+      setBillBmeEquipment(record.billBmeEquipment === true);
       setFortnightBillingPartCount(nextFortnightPartCount);
       setFortnightBillingRanges(nextFortnightRanges);
       const nextMonthRates = seedFortnightMonthRates(
@@ -845,6 +861,7 @@ export function ContractFormDialog({
           })),
           contractCategories: contractSectorsFromRecord(record),
           extendedRoyaltyEnabled: Boolean(record.extendedRoyaltyEnabled),
+          billBmeEquipment: record.billBmeEquipment === true,
           fortnightBillingPartCount: nextFortnightPartCount,
           fortnightBillingRanges: nextFortnightRanges,
           fortnightMonthRates: nextMonthRates,
@@ -868,6 +885,7 @@ export function ContractFormDialog({
       setInheritEditor(null);
       setContractCategories(['Int']);
       setExtendedRoyaltyEnabled(false);
+      setBillBmeEquipment(false);
       setFortnightBillingPartCount('2');
       setFortnightBillingRanges(defaultFortnightRanges(2));
       setFortnightMonthRates([]);
@@ -900,6 +918,7 @@ export function ContractFormDialog({
           additionalCustomerInherit: [],
           contractCategories: ['Int'],
           extendedRoyaltyEnabled: false,
+          billBmeEquipment: false,
           fortnightBillingPartCount: '2',
           fortnightBillingRanges: defaultFortnightRanges(2),
           fortnightMonthRates: [],
@@ -907,7 +926,7 @@ export function ContractFormDialog({
       );
     }
     setAvailableAircraftTypes([]);
-  }, [open, record, focusCondition, loadCustomers, loadAdsServices, loadAdvanceAircraftCatalog]);
+  }, [open, record, focusCondition, loadCustomers, loadAdsServices, loadEquipmentMaster, loadAdvanceAircraftCatalog]);
 
   useEffect(() => {
     if (!open || !focusCondition) return;
@@ -1099,7 +1118,7 @@ export function ContractFormDialog({
             freePerFlightNb: rule.alwaysChargeable ? 0 : rule.freePerFlightNb,
             freePerFlightWb: rule.alwaysChargeable ? 0 : rule.freePerFlightWb,
             alwaysChargeable: Boolean(rule.alwaysChargeable),
-            includedForAds: true,
+            includedForAds: rule.includedForAds !== false,
             unitPriceINR:
               rule.unitPriceINR == null
                 ? undefined
@@ -1190,6 +1209,7 @@ export function ContractFormDialog({
           cancellationWithinHours: normalizedCancellationWithinHours,
           clauses: clausePayload,
           adsBillingEnabled: adsRulesPayload.length > 0,
+          billBmeEquipment,
           adsEquipmentRules: adsRulesPayload,
           bhsVolumeSchedules: volumePayload,
           bhsConcessionCoverage,
@@ -1235,6 +1255,7 @@ export function ContractFormDialog({
           cancellationWithinHours: normalizedCancellationWithinHours,
           clauses: clausePayload,
           adsBillingEnabled: adsRulesPayload.length > 0,
+          billBmeEquipment,
           adsEquipmentRules: adsRulesPayload,
           bhsVolumeSchedules: volumePayload,
           bhsConcessionCoverage,
@@ -2668,6 +2689,19 @@ export function ContractFormDialog({
                   </ContractSection>
 
                   <ContractSection
+                    title="BME equipment"
+                    description="BME lines stay on the flight. They are left out of ADS invoices unless this is turned on."
+                  >
+                    <ContractToggleCard
+                      checked={billBmeEquipment}
+                      disabled={saving}
+                      onChange={setBillBmeEquipment}
+                      title="Bill BME equipment on ADS"
+                      description="Covers Ground Power Unit (BME), Air Conditioner Unit (BME), and Water Cart (BME). Off by default."
+                    />
+                  </ContractSection>
+
+                  <ContractSection
                     title="ADS equipment rules"
                     description="Uses the aircraft chosen on the Aircraft tab. Change a row only when that equipment covers a smaller set."
                   >
@@ -2676,6 +2710,7 @@ export function ContractFormDialog({
                       onChange={setAdsEquipmentRules}
                       aircraftTypes={selectedAircraftTypes}
                       services={adsServices}
+                      equipmentMaster={equipmentMaster}
                       validFrom={form.priceValidFrom}
                       validTo={form.priceValidTo}
                       rateToInr={resolvedRoeRate}

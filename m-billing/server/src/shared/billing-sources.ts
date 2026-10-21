@@ -57,6 +57,8 @@ export interface BillingSourceRow {
     particular?: string;
     aircraftType?: string;
     uom?: string;
+    /** Set when BME equipment is withheld from ADS because the contract toggle is off. */
+    omitBmeFromAds?: boolean;
     /** Second same-day flight of this airline and aircraft uses incrementalPrice. */
     incrementalFlightsActive?: boolean;
     incrementalPrice?: number;

@@ -64,6 +64,11 @@ export type ScheduledEquipmentImportOptions = {
    * but the visible text is day/month (e.g. `30/09/2026`).
    */
   preferDisplayedDmyDates?: boolean;
+  /**
+   * Drop exact duplicate equipment lines (same name and from/to window).
+   * Export workbooks sometimes repeat a line; replace mode otherwise writes both.
+   */
+  dedupeLines?: boolean;
 };
 
 export type ScheduledEquipmentMismatchWarning = {
@@ -233,6 +238,7 @@ export class ScheduledEquipmentImportService {
       opts.resolveEquipmentName ?? toBillingTrackableFullName;
     const onlySerials =
       opts.onlySerials && opts.onlySerials.length > 0 ? new Set(opts.onlySerials) : null;
+    const dedupeLines = !!opts.dedupeLines;
 
     const stationCode =
       opts.station?.trim() || opts.lookupStation?.trim() || LEGACY_STATION_CODE;
@@ -362,7 +368,7 @@ export class ScheduledEquipmentImportService {
           continue;
         }
 
-        const newItems = entries.map((e) => {
+        const builtItems = entries.map((e) => {
           const abbr = textCell(e.row.equipmentNo);
           const resolved = resolveEquipmentName(abbr);
           if (abbr && resolved === abbr && !/\s/.test(abbr)) {
@@ -373,6 +379,9 @@ export class ScheduledEquipmentImportService {
             equipmentNo: resolved || abbr,
           });
         });
+        const newItems = dedupeLines
+          ? dedupeEquipmentDetailItems(builtItems)
+          : builtItems;
 
         summary.flightsProcessed += 1;
         summary.equipmentLinesWritten += newItems.length;

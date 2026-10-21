@@ -6,6 +6,10 @@ import type {
   BillingContractDocument,
 } from '../schemas/billing.schemas';
 import { normalizeFlightCategory } from './aircraft-type-match.util';
+import {
+  flightConcessionSectorFromText,
+  stationPercentForSector,
+} from './station-flight-concession.util';
 
 export const INVOICE_CGST_PERCENT = 9;
 export const INVOICE_SGST_PERCENT = 9;
@@ -113,6 +117,15 @@ export type InvoiceChargeContractShape = {
   conditionalCharges?: ContractConditionalChargesShape | null;
   bhsConcessionCoverage?: 'comprehensive' | 'non_comprehensive' | 'mixed' | null;
   extendedRoyaltyEnabled?: boolean | null;
+  /**
+   * Station Royalty Setup fees. When set, a plain scheduled or general-aviation
+   * flight uses this percent instead of the contract fee for that category.
+   */
+  stationFlightConcession?: {
+    dom?: number;
+    int?: number;
+    ga?: number;
+  } | null;
 };
 
 export type InvoiceLineConcessionInput = {
@@ -967,6 +980,13 @@ export function resolveLineFeeConcessionPercent(
 
   if (isDiverted && isDom) return resolveRateOrDefault(rates.DivDom, contract?.royaltyAtGross);
   if (isDiverted) return resolveRateOrDefault(rates.DivInt, contract?.royaltyAtGross);
+  if (!isDiverted && !isCargo) {
+    const stationPercent = stationPercentForSector(
+      contract?.stationFlightConcession,
+      flightConcessionSectorFromText(categoryRaw, handlingRaw),
+    );
+    if (stationPercent != null && stationPercent > 0) return stationPercent;
+  }
   if (isCargo && isDom) return resolveRateOrDefault(rates.DomCargo, contract?.royaltyAtGross);
   if (isCargo) return resolveRateOrDefault(rates.IntCargo, contract?.royaltyAtGross);
   if (isDom) return resolveRateOrDefault(rates.Dom, contract?.royaltyAtGross);
@@ -1072,6 +1092,11 @@ export type InvoiceCurrencyTaxOptions = {
   totalReceivableInUsd?: boolean | null;
   /** Scheduled flights on this invoice. Overrides the count derived from lines. */
   scheduledFlightCount?: number;
+  /**
+   * ADS invoices still add the station concession when the BHS contract is
+   * comprehensive or uses the BHS ceiling. Those BHS rules do not apply here.
+   */
+  adsConcession?: boolean;
 };
 
 export type InvoiceConcessionTotals = {
@@ -1535,7 +1560,10 @@ export function calculateInvoiceConcessionFromLines(
   const ceilingConcession = latestCeiling > 0 ? latestCeiling : ceilingFromLines;
   let concessionFeeAmount: number;
   let concessionFeePercentFinal: number;
-  if (isInclusiveBhsConcessionContract(contract)) {
+  if (options?.adsConcession) {
+    concessionFeeAmount = percentConcession;
+    concessionFeePercentFinal = concessionFeePercent;
+  } else if (isInclusiveBhsConcessionContract(contract)) {
     concessionFeeAmount = 0;
     concessionFeePercentFinal = 0;
   } else if (isExclusiveBhsConcessionContract(contract)) {
@@ -1668,6 +1696,53 @@ export async function resolveActiveContractForInvoice(
   );
 }
 
+/**
+ * PDF totals follow the amounts already saved on the invoice header.
+ * Recalculating from the contract here was adding the BHS ceiling onto ADS bills,
+ * so View PDF disagreed with the invoice page.
+ */
+export function concessionTotalsFromSavedHeader(header: {
+  currencyCode?: string | null;
+  currencyFactor?: number | null;
+  totalReceivableInUsd?: boolean | null;
+  subtotalExclTax?: number | null;
+  concessionFeePercent?: number | null;
+  concessionFeeAmount?: number | null;
+  taxTotal?: number | null;
+  totalInclTax?: number | null;
+}): InvoiceConcessionTotals {
+  const subtotalExclTax = roundBillingMoney(Number(header.subtotalExclTax ?? 0));
+  const concessionFeeAmount = roundBillingMoney(Number(header.concessionFeeAmount ?? 0));
+  const concessionFeePercent = Number(header.concessionFeePercent ?? 0);
+  const grossAmount = roundBillingMoney(subtotalExclTax + concessionFeeAmount);
+  const usd = String(header.currencyCode ?? 'INR').trim().toUpperCase() === 'USD';
+  const usdReceivable = usd && Boolean(header.totalReceivableInUsd);
+  const roe = Number(header.currencyFactor);
+  const grossAmountInr = usdReceivable
+    ? 0
+    : usd && Number.isFinite(roe) && roe > 0
+      ? roundBillingMoney(grossAmount * roe)
+      : grossAmount;
+  const taxTotal = roundBillingMoney(Number(header.taxTotal ?? 0));
+  const cgstAmount = roundBillingMoney(taxTotal / 2);
+  const sgstAmount = roundBillingMoney(taxTotal - cgstAmount);
+  const totalInclTax = roundBillingMoney(Number(header.totalInclTax ?? 0));
+  const taxPercent = taxTotal > 0 ? INVOICE_CGST_PERCENT : 0;
+  return {
+    subtotalExclTax,
+    concessionFeePercent: Number.isFinite(concessionFeePercent) ? concessionFeePercent : 0,
+    concessionFeeAmount,
+    grossAmount,
+    grossAmountInr,
+    cgstPercent: taxPercent,
+    cgstAmount,
+    sgstPercent: taxPercent,
+    sgstAmount,
+    taxTotal,
+    totalInclTax,
+  };
+}
+
 export function applyConcessionTotalsToHeader(
   header: {
     subtotalExclTax: number;
@@ -1696,6 +1771,7 @@ export function applyConcessionTotalsToHeader(
       currencyFactor: header.currencyFactor,
       totalReceivableInUsd: header.totalReceivableInUsd,
       scheduledFlightCount: options?.scheduledFlightCount,
+      adsConcession: options?.adsConcession,
     },
   );
   header.subtotalExclTax = totals.subtotalExclTax;

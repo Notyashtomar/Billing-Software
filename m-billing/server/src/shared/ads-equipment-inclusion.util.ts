@@ -207,6 +207,30 @@ function billingFullNameMatches(a: string, b: string): boolean {
   return false;
 }
 
+function normalizedRuleCandidates(candidates: string[]): string[] {
+  return candidates
+    .map((v) => normalizeToken(v))
+    .filter(Boolean)
+    .flatMap((c) => {
+      const stripped = stripServiceWrapper(c);
+      return stripped && stripped !== c ? [c, stripped] : [c];
+    });
+}
+
+/** Name or alias match. Family matches (GPU-NB covering GPU-140KV) are separate. */
+function serviceDirectlyMatchesRule(ruleCode: string, candidates: string[]): boolean {
+  const code = normalizeToken(ruleCode);
+  if (!code) return false;
+  const codeStripped = stripServiceWrapper(code);
+  return normalizedRuleCandidates(candidates).some(
+    (c) =>
+      tokensMatch(c, code) ||
+      tokensMatch(c, codeStripped) ||
+      billingFullNameMatches(c, code) ||
+      billingFullNameMatches(c, codeStripped),
+  );
+}
+
 function serviceMatchesRule(
   ruleCode: string,
   candidates: string[],
@@ -214,15 +238,7 @@ function serviceMatchesRule(
   const code = normalizeToken(ruleCode);
   if (!code) return false;
   const codeStripped = stripServiceWrapper(code);
-  const normalizedCandidates = candidates
-    .map((v) => normalizeToken(v))
-    .filter(Boolean)
-    .flatMap((c) => {
-      const stripped = stripServiceWrapper(c);
-      return stripped && stripped !== c ? [c, stripped] : [c];
-    });
-
-  return normalizedCandidates.some(
+  return normalizedRuleCandidates(candidates).some(
     (c) =>
       tokensMatch(c, code) ||
       tokensMatch(c, codeStripped) ||
@@ -236,6 +252,28 @@ function serviceMatchesRule(
 /** True when two equipment / service labels refer to the same ADS equipment family. */
 export function adsEquipmentLabelsMatch(left: string, right: string): boolean {
   return serviceMatchesRule(left, [right]);
+}
+
+/**
+ * BME equipment stays in flight data and is left out of ADS billing unless the
+ * contract clauses toggle `billBmeEquipment` is on.
+ * Matches stored full names such as "Ground Power Unit (BME)" and short codes GPU(BME).
+ */
+export function isBmeAdsEquipmentLabel(...values: unknown[]): boolean {
+  return values.some((value) => {
+    const raw = String(value ?? '').trim();
+    if (!raw) return false;
+    if (/\(\s*BME\s*\)/i.test(raw)) return true;
+    const compact = raw.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    return compact === 'GPUBME' || compact === 'ACUBME' || compact === 'WCBME';
+  });
+}
+
+/** True only when the contract explicitly allows BME equipment on ADS invoices. */
+export function contractBillsBmeEquipment(
+  contract: { billBmeEquipment?: boolean } | null | undefined,
+): boolean {
+  return contract?.billBmeEquipment === true;
 }
 
 /** Wheelchair ADS services (WCH / WCHR / WCHS / WCHC and catalog labels). */
@@ -402,6 +440,44 @@ export function matchAdsEquipmentContractRule(
   );
   if (matches.length === 0) {
     return { matched: false, excluded: false, rule: null };
+  }
+  const candidates = [
+    String(opts.serviceCode ?? ''),
+    String(opts.particular ?? ''),
+    String(opts.equipmentName ?? ''),
+  ].filter((value) => value.trim());
+  const selectionMode = (contract?.adsEquipmentRules ?? []).some(
+    (rule) => rule.includedForAds === false,
+  );
+  const directlyMatches = (rule: AdsEquipmentInclusionRule) =>
+    serviceDirectlyMatchesRule(String(rule.serviceCode ?? ''), candidates);
+  const excludedDirect = matches.find(
+    (rule) => rule.includedForAds === false && directlyMatches(rule),
+  );
+  // An unticked clauses row is the equipment the user left off ADS, even when a
+  // ticked row only reaches it through a shared family (GPU-NB → GPU-140KV).
+  if (selectionMode && excludedDirect) {
+    return { matched: true, excluded: true, rule: excludedDirect };
+  }
+  if (selectionMode) {
+    const directIncluded = matches.filter(
+      (rule) => rule.includedForAds !== false && directlyMatches(rule) && ruleHasUnitPrice(rule),
+    );
+    if (directIncluded.length === 0) {
+      return {
+        matched: true,
+        excluded: true,
+        rule: matches.find((rule) => rule.includedForAds === false) ?? matches[0] ?? null,
+      };
+    }
+    const rule = directIncluded.reduce((best, candidate) => {
+      if (!best) return candidate;
+      const bestOwn = ruleListsOwnAircraft(best);
+      const candidateOwn = ruleListsOwnAircraft(candidate);
+      if (candidateOwn !== bestOwn) return candidateOwn ? candidate : best;
+      return candidate;
+    }, directIncluded[0]);
+    return { matched: true, excluded: false, rule: rule ?? null };
   }
   const excluded = matches.find((r) => r.includedForAds === false);
   if (excluded && !matches.some((r) => r.includedForAds !== false && ruleHasUnitPrice(r))) {

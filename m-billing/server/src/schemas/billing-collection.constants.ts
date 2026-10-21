@@ -26,6 +26,7 @@ export const BillingDocType = {
   BcDecommissionRecord: 'bc_decommission_record',
   KycCase: 'kyc_case',
   AircraftMaster: 'aircraft_master',
+  EquipmentMaster: 'equipment_master',
 } as const;
 
 export type BillingDocTypeValue = (typeof BillingDocType)[keyof typeof BillingDocType];

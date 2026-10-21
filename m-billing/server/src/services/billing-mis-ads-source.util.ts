@@ -4,7 +4,10 @@
  * Excel writes by row/col index. Does not copy BHS revenue formulas.
  */
 
-import { adsEquipmentFamilyKey } from '../shared/ads-equipment-inclusion.util';
+import {
+  adsEquipmentFamilyKey,
+  isBmeAdsEquipmentLabel,
+} from '../shared/ads-equipment-inclusion.util';
 import { computeAdsUsedUnits } from '../shared/fhr-equipment-to-ads-row';
 import type { FhrAdsMappedRow } from '../shared/fhr-equipment-to-ads-row';
 import type { BillingSourceRow } from '../shared/billing-sources';
@@ -87,12 +90,25 @@ export function adsMisMappedLabel(row: FhrAdsMappedRow): string {
   return raw || 'EQ';
 }
 
+function adsMappedRowIsBme(row: FhrAdsMappedRow): boolean {
+  const snap = row.operationalData ?? {};
+  return isBmeAdsEquipmentLabel(
+    snap.particular,
+    snap.equipment,
+    snap.equipment_name,
+    snap.equipmentName,
+    snap.abbr,
+    row.serviceCode,
+  );
+}
+
 export function adsMisRateIndexKey(
   customerCode: string,
   label: string,
   aircraftType?: string,
+  bme = false,
 ): string {
-  return `${String(customerCode ?? '').trim().toUpperCase()}|${compactKey(label)}|${compactKey(aircraftType)}`;
+  return `${String(customerCode ?? '').trim().toUpperCase()}|${compactKey(label)}|${compactKey(aircraftType)}|${bme ? 'BME' : ''}`;
 }
 
 export function adsMisMappedDedupKey(row: FhrAdsMappedRow): string {
@@ -111,7 +127,7 @@ export function indexAdsMisRateSamples(rows: FhrAdsMappedRow[]): FhrAdsMappedRow
     if (!customerCode) continue;
     const label = adsMisMappedLabel(row);
     const ac = String(row.operationalData?.aircraftType ?? row.operationalData?.TypeCraft ?? '');
-    const key = adsMisRateIndexKey(customerCode, label, ac);
+    const key = adsMisRateIndexKey(customerCode, label, ac, adsMappedRowIsBme(row));
     if (!unique.has(key)) unique.set(key, row);
   }
   return [...unique.values()];
@@ -146,6 +162,7 @@ export function adsMisRateMap(
         String(
           sample.operationalData?.aircraftType ?? sample.operationalData?.TypeCraft ?? '',
         ),
+        adsMappedRowIsBme(sample),
       ),
       rate,
     );
@@ -165,6 +182,7 @@ export function applyIndexedAdsRatesToUsage(
       customerCode,
       adsMisMappedLabel(row),
       String(row.operationalData?.aircraftType ?? row.operationalData?.TypeCraft ?? ''),
+      adsMappedRowIsBme(row),
     );
     return applyIndexedAdsRates(row, rateByKey.get(key));
   });

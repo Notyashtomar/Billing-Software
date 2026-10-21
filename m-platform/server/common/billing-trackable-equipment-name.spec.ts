@@ -10,6 +10,12 @@ describe('toBillingTrackableFullName', () => {
     expect(toBillingTrackableFullName('CK')).toBe('Chocks');
     expect(toBillingTrackableFullName('AMB')).toBe('Ambulift');
     expect(toBillingTrackableFullName('GPU-90KV')).toBe('Ground Power Unit - Narrow Body');
+    expect(toBillingTrackableFullName('GPU-140KV')).toBe('Ground Power Unit - 140KV');
+    expect(toBillingTrackableFullName('GPU(BME)')).toBe('Ground Power Unit (BME)');
+    expect(toBillingTrackableFullName('ACU(BME)')).toBe('Air Conditioner Unit (BME)');
+    expect(toBillingTrackableFullName('WC(BME)')).toBe('Water Cart (BME)');
+    expect(toBillingTrackableFullName('CONVEYOR BELT')).toBe('Conveyor Belt Loader');
+    expect(toBillingTrackableFullName('BFL')).toBe('Baggage Freight Loader');
     expect(toBillingTrackableFullName('Ground Power Unit (NB)')).toBe(
       'Ground Power Unit - Narrow Body',
     );

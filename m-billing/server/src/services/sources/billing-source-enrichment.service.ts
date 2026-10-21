@@ -57,7 +57,11 @@ import {
   normalizeBillingScope,
   type RateCardBillingScope,
 } from '../../shared/rate-card-billing-scope';
-import { resolveAdsPricingFromContractRule } from '../../shared/ads-equipment-inclusion.util';
+import {
+  contractBillsBmeEquipment,
+  isBmeAdsEquipmentLabel,
+  resolveAdsPricingFromContractRule,
+} from '../../shared/ads-equipment-inclusion.util';
 import { lookupRafAdhocRate } from '../../shared/raf-adhoc-lookup';
 
 type EnrichmentCache = {
@@ -821,7 +825,16 @@ export class BillingSourceEnrichmentService {
 
     // ADS: only Contracts → ADS equipment rules (Included + unit price) are billable.
     // Everything else is free / included in BHS package (not invoiced on ADS).
+    let omitBmeFromAds = false;
     if (isAds) {
+      omitBmeFromAds =
+        isBmeAdsEquipmentLabel(
+          particular,
+          input.operationalData.equipment_name,
+          input.operationalData.equipmentName,
+          input.operationalData.equipment,
+          input.serviceCode,
+        ) && !contractBillsBmeEquipment(rulesContract);
       const adsContractEnabled = Boolean(
         rulesContract &&
           ((rulesContract as { adsEquipmentRules?: unknown[] }).adsEquipmentRules?.length ??
@@ -831,7 +844,13 @@ export class BillingSourceEnrichmentService {
       freeAllowance = 0;
       fullyPackageIncluded = false;
 
-      if (!rulesContract || !adsContractEnabled) {
+      if (omitBmeFromAds) {
+        unitPrice = 0;
+        pricingBasis = 'ads_excluded';
+        fullyPackageIncluded = true;
+        freeAllowance = 0;
+        usedUnits = this.resolveAdsUsedUnits(input.operationalData, null, adsUom);
+      } else if (!rulesContract || !adsContractEnabled) {
         unitPrice = 0;
         pricingBasis = 'package_inclusive';
         fullyPackageIncluded = true;
@@ -1212,6 +1231,7 @@ export class BillingSourceEnrichmentService {
               usedUnits,
               freeAllowance,
               pricingBasis,
+              ...(omitBmeFromAds ? { omitBmeFromAds: true } : {}),
               particular,
               aircraftType: aircraftType || undefined,
               uom: adsUom,

@@ -85,6 +85,7 @@ import {
   preparationInvoiceGroupKey,
   preparationListPeriodFilter,
 } from '../common/billing-invoice-period.util';
+import { stationFlightConcessionPercents } from '../utils/station-flight-concession.util';
 import { isAdsFamilySourceType } from '../shared/ads-adhoc-tariff';
 import {
   ataCalendarDay,
@@ -540,8 +541,15 @@ export class BillingInvoiceDraftsService {
           contract,
           customer?.currencyCode,
         );
-        const invoiceContract =
-          shapeContractForAdditionalCustomer(contract, group[0].customerCode) ?? contract;
+        const invoiceContract = await this.contractWithStationFlightConcession(
+          ctx,
+          shapeContractForAdditionalCustomer(contract, group[0].customerCode) ?? contract,
+          documentDate,
+          {
+            start: group[0]?.billingPeriodStart,
+            end: group[0]?.billingPeriodEnd,
+          },
+        );
         const periodGroups = splitPreparationGroupByFortnightConfig(group, invoiceContract);
         for (const periodGroup of periodGroups) {
           const volumeOptions = await this.bhsVolumeComposeOptions(
@@ -3014,6 +3022,32 @@ export class BillingInvoiceDraftsService {
     { at: number; rows: BillingPreparationRecordDocument[] }
   >();
 
+  /** Station Royalty Setup fees ride on the contract so each flight category picks its percent. */
+  private async contractWithStationFlightConcession<T extends object | null | undefined>(
+    ctx: StationScopeContext,
+    contract: T,
+    documentDate: Date,
+    billingPeriod?: { start?: Date | string | null; end?: Date | string | null },
+  ): Promise<T> {
+    const stationCode = String(
+      ctx.stationCode ??
+        (contract as { stationCode?: string } | null | undefined)?.stationCode ??
+        '',
+    ).trim();
+    if (!stationCode && !contract) return contract;
+    const settings = await this.settingsModel
+      .findOne(stationCode ? { stationCode } : StationScope.filter({}, ctx))
+      .select('airportCommercial royaltyMaster')
+      .lean();
+    const stationFlightConcession = stationFlightConcessionPercents(
+      settings,
+      documentDate,
+      billingPeriod,
+    );
+    if (!stationFlightConcession) return contract;
+    return { ...(contract ?? {}), stationFlightConcession } as T;
+  }
+
   private async bhsVolumeComposeOptions(
     ctx: StationScopeContext,
     contract: { bhsVolumeSchedules?: unknown[] | null } | null | undefined,
@@ -3099,8 +3133,15 @@ export class BillingInvoiceDraftsService {
       documentDate,
       stationCode: header.stationCode ?? stationCode,
     });
-    const contract =
-      shapeContractForAdditionalCustomer(linkedContract, header.customerCode) ?? linkedContract;
+    const contract = await this.contractWithStationFlightConcession(
+      ctx,
+      shapeContractForAdditionalCustomer(linkedContract, header.customerCode) ?? linkedContract,
+      documentDate,
+      {
+        start: header.billingPeriodStart,
+        end: header.billingPeriodEnd,
+      },
+    );
     const previousCurrency = String(header.currencyCode ?? 'INR').trim().toUpperCase();
     const currencyCode = await this.resolveCommercialInvoiceCurrency(
       ctx,
@@ -3272,8 +3313,15 @@ export class BillingInvoiceDraftsService {
       documentDate,
       stationCode: header.stationCode ?? ctx.stationCode,
     });
-    const contract =
-      shapeContractForAdditionalCustomer(linkedContract, header.customerCode) ?? linkedContract;
+    const contract = await this.contractWithStationFlightConcession(
+      ctx,
+      shapeContractForAdditionalCustomer(linkedContract, header.customerCode) ?? linkedContract,
+      documentDate,
+      {
+        start: header.billingPeriodStart,
+        end: header.billingPeriodEnd,
+      },
+    );
     const currencyCode = await this.resolveCommercialInvoiceCurrency(
       ctx,
       header.customerCode,
@@ -3587,10 +3635,19 @@ export class BillingInvoiceDraftsService {
       }
     }
 
-    const contract = await resolveActiveContractForInvoice(this.contractModel, ctx, header);
-    if (contract?._id && !header.contractId) {
-      header.contractId = contract._id as Types.ObjectId;
+    const linkedContract = await resolveActiveContractForInvoice(this.contractModel, ctx, header);
+    if (linkedContract?._id && !header.contractId) {
+      header.contractId = linkedContract._id as Types.ObjectId;
     }
+    const contract = await this.contractWithStationFlightConcession(
+      ctx,
+      linkedContract,
+      header.documentDate instanceof Date ? header.documentDate : new Date(header.documentDate),
+      {
+        start: header.billingPeriodStart,
+        end: header.billingPeriodEnd,
+      },
+    );
 
     const ceilingLineIds = lines
       .filter((line) => isCeilingParticularLine(line) && line._id)
@@ -3603,7 +3660,10 @@ export class BillingInvoiceDraftsService {
     }
 
     const scheduledFlightCount = await this.countInvoiceScheduledFlights(header, lines, options);
-    applyConcessionTotalsToHeader(header, lines, contract, { scheduledFlightCount });
+    applyConcessionTotalsToHeader(header, lines, contract, {
+      scheduledFlightCount,
+      adsConcession: String(header.invoiceCategory ?? '').trim().toUpperCase() === 'ADS',
+    });
     await header.save({ session: options?.session });
   }
 
