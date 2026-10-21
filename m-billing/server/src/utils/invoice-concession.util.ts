@@ -126,6 +126,16 @@ export type InvoiceChargeContractShape = {
     int?: number;
     ga?: number;
   } | null;
+  /**
+   * Station fee used only when the contract has no concession for that flight.
+   * ADS invoices use this when the royalty dates miss the billing period but
+   * cover the invoice date, so a blank contract does not bill at 0%.
+   */
+  stationFlightConcessionFallback?: {
+    dom?: number;
+    int?: number;
+    ga?: number;
+  } | null;
 };
 
 export type InvoiceLineConcessionInput = {
@@ -978,19 +988,22 @@ export function resolveLineFeeConcessionPercent(
     (/domestic/.test(categoryLower) && !/international/.test(categoryLower));
   const isCargo = /cargo/.test(categoryLower);
 
-  if (isDiverted && isDom) return resolveRateOrDefault(rates.DivDom, contract?.royaltyAtGross);
-  if (isDiverted) return resolveRateOrDefault(rates.DivInt, contract?.royaltyAtGross);
-  if (!isDiverted && !isCargo) {
-    const stationPercent = stationPercentForSector(
-      contract?.stationFlightConcession,
-      flightConcessionSectorFromText(categoryRaw, handlingRaw),
-    );
-    if (stationPercent != null && stationPercent > 0) return stationPercent;
-  }
-  if (isCargo && isDom) return resolveRateOrDefault(rates.DomCargo, contract?.royaltyAtGross);
-  if (isCargo) return resolveRateOrDefault(rates.IntCargo, contract?.royaltyAtGross);
-  if (isDom) return resolveRateOrDefault(rates.Dom, contract?.royaltyAtGross);
-  return resolveRateOrDefault(rates.Int, contract?.royaltyAtGross);
+  const sector = flightConcessionSectorFromText(categoryRaw, handlingRaw);
+  const fromContract = (() => {
+    if (isDiverted && isDom) return resolveRateOrDefault(rates.DivDom, contract?.royaltyAtGross);
+    if (isDiverted) return resolveRateOrDefault(rates.DivInt, contract?.royaltyAtGross);
+    if (!isDiverted && !isCargo) {
+      const stationPercent = stationPercentForSector(contract?.stationFlightConcession, sector);
+      if (stationPercent != null && stationPercent > 0) return stationPercent;
+    }
+    if (isCargo && isDom) return resolveRateOrDefault(rates.DomCargo, contract?.royaltyAtGross);
+    if (isCargo) return resolveRateOrDefault(rates.IntCargo, contract?.royaltyAtGross);
+    if (isDom) return resolveRateOrDefault(rates.Dom, contract?.royaltyAtGross);
+    return resolveRateOrDefault(rates.Int, contract?.royaltyAtGross);
+  })();
+  if (fromContract > 0) return fromContract;
+  const fallback = stationPercentForSector(contract?.stationFlightConcessionFallback, sector);
+  return fallback != null && fallback > 0 ? fallback : fromContract;
 }
 
 /** Legacy single % on contract — used when scenario rates are not set. */
@@ -1097,6 +1110,11 @@ export type InvoiceCurrencyTaxOptions = {
    * comprehensive or uses the BHS ceiling. Those BHS rules do not apply here.
    */
   adsConcession?: boolean;
+  /**
+   * Typed on the invoice edit screen. Replaces the contract percent.
+   * ADS invoices apply this as a straight percent. Extended royalty stays on BHS.
+   */
+  concessionPercentOverride?: number | null;
 };
 
 export type InvoiceConcessionTotals = {
@@ -1560,7 +1578,16 @@ export function calculateInvoiceConcessionFromLines(
   const ceilingConcession = latestCeiling > 0 ? latestCeiling : ceilingFromLines;
   let concessionFeeAmount: number;
   let concessionFeePercentFinal: number;
-  if (options?.adsConcession) {
+  const typedConcession = Number(options?.concessionPercentOverride);
+  if (options?.concessionPercentOverride != null && Number.isFinite(typedConcession)) {
+    const pct = Math.min(100, Math.max(0, typedConcession));
+    const extendedOnTyped =
+      !options?.adsConcession && Boolean(contract?.extendedRoyaltyEnabled);
+    concessionFeePercentFinal = pct;
+    concessionFeeAmount = roundBillingMoney(
+      subtotal * exclusiveRoyaltyRate(extendedOnTyped, pct),
+    );
+  } else if (options?.adsConcession) {
     concessionFeeAmount = percentConcession;
     concessionFeePercentFinal = concessionFeePercent;
   } else if (isInclusiveBhsConcessionContract(contract)) {
@@ -1772,6 +1799,7 @@ export function applyConcessionTotalsToHeader(
       totalReceivableInUsd: header.totalReceivableInUsd,
       scheduledFlightCount: options?.scheduledFlightCount,
       adsConcession: options?.adsConcession,
+      concessionPercentOverride: options?.concessionPercentOverride,
     },
   );
   header.subtotalExclTax = totals.subtotalExclTax;

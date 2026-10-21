@@ -147,6 +147,39 @@ describe('exclusive BHS invoice concession', () => {
     expect(totals.grossAmount).toBe(23_600);
   });
 
+  it('keeps ADS concession as a straight percent when extended royalty is checked', () => {
+    const totals = calculateInvoiceConcessionFromLines(
+      1000,
+      [
+        {
+          lineAmountExclTax: 1000,
+          sourceType: 'ads',
+          sourceRef: { categoryOfFlight: 'International', concessionFeePercent: 18 },
+        },
+      ],
+      {
+        bhsConcessionCoverage: 'non_comprehensive',
+        extendedRoyaltyEnabled: true,
+        concessionRates: { int: 18 },
+      },
+      { adsConcession: true },
+    );
+    expect(totals.concessionFeePercent).toBe(18);
+    expect(totals.concessionFeeAmount).toBe(180);
+    expect(totals.grossAmount).toBe(1180);
+  });
+
+  it('uses the concession typed on an ADS invoice as a straight percent', () => {
+    const totals = calculateInvoiceConcessionFromLines(
+      1000,
+      [{ lineAmountExclTax: 1000, sourceType: 'ads' }],
+      { extendedRoyaltyEnabled: true, concessionRates: { int: 18 } },
+      { adsConcession: true, concessionPercentOverride: 10 },
+    );
+    expect(totals.concessionFeePercent).toBe(10);
+    expect(totals.concessionFeeAmount).toBe(100);
+  });
+
   it('uses 18/(100-18) when exclusive extended royalty is on', () => {
     const totals = calculateInvoiceConcessionFromLines(
       20_000,

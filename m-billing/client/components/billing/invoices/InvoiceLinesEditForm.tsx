@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Trash2 } from 'lucide-react';
 import type { BillingApi } from '@/lib/billing-api';
 
 export type InvoiceEditLine = {
@@ -19,6 +19,8 @@ type Props = {
   draftId: string;
   currencyCode: string;
   lines: InvoiceEditLine[];
+  /** Percent already applied, or the value typed on a previous save. */
+  concessionPercent?: number | null;
   onSaved: (message: string) => void;
 };
 
@@ -67,14 +69,29 @@ export function linesToInvoiceEditLines(
     });
 }
 
-export function InvoiceLinesEditForm({ api, draftId, currencyCode, lines: seedLines, onSaved }: Props) {
-  const seedKey = `${draftId}:${seedLines.map((l) => l.lineNo).join(',')}`;
+export function InvoiceLinesEditForm({
+  api,
+  draftId,
+  currencyCode,
+  lines: seedLines,
+  concessionPercent: seedConcession,
+  onSaved,
+}: Props) {
+  const seedKey = `${draftId}:${seedLines.map((l) => l.lineNo).join(',')}:${seedConcession ?? ''}`;
   const [lines, setLines] = useState<InvoiceEditLine[]>(seedLines);
+  const [removedLineNos, setRemovedLineNos] = useState<number[]>([]);
+  const [concessionPercent, setConcessionPercent] = useState(
+    seedConcession != null && Number.isFinite(Number(seedConcession)) ? String(seedConcession) : '',
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
     setLines(seedLines);
+    setRemovedLineNos([]);
+    setConcessionPercent(
+      seedConcession != null && Number.isFinite(Number(seedConcession)) ? String(seedConcession) : '',
+    );
     setError('');
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reseed when line identity changes
   }, [seedKey]);
@@ -83,8 +100,20 @@ export function InvoiceLinesEditForm({ api, draftId, currencyCode, lines: seedLi
     setLines((prev) => prev.map((line, i) => (i === index ? { ...line, ...patch } : line)));
   };
 
+  const removeLine = (index: number) => {
+    const line = lines[index];
+    if (!line) return;
+    const label = line.description.trim() || `line ${line.lineNo}`;
+    if (!window.confirm(`Remove ${label} from this invoice? It is deleted when you save.`)) return;
+    setRemovedLineNos((prev) => (prev.includes(line.lineNo) ? prev : [...prev, line.lineNo]));
+    setLines((prev) => prev.filter((_, i) => i !== index));
+    setError('');
+  };
+
   const validate = (): string | null => {
-    if (lines.length === 0) return 'No invoice lines to edit.';
+    if (lines.length === 0) {
+      return removedLineNos.length > 0 ? null : 'No invoice lines to edit.';
+    }
     for (const line of lines) {
       if (!line.description.trim()) return `Line ${line.lineNo}: particulars are required.`;
       if (!(Number(line.unitPrice) > 0)) return `Line ${line.lineNo}: Rate/Unit must be greater than zero.`;
@@ -96,7 +125,20 @@ export function InvoiceLinesEditForm({ api, draftId, currencyCode, lines: seedLi
     return null;
   };
 
+  const parsedConcession = () => {
+    const text = concessionPercent.trim();
+    if (!text) return null;
+    const n = Number(text);
+    if (!Number.isFinite(n) || n < 0 || n > 100) return undefined;
+    return n;
+  };
+
   const save = async () => {
+    const typedConcession = parsedConcession();
+    if (typedConcession === undefined) {
+      setError('Concession must be a percent from 0 to 100.');
+      return;
+    }
     const issue = validate();
     if (issue) {
       setError(issue);
@@ -105,17 +147,29 @@ export function InvoiceLinesEditForm({ api, draftId, currencyCode, lines: seedLi
     setSaving(true);
     setError('');
     try {
-      await api.updateInvoiceDraftLines(draftId, {
-        lines: lines.map((line) => ({
-          lineNo: line.lineNo,
-          description: line.description.trim(),
-          quantity: Number(line.charged),
-          unitPrice: Number(line.unitPrice),
-          uom: line.uom.trim() || 'Per Service',
-          usedQuantity: line.showUsed ? Number(line.used) : undefined,
-        })),
-      });
-      onSaved('Invoice particulars updated and totals recalculated.');
+      for (const lineNo of removedLineNos) {
+        await api.deleteInvoiceDraftLine(draftId, lineNo);
+        setRemovedLineNos((prev) => prev.filter((n) => n !== lineNo));
+      }
+      if (lines.length > 0) {
+        await api.updateInvoiceDraftLines(draftId, {
+          concessionPercent: typedConcession,
+          lines: lines.map((line) => ({
+            lineNo: line.lineNo,
+            description: line.description.trim(),
+            quantity: Number(line.charged),
+            unitPrice: Number(line.unitPrice),
+            uom: line.uom.trim() || 'Per Service',
+            usedQuantity: line.showUsed ? Number(line.used) : undefined,
+          })),
+        });
+      }
+      const removedCount = removedLineNos.length;
+      onSaved(
+        removedCount > 0
+          ? `Removed ${removedCount} particular${removedCount === 1 ? '' : 's'} and recalculated the invoice.`
+          : 'Invoice particulars updated and totals recalculated.',
+      );
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to update invoice');
     } finally {
@@ -128,9 +182,28 @@ export function InvoiceLinesEditForm({ api, draftId, currencyCode, lines: seedLi
       <div>
         <h3 className="text-sm font-semibold text-gray-900">Edit invoice particulars</h3>
         <p className="mt-0.5 text-xs text-gray-600">
-          Adjust particulars, quantities, and rates. Tax and invoice totals update on save.
+          Adjust particulars, quantities, and rates. Use the delete icon to remove a line. Tax and invoice totals update on save.
         </p>
       </div>
+
+      <label className="flex max-w-xs flex-col gap-1 text-xs font-medium text-gray-600">
+        Concession %
+        <input
+          type="number"
+          min={0}
+          max={100}
+          step="any"
+          value={concessionPercent}
+          onChange={(event) => setConcessionPercent(event.target.value)}
+          disabled={saving}
+          placeholder="Use contract rate"
+          aria-label="Concession percent"
+          className="h-9 rounded border border-gray-300 bg-white px-2 text-sm text-gray-900"
+        />
+        <span className="font-normal text-gray-500">
+          Applied to this invoice on save. Leave blank to use the contract rate.
+        </span>
+      </label>
 
       <div className="overflow-x-auto">
         <table className="min-w-full border-collapse text-left text-xs sm:text-sm">
@@ -145,6 +218,9 @@ export function InvoiceLinesEditForm({ api, draftId, currencyCode, lines: seedLi
               <th className="px-2 py-2 font-medium">Unit</th>
               <th className="px-2 py-2 font-medium">Rate/Unit</th>
               <th className="px-2 py-2 font-medium">Amount</th>
+              <th className="px-2 py-2 font-medium">
+                <span className="sr-only">Remove</span>
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -211,6 +287,18 @@ export function InvoiceLinesEditForm({ api, draftId, currencyCode, lines: seedLi
                 </td>
                 <td className="px-2 py-2 text-gray-700">
                   {formatPreview(line.charged * line.unitPrice, currencyCode)}
+                </td>
+                <td className="px-2 py-2">
+                  <button
+                    type="button"
+                    onClick={() => removeLine(index)}
+                    disabled={saving}
+                    aria-label={`Remove ${line.description.trim() || `line ${line.lineNo}`}`}
+                    title="Remove this particular"
+                    className="rounded-md p-1.5 text-red-600 hover:bg-red-50 disabled:opacity-50"
+                  >
+                    <Trash2 className="h-4 w-4" aria-hidden />
+                  </button>
                 </td>
               </tr>
             ))}

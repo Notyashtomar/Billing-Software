@@ -1313,12 +1313,18 @@ export function createBillingApi({ getApiBase, fetch }: BillingApiConfig) {
           usedQuantity?: number;
           pricingBasis?: string;
         }>;
+        concessionPercent?: number | null;
       },
     ) =>
       request(`/billing/invoice-drafts/${id}/lines`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
+      }).then((r) => parseJson(r)),
+
+    deleteInvoiceDraftLine: (id: string, lineNo: number) =>
+      request(`/billing/invoice-drafts/${id}/lines/${lineNo}`, {
+        method: 'DELETE',
       }).then((r) => parseJson(r)),
 
     updateCustomBillDraft: (

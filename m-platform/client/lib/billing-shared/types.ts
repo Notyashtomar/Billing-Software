@@ -661,6 +661,8 @@ export interface BillingInvoiceHeader {
   currencyFactor: number;
   totalReceivableInUsd?: boolean;
   subtotalExclTax: number;
+  /** Typed on the invoice edit screen. Missing means the contract percent is used. */
+  concessionPercentOverride?: number | null;
   concessionFeePercent?: number;
   concessionFeeAmount?: number;
   taxTotal: number;

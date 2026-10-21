@@ -102,4 +102,26 @@ describe('station flight concession', () => {
     expect(totals.concessionFeePercent).toBe(11);
     expect(totals.concessionFeeAmount).toBe(110);
   });
+
+  it('uses the invoice-date station fee when the ADS contract has no concession', () => {
+    const totals = calculateInvoiceConcessionFromLines(
+      1503868,
+      [
+        {
+          lineAmountExclTax: 1503868,
+          sourceType: 'ads',
+          sourceRef: { categoryOfFlight: 'International' },
+        },
+      ],
+      {
+        royaltyAtGross: 0,
+        concessionRates: {},
+        bhsConcessionCoverage: 'non_comprehensive',
+        stationFlightConcessionFallback: { int: 18, dom: 5, ga: 18 },
+      },
+      { adsConcession: true },
+    );
+    expect(totals.concessionFeePercent).toBe(18);
+    expect(totals.concessionFeeAmount).toBe(270696.24);
+  });
 });
