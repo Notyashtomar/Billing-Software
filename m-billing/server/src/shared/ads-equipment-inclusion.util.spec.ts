@@ -1,6 +1,8 @@
 import {
   adsEquipmentFamilyKey,
   adsEquipmentLabelsMatch,
+  contractBillsBmeEquipment,
+  isBmeAdsEquipmentLabel,
   resolveAdsPricingFromContractRule,
 } from './ads-equipment-inclusion.util';
 
@@ -309,5 +311,59 @@ describe('ads-equipment-inclusion.util', () => {
     );
     expect(priced.matched).toBe(true);
     expect(priced.unitPrice).toBe(494.29);
+  });
+
+  it('does not bill an unticked equipment row through a ticked family rule', () => {
+    const priced = resolveAdsPricingFromContractRule(
+      {
+        adsBillingEnabled: true,
+        aircraftTypes: ['A330'],
+        adsEquipmentRules: [
+          {
+            serviceCode: 'GPU-NB',
+            includedForAds: true,
+            unitPriceINR: 8000,
+            uom: 'Per Service',
+            aircraftTypes: ['A330'],
+          },
+          {
+            serviceCode: 'Ground Power Unit - 140KV',
+            includedForAds: false,
+            unitPriceINR: 8000,
+            uom: 'Per Service',
+            aircraftTypes: ['A330'],
+          },
+          {
+            serviceCode: 'ACU-NB',
+            includedForAds: true,
+            unitPriceINR: 5000,
+            uom: 'Per Service',
+            aircraftTypes: ['A330'],
+          },
+        ],
+      },
+      {
+        serviceCode: 'Ground Power Unit - 140KV',
+        particular: 'Ground Power Unit - 140KV',
+        equipmentName: 'Ground Power Unit - 140KV',
+        aircraftType: 'A330',
+        billingCurrency: 'INR',
+      },
+    );
+    expect(priced.excluded).toBe(true);
+    expect(priced.unitPrice).toBe(0);
+  });
+
+  it('recognises BME equipment labels and keeps the toggle off unless explicitly true', () => {
+    expect(isBmeAdsEquipmentLabel('Ground Power Unit (BME)')).toBe(true);
+    expect(isBmeAdsEquipmentLabel('Air Conditioner Unit (BME)')).toBe(true);
+    expect(isBmeAdsEquipmentLabel('Water Cart (BME)')).toBe(true);
+    expect(isBmeAdsEquipmentLabel('GPU(BME)')).toBe(true);
+    expect(isBmeAdsEquipmentLabel('Ground Power Unit - 140KV')).toBe(false);
+    expect(isBmeAdsEquipmentLabel('Wheel Chair -WCHR')).toBe(false);
+    expect(contractBillsBmeEquipment(undefined)).toBe(false);
+    expect(contractBillsBmeEquipment({})).toBe(false);
+    expect(contractBillsBmeEquipment({ billBmeEquipment: false })).toBe(false);
+    expect(contractBillsBmeEquipment({ billBmeEquipment: true })).toBe(true);
   });
 });

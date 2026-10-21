@@ -27,6 +27,7 @@ type InheritContract = {
   ceilingRatePerFlightUSD?: number | null;
   adsEquipmentRules?: unknown;
   adsBillingEnabled?: boolean;
+  billBmeEquipment?: boolean;
   bhsVolumeSchedules?: unknown;
   bhsConcessionCoverage?: string;
   extendedRoyaltyEnabled?: boolean;
@@ -124,6 +125,7 @@ export function shapeContractForAdditionalCustomer<T extends InheritContract>(
   if (!flags.contract) {
     shaped.adsEquipmentRules = [];
     shaped.adsBillingEnabled = false;
+    shaped.billBmeEquipment = false;
     shaped.bhsVolumeSchedules = [];
     shaped.bhsConcessionCoverage = undefined;
     shaped.extendedRoyaltyEnabled = false;

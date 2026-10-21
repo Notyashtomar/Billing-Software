@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { BillingPageHeader } from '../BillingLayout';
 import { ConfigureRulesButton, type AirportCommercial } from './AirportRulesWizard';
+import { FlightConcessionButton } from './FlightConcessionButton';
 import { BillingDataTable } from '../BillingDataTable';
 import { SettingsSubNav } from './SettingsSubNav';
 import { FieldGroup, TextArea, TextInput } from './SettingsFormFields';
@@ -213,7 +214,12 @@ export function StationProfilePage({ api }: Props) {
         <BillingPageHeader
           title="Airport Setup"
           description="Invoice letterhead and bank details for your station"
-          actions={<ConfigureRulesButton api={api} />}
+          actions={
+            <div className="flex flex-wrap gap-2">
+              <FlightConcessionButton api={api} />
+              <ConfigureRulesButton api={api} />
+            </div>
+          }
         />
         <SettingsSubNav />
         <p className="text-sm text-gray-500">Loading airport setup…</p>
@@ -231,14 +237,17 @@ export function StationProfilePage({ api }: Props) {
             : 'Invoice letterhead & bank details for your station'
         }
         actions={
-          <ConfigureRulesButton
-            api={api}
-            initial={airportCommercial}
-            onSaved={() => {
-              setSuccess('Airport rules saved.');
-              void load();
-            }}
-          />
+          <div className="flex flex-wrap gap-2">
+            <FlightConcessionButton api={api} />
+            <ConfigureRulesButton
+              api={api}
+              initial={airportCommercial}
+              onSaved={() => {
+                setSuccess('Airport rules saved.');
+                void load();
+              }}
+            />
+          </div>
         }
       />
       <SettingsSubNav />

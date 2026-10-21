@@ -57,7 +57,7 @@ import { ListInvoicesQueryDto, PostInvoiceDto, BulkDeleteInvoicesDto } from '../
 import { NOT_IN_BIN_FILTER } from '../common/billing-invoice-bin.util';
 import { PaxShiftReportEmailService } from 'src/reports-pax-shift-report/services/pax-shift-report-email.service';
 import {
-  calculateInvoiceConcessionFromLines,
+  concessionTotalsFromSavedHeader,
   resolveActiveContractForInvoice,
 } from '../utils/invoice-concession.util';
 import { billingSettingsForInvoicing } from '../shared/ignored-billing-masters';
@@ -871,16 +871,7 @@ export class BillingInvoicesService {
             }
           : null;
 
-    const concessionTotals = calculateInvoiceConcessionFromLines(
-      header.subtotalExclTax,
-      lines,
-      contract,
-      {
-        currencyCode: header.currencyCode,
-        currencyFactor: header.currencyFactor,
-        totalReceivableInUsd: header.totalReceivableInUsd,
-      },
-    );
+    const concessionTotals = concessionTotalsFromSavedHeader(header);
 
     const settings = billingSettingsForInvoicing(settingsDoc);
     return this.pdfEngine.buildInvoiceSnapshot({

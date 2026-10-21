@@ -2,7 +2,7 @@
  * CLI: seed Delhi (DEL) September 2026 scheduled equipment into
  * `fhr_collection.equipmentDetails[]`.
  *
- * Workbook: `data/DEL_SKD_EQUIP-SEPT-2026.xls` (sheet `Sheet1`).
+ * Workbook: `data/DEL-SCH-EQUP-DATA-SEPT-2026.xls` (sheet `Sheet1`).
  * Matches existing flights by Serial Number and stamps equipment only when
  * `stationCode` is DEL. Displayed STD dates are read as dd/mm/yyyy.
  * Equipment No values are stored as billing full names for the GSE report.
@@ -13,10 +13,17 @@
  */
 import { existsSync } from 'fs';
 import { join } from 'path';
-import { Logger } from '@nestjs/common';
+import { Logger, Module } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from '../app.module';
+import { ExcelImportModule } from './excel-import.module';
 import { ScheduledEquipmentImportService } from './scheduled-equipment-import.service';
+
+/** CLI-only graph. The billing API shell does not register the Excel import providers. */
+@Module({
+  imports: [AppModule, ExcelImportModule],
+})
+class DelSeptEquipmentSeedModule {}
 
 const cliLogger = new Logger('SeedDelSeptEquipmentExcelCli');
 
@@ -30,7 +37,7 @@ const DEFAULT_WORKBOOK = join(
   '..',
   '..',
   'data',
-  'DEL_SKD_EQUIP-SEPT-2026.xls',
+  'DEL-SCH-EQUP-DATA-SEPT-2026.xls',
 );
 
 function readArg(flag: string): string | null {
@@ -76,7 +83,7 @@ async function bootstrap() {
     `Station: ${STATION_CODE} | sheet: ${sheetName} | STD Date: ${fromYmd} … ${toYmd}`,
   );
 
-  const app = await NestFactory.createApplicationContext(AppModule, {
+  const app = await NestFactory.createApplicationContext(DelSeptEquipmentSeedModule, {
     logger: ['error', 'warn', 'log'],
   });
   try {
@@ -93,6 +100,7 @@ async function bootstrap() {
       toYmd,
       onlySerials,
       preferDisplayedDmyDates: true,
+      dedupeLines: true,
     });
     cliLogger.log(JSON.stringify(res, null, 2));
 

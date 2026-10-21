@@ -1,12 +1,21 @@
 'use client';
 
-import { BillingPageHeader } from '@/components/billing/BillingLayout';
+import dynamic from 'next/dynamic';
+import { Suspense } from 'react';
+import { billingApi } from '@/lib/billing-api';
+
+const PageComponent = dynamic(
+  () =>
+    import('@/components/billing/equipment-master/EquipmentMasterPage').then(
+      (m) => m.EquipmentMasterPage,
+    ),
+  { ssr: false },
+);
 
 export default function Page() {
   return (
-    <BillingPageHeader
-      title="Equipment Master"
-      description="Equipment master for this station. Invoices and Regenerate invoice do not read this page."
-    />
+    <Suspense fallback={null}>
+      <PageComponent api={billingApi} />
+    </Suspense>
   );
 }

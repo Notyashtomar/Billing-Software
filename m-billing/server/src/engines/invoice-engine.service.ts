@@ -35,6 +35,8 @@ import {
   incrementalSecondFlightIds,
 } from '../utils/incremental-flight-price.util';
 import {
+  contractBillsBmeEquipment,
+  isBmeAdsEquipmentLabel,
   resolveAdsPricingFromContractRule,
   type AdsEquipmentInclusionContract,
   type AdsEquipmentInclusionRule,
@@ -131,6 +133,13 @@ export type InvoiceChargeContractLike = {
   cancellationWithinHours?: number | null;
   /** ADS compose re-checks these so stale prep cannot bill non-contract equipment. */
   adsBillingEnabled?: boolean;
+  /** Off unless the contract clauses toggle is on. BME equipment is then omitted. */
+  billBmeEquipment?: boolean;
+  stationFlightConcession?: {
+    dom?: number;
+    int?: number;
+    ga?: number;
+  } | null;
   adsEquipmentRules?: AdsEquipmentInclusionRule[];
   aircraftTypes?: string[];
   /** Comprehensive volume bands. INR invoices only; replaces the saved BHS rate. */
@@ -761,6 +770,12 @@ export class InvoiceEngineService {
           snap.abbr ??
           '',
       );
+      if (
+        !contractBillsBmeEquipment(contract) &&
+        isBmeAdsEquipmentLabel(particular, equipmentName, rateMatch.serviceCode, snap.equipment)
+      ) {
+        continue;
+      }
       const aircraftBody = String(snap.aircraftBody ?? snap.AircraftBody ?? '');
       const flightCategory = String(
         snap.categoryOfFlight ?? snap.Cate_of_Flight ?? snap.flightCategory ?? '',
@@ -887,7 +902,9 @@ export class InvoiceEngineService {
         equipmentServiceCode,
         pricingBasis,
         flightKey,
-        equipmentKey: `${equipmentServiceCode.toLowerCase()}|${uom.toLowerCase()}|${billedUnitPrice}`,
+        equipmentKey: `${equipmentServiceCode.toLowerCase()}|${uom.toLowerCase()}|${billedUnitPrice}|${
+          isBmeAdsEquipmentLabel(particular, equipmentName) ? 'bme' : ''
+        }`,
         turnaroundCrew:
           isCrewCoachEquipmentLabel(particular) &&
           isTurnaroundFlightContext(snap, snap.flightNo ?? snap.flightNoEquipmentNo),
@@ -1706,6 +1723,8 @@ function contractFromPreparationRecord(
       ...(liveConditional ? fallback?.conditionalCharges ?? {} : {}),
     },
     adsBillingEnabled: fallback?.adsBillingEnabled,
+    billBmeEquipment: fallback?.billBmeEquipment === true,
+    stationFlightConcession: fallback?.stationFlightConcession ?? null,
     adsEquipmentRules: fallback?.adsEquipmentRules,
     aircraftTypes: fallback?.aircraftTypes,
   };

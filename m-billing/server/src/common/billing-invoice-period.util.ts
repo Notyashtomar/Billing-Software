@@ -1,3 +1,5 @@
+import { preparationFlightConcessionSector } from '../utils/station-flight-concession.util';
+
 /** Open invoice workflow states that can still absorb preparation rows for the same period. */
 export const OPEN_INVOICE_DRAFT_STATUSES = ['draft', 'pending_approval'] as const;
 
@@ -59,11 +61,14 @@ export function preparationInvoiceGroupKey(record: {
   billingPeriodStart?: Date | string;
   billingPeriodEnd?: Date | string;
   sourceType?: string;
+  operationalSnapshot?: Record<string, unknown> | null;
+  sourceRef?: { operationalSnapshot?: Record<string, unknown> | null } | null;
 }): string {
   const start = toYmd(record.billingPeriodStart);
   const end = toYmd(record.billingPeriodEnd);
   const category = preparationInvoiceCategory(record.sourceType);
-  return `${String(record.customerCode ?? '').toUpperCase()}|${start}|${end}|${category}`;
+  const sector = preparationFlightConcessionSector(record);
+  return `${String(record.customerCode ?? '').toUpperCase()}|${start}|${end}|${category}|${sector}`;
 }
 
 export function exactBillingPeriodMatch(

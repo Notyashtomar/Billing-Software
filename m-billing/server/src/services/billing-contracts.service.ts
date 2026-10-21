@@ -175,6 +175,7 @@ export class BillingContractsService {
           adsBillingEnabled:
             Boolean(dto.adsBillingEnabled) ||
             (dto.adsEquipmentRules?.length ?? 0) > 0,
+          billBmeEquipment: dto.billBmeEquipment === true,
           adsEquipmentRules: sanitizeContractAdsRules(dto.adsEquipmentRules),
           bhsVolumeSchedules: sanitizeBhsVolumeSchedules(dto.bhsVolumeSchedules),
           fortnightBillingEnabled: fortnightBilling.enabled,
@@ -322,8 +323,12 @@ export class BillingContractsService {
       doc.delayClause = legacy.delayClause;
     }
     if (dto.adsBillingEnabled !== undefined) doc.adsBillingEnabled = dto.adsBillingEnabled;
+    if (dto.billBmeEquipment !== undefined) {
+      doc.billBmeEquipment = dto.billBmeEquipment === true;
+    }
     if (dto.adsEquipmentRules !== undefined) {
       doc.adsEquipmentRules = sanitizeContractAdsRules(dto.adsEquipmentRules);
+      doc.markModified('adsEquipmentRules');
     }
     if (dto.contractPdfBase64 !== undefined) {
       if (!dto.contractPdfBase64) {

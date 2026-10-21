@@ -115,7 +115,7 @@ export interface BillingCustomer {
   annexures?: {
     ads?: BillingCustomerAnnexureFile;
     bhs?: BillingCustomerAnnexureFile;
-  };
+  } | null;
   active: boolean;
   createdAt: string;
   updatedAt: string;
@@ -329,6 +329,8 @@ export interface BillingContract {
   clauses?: BillingContractClause[];
   /** Enable ADS conditions — free/always-chargeable equipment rules. */
   adsBillingEnabled?: boolean;
+  /** When true, BME equipment is included on ADS invoices. Off leaves it unbilled. */
+  billBmeEquipment?: boolean;
   /** Per-equipment ADS free allowance and unit rates (synced to rate cards). */
   adsEquipmentRules?: BillingContractAdsEquipmentRule[];
   /** Uploaded signed contract PDF (base64) for preview/download. */

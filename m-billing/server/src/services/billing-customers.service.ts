@@ -89,7 +89,7 @@ function normalizeCustomerScheduleLines(
 function presentCustomer<T extends { annexures?: StoredCustomerAnnexures | null }>(doc: T) {
   return {
     ...doc,
-    annexures: publicCustomerAnnexures(doc.annexures),
+    annexures: publicCustomerAnnexures(doc.annexures) ?? null,
   };
 }
 

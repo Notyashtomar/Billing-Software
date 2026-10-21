@@ -50,6 +50,10 @@ import {
   BillingAircraftMaster,
   BillingAircraftMasterSchema,
 } from './billing-aircraft-master.schema';
+import {
+  BillingEquipmentMaster,
+  BillingEquipmentMasterSchema,
+} from './billing-equipment-master.schema';
 
 /** Registers all billing entities as discriminators on the single `billing` collection. */
 export const billingMongooseFeature = {
@@ -134,6 +138,11 @@ export const billingMongooseFeature = {
       name: BillingAircraftMaster.name,
       schema: BillingAircraftMasterSchema,
       value: BillingDocType.AircraftMaster,
+    },
+    {
+      name: BillingEquipmentMaster.name,
+      schema: BillingEquipmentMasterSchema,
+      value: BillingDocType.EquipmentMaster,
     },
   ],
 };

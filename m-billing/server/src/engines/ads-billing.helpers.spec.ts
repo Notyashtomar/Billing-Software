@@ -25,6 +25,19 @@ describe('ADS billing helpers', () => {
     expect(
       preparationInvoiceGroupKey({ ...base, sourceType: 'scheduled_flight' }),
     ).not.toEqual(preparationInvoiceGroupKey({ ...base, sourceType: 'ads' }));
+    expect(
+      preparationInvoiceGroupKey({
+        ...base,
+        sourceType: 'scheduled_flight',
+        operationalSnapshot: { categoryOfFlight: 'Domestic' },
+      }),
+    ).not.toEqual(
+      preparationInvoiceGroupKey({
+        ...base,
+        sourceType: 'scheduled_flight',
+        operationalSnapshot: { categoryOfFlight: 'International' },
+      }),
+    );
   });
 
   it('looks up wheelchair adhoc rate from tariff', () => {

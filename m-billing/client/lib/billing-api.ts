@@ -114,6 +114,26 @@ async function parseJsonWithFallback<T>(res: Response, fallback: T): Promise<T> 
   return data as T;
 }
 
+export type EquipmentMasterUomRecord = {
+  uom: string;
+  abbreviation: string;
+};
+
+export type EquipmentMasterRecord = {
+  _id: string;
+  itemNo: string;
+  description: string;
+  unitType: string;
+  uoms: EquipmentMasterUomRecord[];
+};
+
+export type EquipmentMasterWrite = {
+  itemNo?: string;
+  description?: string;
+  unitType?: string;
+  uoms?: EquipmentMasterUomRecord[];
+};
+
 function annexureFileNameFromDisposition(header: string | null, fallback: string): string {
   if (!header) return fallback;
   const encoded = /filename\*=UTF-8''([^;]+)/i.exec(header);
@@ -481,6 +501,28 @@ export function createBillingApi({ getApiBase, fetch }: BillingApiConfig) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       }).then((r) => parseJson<{ data: Array<Record<string, unknown>> }>(r)),
+
+    listEquipmentMaster: () =>
+      request('/billing/equipment-master').then((r) =>
+        parseJson<{ data: EquipmentMasterRecord[] }>(r),
+      ),
+
+    createEquipmentMaster: (body: EquipmentMasterWrite) =>
+      request('/billing/equipment-master', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      }).then((r) => parseJson<{ data: EquipmentMasterRecord }>(r)),
+
+    updateEquipmentMaster: (id: string, body: EquipmentMasterWrite) =>
+      request(`/billing/equipment-master/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      }).then((r) => parseJson<{ data: EquipmentMasterRecord }>(r)),
+
+    deleteEquipmentMaster: (id: string) =>
+      request(`/billing/equipment-master/${id}`, { method: 'DELETE' }).then((r) => parseJson(r)),
 
     listServiceCatalog: (params?: { category?: string; search?: string }) => {
       const qs = new URLSearchParams();

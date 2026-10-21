@@ -8,6 +8,7 @@ import {
   resolveLineAdditionalChargePercent,
   ferryKindFromFhrDocument,
   resolveLineConcessionPercent,
+  concessionTotalsFromSavedHeader,
   roundBillingMoney,
   roundCeilingConcessionTotal,
   roundCeilingRatePerFlight,
@@ -521,5 +522,23 @@ describe('ferryKindFromFhrDocument', () => {
       { concessionRates: { filoChargesPercent: 90, dom: 100 } },
     );
     expect(percent).toBe(90);
+  });
+});
+
+describe('PDF totals follow the saved invoice header', () => {
+  it('does not add a BHS ceiling on top of the amount shown on the invoice page', () => {
+    const totals = concessionTotalsFromSavedHeader({
+      currencyCode: 'INR',
+      subtotalExclTax: 1914514,
+      concessionFeePercent: 0,
+      concessionFeeAmount: 0,
+      taxTotal: 344612.52,
+      totalInclTax: 2259126.52,
+    });
+    expect(totals.concessionFeeAmount).toBe(0);
+    expect(totals.grossAmount).toBe(1914514);
+    expect(totals.cgstAmount).toBe(172306.26);
+    expect(totals.sgstAmount).toBe(172306.26);
+    expect(totals.totalInclTax).toBe(2259126.52);
   });
 });

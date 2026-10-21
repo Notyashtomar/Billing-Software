@@ -805,6 +805,98 @@ describe('InvoiceEngineService', () => {
     expect(composed.lines[0].quantity).toBe(2);
   });
 
+  it('ADS: leaves BME equipment off the invoice unless the contract toggle is on', async () => {
+    const contract = {
+      adsBillingEnabled: true,
+      aircraftTypes: ['A320'],
+      adsEquipmentRules: [
+        {
+          serviceCode: 'GPU-NB',
+          includedForAds: true,
+          unitPriceINR: 8000,
+          uom: 'Per Service',
+          aircraftTypes: ['A320'],
+          effectiveMonth: '2026-09',
+        },
+      ],
+    };
+    const records = [
+      {
+        _id: new Types.ObjectId(),
+        customerCode: 'VS',
+        customerName: 'Virgin Atlantic',
+        billingPeriodStart: new Date('2026-09-01'),
+        billingPeriodEnd: new Date('2026-09-30'),
+        sourceType: 'ads',
+        sourceRef: { serialNo: '1', usageRowId: '1:gpu-bme' },
+        operationalSnapshot: {
+          aircraftType: 'A320',
+          equipment_name: 'Ground Power Unit (BME)',
+          billingDateYmd: '2026-09-10',
+          adsParticular: 'Ground Power Unit (BME)',
+        },
+        rateMatch: {
+          serviceCode: 'GPU-NB',
+          unitPrice: 8000,
+          usedUnits: 1,
+          freeAllowance: 0,
+          particular: 'Ground Power Unit (BME)',
+          aircraftType: 'A320',
+          uom: 'Per Service',
+          pricingBasis: 'rate_card',
+        },
+      },
+      {
+        _id: new Types.ObjectId(),
+        customerCode: 'VS',
+        customerName: 'Virgin Atlantic',
+        billingPeriodStart: new Date('2026-09-01'),
+        billingPeriodEnd: new Date('2026-09-30'),
+        sourceType: 'ads',
+        sourceRef: { serialNo: '1', usageRowId: '1:gpu-140' },
+        operationalSnapshot: {
+          aircraftType: 'A320',
+          equipment_name: 'Ground Power Unit - 140KV',
+          billingDateYmd: '2026-09-10',
+          adsParticular: 'Ground Power Unit - 140KV',
+        },
+        rateMatch: {
+          serviceCode: 'GPU-NB',
+          unitPrice: 8000,
+          usedUnits: 2,
+          freeAllowance: 0,
+          particular: 'Ground Power Unit - 140KV',
+          aircraftType: 'A320',
+          uom: 'Per Service',
+          pricingBasis: 'rate_card',
+        },
+      },
+    ] as never;
+
+    const excluded = await service.composeFromPreparation(
+      {} as never,
+      records,
+      new Date('2026-09-01'),
+      'INR',
+      contract,
+    );
+    expect(excluded.lines.map((line) => line.description)).toEqual([
+      'Ground Power Unit - 140KV',
+    ]);
+
+    const included = await service.composeFromPreparation(
+      {} as never,
+      records,
+      new Date('2026-09-01'),
+      'INR',
+      { ...contract, billBmeEquipment: true },
+    );
+    expect(included.lines.map((line) => line.description).sort()).toEqual([
+      'Ground Power Unit (BME)',
+      'Ground Power Unit - 140KV',
+    ]);
+  });
+
   it('ADS: applies July contract rules when STA is DD/MM/YYYY', async () => {
     const contract = {
       adsBillingEnabled: true,

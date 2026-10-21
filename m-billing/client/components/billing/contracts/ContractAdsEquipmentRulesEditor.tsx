@@ -2,6 +2,7 @@
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, Plus, Trash2 } from 'lucide-react';
+import type { EquipmentMasterRecord } from '@/lib/billing-api';
 import type {
   BillingContractAdsEquipmentRule,
   BillingServiceCatalogItem,
@@ -9,6 +10,7 @@ import type {
 import { formatBillingDateRange } from '@/lib/billing-shared/billing-date-format';
 import { buildAdsUomOptions } from '@/lib/billing-shared/ads-uom-options';
 import {
+  adsCatalogServiceDisplayName,
   buildAdsContractCatalogOptions,
   inferCatalogMeta,
   resolveAdsContractCatalogValue,
@@ -31,6 +33,7 @@ type Props = {
   onChange: (rules: BillingContractAdsEquipmentRule[]) => void;
   aircraftTypes: string[];
   services: BillingServiceCatalogItem[];
+  equipmentMaster?: EquipmentMasterRecord[];
   validFrom?: string;
   validTo?: string;
   rateToInr?: number | null;
@@ -263,6 +266,7 @@ export function ContractAdsEquipmentRulesEditor({
   onChange,
   aircraftTypes,
   services,
+  equipmentMaster = [],
   validFrom = '',
   validTo = '',
   rateToInr = null,
@@ -293,6 +297,17 @@ export function ContractAdsEquipmentRulesEditor({
       });
     }
 
+    for (const item of equipmentMaster) {
+      const description = String(item.description ?? '').trim();
+      if (!description) continue;
+      const uom = (item.uoms ?? []).find((pair) => pair.uom?.trim())?.uom;
+      sources.push({
+        serviceCode: description,
+        uom,
+        category: 'equipment',
+      });
+    }
+
     for (const rule of displayRules) {
       const code = String(rule.serviceCode ?? '').trim();
       if (!code) continue;
@@ -304,7 +319,7 @@ export function ContractAdsEquipmentRulesEditor({
     }
 
     return buildAdsContractCatalogOptions(sources);
-  }, [services, displayRules]);
+  }, [services, displayRules, equipmentMaster]);
 
   const uomOptions = useMemo(
     () =>
@@ -312,9 +327,34 @@ export function ContractAdsEquipmentRulesEditor({
         services.map((s) => s.uom),
         adsServices.map((s) => s.uom),
         displayRules.map((r) => r.uom),
+        equipmentMaster.flatMap((item) => (item.uoms ?? []).map((pair) => pair.uom)),
       ),
-    [services, adsServices, displayRules],
+    [services, adsServices, displayRules, equipmentMaster],
   );
+
+  const uomsForEquipment = (serviceCode: string | undefined) => {
+    const names = new Set(
+      [serviceCode ?? '', adsCatalogServiceDisplayName(serviceCode ?? '')]
+        .map((value) => value.trim().toLowerCase())
+        .filter(Boolean),
+    );
+    const pairs = new Map<string, { uom: string; abbreviation: string }>();
+    for (const item of equipmentMaster) {
+      const keys = [item.description, item.itemNo]
+        .map((value) => String(value ?? '').trim().toLowerCase())
+        .filter(Boolean);
+      if (!keys.some((key) => names.has(key))) continue;
+      for (const pair of item.uoms ?? []) {
+        const uom = String(pair.uom ?? '').trim();
+        if (!uom || pairs.has(uom.toLowerCase())) continue;
+        pairs.set(uom.toLowerCase(), {
+          uom,
+          abbreviation: String(pair.abbreviation ?? '').trim(),
+        });
+      }
+    }
+    return [...pairs.values()];
+  };
 
   const [duplicateError, setDuplicateError] = useState('');
 
@@ -387,11 +427,12 @@ export function ContractAdsEquipmentRulesEditor({
     }
     setDuplicateError('');
     const selected = adsServices.find((s) => s.value === serviceCode);
+    const equipmentUom = uomsForEquipment(serviceCode)[0]?.uom;
     const wheelchair = isWheelchairAdsService(serviceCode);
     const current = displayRules[index];
     updateRule(index, {
       serviceCode,
-      uom: selected?.uom?.trim() || current?.uom || 'EA',
+      uom: equipmentUom || selected?.uom?.trim() || current?.uom || 'EA',
       ...(wheelchair
         ? {
             freePerFlightNb: current?.freePerFlightNb ?? current?.freePerFlight ?? 0,
@@ -422,7 +463,7 @@ export function ContractAdsEquipmentRulesEditor({
           <p className="mt-0.5 text-xs text-gray-600">
             Equipment lines apply for the whole contract window{' '}
             <strong>{validityLabel}</strong>. Charge uses the UOM saved on each line.
-            Anything not listed is not charged on ADS.
+            Only rows ticked under Charge on ADS are invoiced. Anything unticked or not listed is left off the ADS invoice.
           </p>
           {roeHint ? (
             <p
@@ -458,7 +499,7 @@ export function ContractAdsEquipmentRulesEditor({
               className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
             >
               <Plus className="h-4 w-4" aria-hidden />
-              Add equipment rule
+              Add equipment
             </button>
           </div>
           {duplicateError ? (
@@ -478,6 +519,12 @@ export function ContractAdsEquipmentRulesEditor({
                       Wheelchairs: NB + WB
                     </span>
                   </th>
+                  <th className="sticky top-0 z-30 border-b border-gray-200 bg-gray-50 px-3 py-2">
+                    Charge on ADS
+                    <span className="mt-0.5 block text-[10px] font-normal normal-case tracking-normal text-gray-500">
+                      Only ticked rows are invoiced
+                    </span>
+                  </th>
                   <th className="sticky top-0 z-30 border-b border-gray-200 bg-gray-50 px-3 py-2">Always bill</th>
                   <th className="sticky top-0 z-30 border-b border-gray-200 bg-gray-50 px-3 py-2">UOM</th>
                   <th className="sticky top-0 z-30 border-b border-gray-200 bg-gray-50 px-3 py-2">INR</th>
@@ -489,7 +536,7 @@ export function ContractAdsEquipmentRulesEditor({
               <tbody className="divide-y divide-gray-100">
                 {displayRules.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-3 py-4 text-center text-xs text-gray-500">
+                    <td colSpan={9} className="px-3 py-4 text-center text-xs text-gray-500">
                       No equipment rules yet for this validity period.
                     </td>
                   </tr>
@@ -582,6 +629,18 @@ export function ContractAdsEquipmentRulesEditor({
                       <td className="px-3 py-2">
                         <input
                           type="checkbox"
+                          checked={rule.includedForAds !== false}
+                          disabled={disabled}
+                          onChange={(e) =>
+                            updateRule(index, { includedForAds: e.target.checked })
+                          }
+                          aria-label={`Charge on ADS row ${index + 1}`}
+                          className="h-4 w-4 rounded border-gray-300 text-[color:var(--billing-accent)] focus:ring-[color:var(--billing-accent)]"
+                        />
+                      </td>
+                      <td className="px-3 py-2">
+                        <input
+                          type="checkbox"
                           checked={Boolean(rule.alwaysChargeable)}
                           disabled={disabled}
                           onChange={(e) =>
@@ -608,12 +667,30 @@ export function ContractAdsEquipmentRulesEditor({
                           value={rule.uom ?? ''}
                           disabled={disabled}
                           onChange={(e) => updateRule(index, { uom: e.target.value || undefined })}
-                          className="min-w-[10rem] max-w-[14rem] rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+                          className="min-w-[10rem] max-w-[16rem] rounded-md border border-gray-300 px-2 py-1.5 text-sm"
                         >
                           <option value="">Select UOM</option>
-                          {uomOptions.map((uom) => (
-                            <option key={uom} value={uom}>
-                              {uom}
+                          {(uomsForEquipment(rule.serviceCode).length > 0
+                            ? (() => {
+                                const pairs = uomsForEquipment(rule.serviceCode);
+                                const current = String(rule.uom ?? '').trim();
+                                if (
+                                  current &&
+                                  !pairs.some((pair) => pair.uom.toLowerCase() === current.toLowerCase())
+                                ) {
+                                  pairs.unshift({ uom: current, abbreviation: '' });
+                                }
+                                return pairs.map((pair) => ({
+                                  value: pair.uom,
+                                  label: pair.abbreviation
+                                    ? `${pair.uom} (${pair.abbreviation})`
+                                    : pair.uom,
+                                }));
+                              })()
+                            : uomOptions.map((uom) => ({ value: uom, label: uom }))
+                          ).map((choice) => (
+                            <option key={choice.value} value={choice.value}>
+                              {choice.label}
                             </option>
                           ))}
                         </select>
