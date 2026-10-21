@@ -936,9 +936,10 @@ const Navbar: React.FC = () => {
   const handleLogout = useCallback(async () => {
     setActiveDropdown(null);
     setIsOpen(false);
+    const returnToBillingLogin = billingNavbarChrome;
     await logoutFrisToStationMap();
-    window.location.replace('/?skipIntro=1');
-  }, []);
+    window.location.replace(returnToBillingLogin ? '/billing/login' : '/?skipIntro=1');
+  }, [billingNavbarChrome]);
 
   // Close menus on navigation. Tab highlight uses isNavItemActive — do not
   // re-open the panel just because the route matches a dropdown child.
