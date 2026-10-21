@@ -83,12 +83,14 @@ export function InvoiceLinesEditForm({
   const [concessionPercent, setConcessionPercent] = useState(
     seedConcession != null && Number.isFinite(Number(seedConcession)) ? String(seedConcession) : '',
   );
+  const [selectedLineNos, setSelectedLineNos] = useState<Set<number>>(() => new Set());
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
     setLines(seedLines);
     setRemovedLineNos([]);
+    setSelectedLineNos(new Set());
     setConcessionPercent(
       seedConcession != null && Number.isFinite(Number(seedConcession)) ? String(seedConcession) : '',
     );
@@ -107,6 +109,45 @@ export function InvoiceLinesEditForm({
     if (!window.confirm(`Remove ${label} from this invoice? It is deleted when you save.`)) return;
     setRemovedLineNos((prev) => (prev.includes(line.lineNo) ? prev : [...prev, line.lineNo]));
     setLines((prev) => prev.filter((_, i) => i !== index));
+    setSelectedLineNos((prev) => {
+      if (!prev.has(line.lineNo)) return prev;
+      const next = new Set(prev);
+      next.delete(line.lineNo);
+      return next;
+    });
+    setError('');
+  };
+
+  const selectedCount = lines.filter((line) => selectedLineNos.has(line.lineNo)).length;
+  const allSelected = lines.length > 0 && selectedCount === lines.length;
+
+  const toggleLine = (lineNo: number) => {
+    setSelectedLineNos((prev) => {
+      const next = new Set(prev);
+      if (next.has(lineNo)) next.delete(lineNo);
+      else next.add(lineNo);
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    setSelectedLineNos(allSelected ? new Set() : new Set(lines.map((line) => line.lineNo)));
+  };
+
+  const removeSelected = () => {
+    const chosen = lines.filter((line) => selectedLineNos.has(line.lineNo));
+    if (chosen.length === 0) return;
+    if (
+      !window.confirm(
+        `Remove ${chosen.length} particular${chosen.length === 1 ? '' : 's'} from this invoice? They are deleted when you save.`,
+      )
+    ) {
+      return;
+    }
+    const chosenNos = new Set(chosen.map((line) => line.lineNo));
+    setRemovedLineNos((prev) => [...new Set([...prev, ...chosenNos])]);
+    setLines((prev) => prev.filter((line) => !chosenNos.has(line.lineNo)));
+    setSelectedLineNos(new Set());
     setError('');
   };
 
@@ -182,7 +223,7 @@ export function InvoiceLinesEditForm({
       <div>
         <h3 className="text-sm font-semibold text-gray-900">Edit invoice particulars</h3>
         <p className="mt-0.5 text-xs text-gray-600">
-          Adjust particulars, quantities, and rates. Use the delete icon to remove a line. Tax and invoice totals update on save.
+          Adjust particulars, quantities, and rates. Select rows to delete several at once, or use the delete icon for one line. Tax and invoice totals update on save.
         </p>
       </div>
 
@@ -205,10 +246,31 @@ export function InvoiceLinesEditForm({
         </span>
       </label>
 
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={removeSelected}
+          disabled={saving || selectedCount === 0}
+          className="rounded-md border border-red-200 bg-white px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-40"
+        >
+          Delete selected{selectedCount > 0 ? ` (${selectedCount})` : ''}
+        </button>
+      </div>
+
       <div className="overflow-x-auto">
         <table className="min-w-full border-collapse text-left text-xs sm:text-sm">
           <thead>
             <tr className="border-b border-sky-200/80 text-[11px] uppercase tracking-wide text-gray-500">
+              <th className="w-10 px-2 py-2 font-medium">
+                <input
+                  type="checkbox"
+                  checked={allSelected}
+                  onChange={toggleAll}
+                  disabled={saving || lines.length === 0}
+                  aria-label="Select all particulars"
+                  className="h-4 w-4 rounded border-gray-300"
+                />
+              </th>
               <th className="px-2 py-2 font-medium">Line</th>
               <th className="px-2 py-2 font-medium">Particulars</th>
               {lines.some((l) => l.showUsed) ? (
@@ -226,6 +288,16 @@ export function InvoiceLinesEditForm({
           <tbody>
             {lines.map((line, index) => (
               <tr key={line.lineNo} className="border-b border-sky-100/80 align-top">
+                <td className="px-2 py-2">
+                  <input
+                    type="checkbox"
+                    checked={selectedLineNos.has(line.lineNo)}
+                    onChange={() => toggleLine(line.lineNo)}
+                    disabled={saving}
+                    aria-label={`Select ${line.description.trim() || `line ${line.lineNo}`}`}
+                    className="h-4 w-4 rounded border-gray-300"
+                  />
+                </td>
                 <td className="px-2 py-2 text-gray-500">{line.lineNo}</td>
                 <td className="px-2 py-2">
                   <input
