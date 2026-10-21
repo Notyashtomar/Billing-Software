@@ -823,6 +823,7 @@ html[data-billing-night] .billing-app [class*='bg-[#f4f6f3]'],
 html[data-billing-night] .billing-app [class*='bg-[#f7faf7]'],
 html[data-billing-night] .billing-app [class*='bg-[#f3f5f2]'],
 html[data-billing-night] .billing-app [class*='bg-[#eef0ec]'],
+html[data-billing-night] .billing-app [class*='bg-[#eef1ec]'],
 html[data-billing-night] .billing-app [class*='bg-[#e7f6ea]'] {
   background-color: #242733 !important;
 }

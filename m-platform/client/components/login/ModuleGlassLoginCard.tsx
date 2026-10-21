@@ -71,6 +71,8 @@ export type ModuleGlassLoginCardProps = {
   headerExtra?: ReactNode;
   /** Shrink spacing so the card fits a laptop viewport without scrolling. */
   compact?: boolean;
+  /** Quieter billing card. Other module logins stay on the default glass. */
+  refined?: boolean;
 };
 
 function resolveLoginCompanyLogo(station: StationSlot): {
@@ -122,6 +124,7 @@ export default function ModuleGlassLoginCard({
   onSubmit,
   onForgotPassword,
   compact = false,
+  refined = false,
 }: ModuleGlassLoginCardProps) {
   const employeeIdField = useId();
   const passwordField = useId();
@@ -159,12 +162,14 @@ export default function ModuleGlassLoginCard({
 
   return (
     <div
-      className={`w-full max-w-[460px] rounded-[1.35rem] border bg-[rgba(8,12,28,0.72)] shadow-[0_0_0_1px_rgba(255,255,255,0.04),0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-xl ${
-        compact ? 'p-4 sm:p-5' : 'p-6 sm:p-8'
+      className={`w-full border ${
+        refined ? 'max-w-[420px] rounded-2xl bg-[rgba(10,14,24,0.42)] p-6 backdrop-blur-md sm:p-7' : `max-w-[460px] rounded-[1.35rem] bg-[rgba(8,12,28,0.72)] shadow-[0_0_0_1px_rgba(255,255,255,0.04),0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-xl ${compact ? 'p-4 sm:p-5' : 'p-6 sm:p-8'}`
       }`}
       style={{
-        borderColor: theme.cardBorder,
-        boxShadow: `0 0 0 1px ${theme.cardBorder}, 0 0 40px ${theme.accentMuted}, 0 24px 80px rgba(0,0,0,0.45)`,
+        borderColor: refined ? 'rgba(255,255,255,0.12)' : theme.cardBorder,
+        boxShadow: refined
+          ? '0 24px 60px rgba(0,0,0,0.45)'
+          : `0 0 0 1px ${theme.cardBorder}, 0 0 40px ${theme.accentMuted}, 0 24px 80px rgba(0,0,0,0.45)`,
       }}
     >
       <div className="text-center">
@@ -185,10 +190,12 @@ export default function ModuleGlassLoginCard({
           </div>
         ) : null}
         <h1
-          className={`font-bold uppercase tracking-[0.12em] ${
-            compact ? 'text-xl sm:text-2xl' : 'text-[1.75rem] sm:text-[2rem]'
+          className={`font-semibold ${
+            refined
+              ? 'text-[1.65rem] tracking-tight text-white'
+              : `font-bold uppercase tracking-[0.12em] ${compact ? 'text-xl sm:text-2xl' : 'text-[1.75rem] sm:text-[2rem]'}`
           }`}
-          style={{ color: theme.accent }}
+          style={refined ? undefined : { color: theme.accent }}
         >
           {title}
         </h1>
@@ -234,7 +241,7 @@ export default function ModuleGlassLoginCard({
           <div className="mb-1.5 flex items-center justify-between gap-2">
             <label
               htmlFor={employeeIdField}
-              className="inline-flex items-center gap-1.5 text-sm font-semibold uppercase tracking-wider text-white"
+              className={refined ? 'inline-flex items-center gap-1.5 text-[13px] font-medium text-white/85' : 'inline-flex items-center gap-1.5 text-sm font-semibold uppercase tracking-wider text-white'}
             >
               <User className="size-4 opacity-80" aria-hidden />
               Employee ID
@@ -276,7 +283,7 @@ export default function ModuleGlassLoginCard({
           <div className="mb-1.5 flex items-center justify-between gap-2">
             <label
               htmlFor={passwordField}
-              className="inline-flex items-center gap-1.5 text-sm font-semibold uppercase tracking-wider text-white"
+              className={refined ? 'inline-flex items-center gap-1.5 text-[13px] font-medium text-white/85' : 'inline-flex items-center gap-1.5 text-sm font-semibold uppercase tracking-wider text-white'}
             >
               <Lock className="size-4 opacity-80" aria-hidden />
               Password
@@ -375,8 +382,8 @@ export default function ModuleGlassLoginCard({
         <button
           type="submit"
           disabled={isLoading || submitDisabled}
-          className={`inline-flex w-full items-center justify-center gap-2 rounded-full px-4 font-bold uppercase tracking-[0.14em] transition active:scale-[0.98] disabled:opacity-55 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 ${
-            compact ? 'py-2.5 text-sm' : 'py-4 text-base'
+          className={`inline-flex w-full items-center justify-center gap-2 px-4 font-semibold transition active:scale-[0.99] disabled:opacity-55 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 ${
+            refined ? 'rounded-xl py-3 text-sm tracking-wide' : `rounded-full font-bold uppercase tracking-[0.14em] ${compact ? 'py-2.5 text-sm' : 'py-4 text-base'}`
           }`}
           style={{
             background: theme.accent,

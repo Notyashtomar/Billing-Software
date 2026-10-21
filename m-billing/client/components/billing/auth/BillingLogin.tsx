@@ -36,7 +36,6 @@ import {
   isSafeRelativeRedirect,
 } from '@/lib/fris-route-permissions';
 import { parseUserNavFlags, type UserNavFlags } from '@/lib/nav-permissions';
-import BillingLoginBurst from './BillingLoginBurst';
 
 const REMEMBER_KEY = 'billing.rememberUserId';
 const BILLING_DESTINATION = '/billing/dashboard';
@@ -342,7 +341,16 @@ export default function BillingLogin() {
       className="relative flex h-dvh flex-col overflow-hidden"
       style={{ background: BILLING_SURFACE_DARK }}
     >
-      <BillingLoginBurst />
+      <video
+        className="pointer-events-none absolute inset-0 z-0 h-full w-full object-cover"
+        autoPlay
+        muted
+        loop
+        playsInline
+        aria-hidden
+        src="/login/ground-handling.mp4"
+      />
+      <div className="pointer-events-none absolute inset-0 z-0 bg-[#070b16]/30" aria-hidden />
 
       <header className="relative z-10 flex shrink-0 items-center justify-between px-4 py-2 sm:px-6">
         <Link
@@ -360,9 +368,9 @@ export default function BillingLogin() {
         </div>
       </header>
 
-      <main className="relative z-10 flex min-h-0 flex-1 items-center justify-center overflow-hidden px-4 py-2">
+      <main className="relative z-10 flex min-h-0 flex-1 items-center justify-start overflow-hidden py-2 pl-6 pr-4 sm:pl-12 lg:pl-20">
         <ModuleGlassLoginCard
-          compact
+          refined
           theme={BILLING_GLASS_THEME}
           title="Billing Login"
           subtitle="Access your account securely"

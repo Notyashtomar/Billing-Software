@@ -247,13 +247,14 @@ export function ExecutiveDashboard() {
     : ['This month', 'Last month', 'This quarter'];
 
   return (
-    <div className="-m-3 min-h-[calc(100dvh-4.5rem)] bg-[#f4f6f3] px-4 py-4 text-[#1c2430] sm:-m-6 sm:px-6">
-        <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
+    <div className="-m-3 min-h-[calc(100dvh-4.5rem)] bg-[#eef1ec] px-4 py-5 text-[#1c2430] sm:-m-6 sm:px-6">
+        <header className="mb-5 flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Executive</h1>
-            <p className="text-sm text-[#667066]">Billing performance for station leadership</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#1f8a3b]">Station leadership</p>
+            <h1 className="mt-1 text-[1.75rem] font-semibold tracking-tight">Executive</h1>
+            <p className="mt-0.5 text-sm text-[#667066]">Billing performance for station leadership</p>
           </div>
-          <label className="relative inline-flex cursor-pointer items-center gap-2 rounded-lg border border-[#e1e4de] bg-white px-3 py-2 text-sm text-[#3d463f] shadow-sm transition hover:-translate-y-0.5 hover:border-[#1f8a3b] hover:shadow-md">
+          <label className="relative inline-flex cursor-pointer items-center gap-2 rounded-xl border border-[#e1e4de] bg-white px-3.5 py-2 text-sm font-medium text-[#3d463f] shadow-[0_1px_2px_rgba(16,24,16,0.04)] transition hover:border-[#1f8a3b]">
             <span>{selectedMonthLabel}</span>
             <Calendar className="h-4 w-4" />
             <input
@@ -271,7 +272,7 @@ export function ExecutiveDashboard() {
           </label>
         </header>
 
-        <div className="mb-3 flex flex-wrap items-end gap-3 rounded-xl border border-[#e6e8e3] bg-white p-3 shadow-sm transition-shadow hover:shadow-md">
+        <div className="mb-3 flex flex-wrap items-end gap-3 rounded-2xl border border-[#e4e7e1] bg-white p-3.5 shadow-[0_1px_2px_rgba(16,24,16,0.04)]">
           <Filter
             label="Period"
             value={pickedMonth ? formatMonthValue(pickedMonth) : period}
@@ -337,10 +338,10 @@ export function ExecutiveDashboard() {
             }
             positive={(metrics?.flights ?? 0) - (metrics?.previousFlights ?? 0) >= 0}
           />
-          <article className="flex min-h-[7.5rem] flex-col justify-between rounded-xl border border-[#e6e8e3] bg-white p-4 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md">
+          <article className="flex min-h-[7.5rem] flex-col justify-between rounded-2xl border border-[#e4e7e1] bg-white p-4 shadow-[0_1px_2px_rgba(16,24,16,0.04)] transition duration-200 hover:shadow-[0_8px_24px_rgba(16,24,16,0.06)]">
             <p className="text-xs font-medium tracking-wide text-[#667066]">BILLING COMPLETION</p>
             <div>
-              <p className="text-2xl font-semibold">{metrics ? `${metrics.completionPercent}%` : '—'}</p>
+              <p className="text-[1.65rem] font-semibold tabular-nums tracking-tight">{metrics ? `${metrics.completionPercent}%` : '—'}</p>
               <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#e7f6ea]">
                 <div
                   className="h-full rounded-full bg-[#1f8a3b] transition-all duration-700"
@@ -354,10 +355,10 @@ export function ExecutiveDashboard() {
               </p>
             </div>
           </article>
-          <article className="flex min-h-[7.5rem] flex-col justify-between rounded-xl border border-[#e6e8e3] bg-white p-4 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md">
+          <article className="flex min-h-[7.5rem] flex-col justify-between rounded-2xl border border-[#e4e7e1] bg-white p-4 shadow-[0_1px_2px_rgba(16,24,16,0.04)] transition duration-200 hover:shadow-[0_8px_24px_rgba(16,24,16,0.06)]">
             <p className="text-xs font-medium tracking-wide text-[#667066]">ADDITIONAL SERVICES</p>
             <div className="flex items-end justify-between">
-              <p className="text-2xl font-semibold">
+              <p className="text-[1.65rem] font-semibold tabular-nums tracking-tight">
                 {metrics ? formatInr(service === 'BHS' || service === 'RAF' ? 0 : metrics.additionalExclTax) : '—'}
               </p>
               <span className="grid h-7 w-7 place-items-center rounded-full border border-[#d7ddd4] text-[#1f8a3b]">
@@ -365,20 +366,20 @@ export function ExecutiveDashboard() {
               </span>
             </div>
           </article>
-          <article className="flex min-h-[7.5rem] flex-col justify-between rounded-xl border border-[#e6e8e3] bg-white p-4 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md">
+          <article className="flex min-h-[7.5rem] flex-col justify-between rounded-2xl border border-[#e4e7e1] bg-white p-4 shadow-[0_1px_2px_rgba(16,24,16,0.04)] transition duration-200 hover:shadow-[0_8px_24px_rgba(16,24,16,0.06)]">
             <div className="flex items-center justify-between">
               <p className="text-xs font-medium tracking-wide text-[#667066]">INVOICED INCL. GST</p>
               <Info className="h-4 w-4 text-[#8b9388]" />
             </div>
             <div>
-              <p className="text-2xl font-semibold">{metrics ? formatInr(metrics.invoicedInclTax) : '—'}</p>
+              <p className="text-[1.65rem] font-semibold tabular-nums tracking-tight">{metrics ? formatInr(metrics.invoicedInclTax) : '—'}</p>
               <p className="mt-1 text-xs text-[#8b9388]">Amount on generated bills</p>
             </div>
           </article>
         </div>
 
         <div className="mt-3 grid items-stretch gap-3 lg:grid-cols-2">
-          <article className="flex h-full flex-col rounded-xl border border-[#e6e8e3] bg-white p-4 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md">
+          <article className="flex h-full flex-col rounded-2xl border border-[#e4e7e1] bg-white p-4 shadow-[0_1px_2px_rgba(16,24,16,0.04)] transition duration-200 hover:shadow-[0_8px_24px_rgba(16,24,16,0.06)]">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
               <h2 className="text-base font-semibold">Revenue trend</h2>
               <div className="flex items-center gap-3">
@@ -431,7 +432,7 @@ export function ExecutiveDashboard() {
             {trend.length === 0 ? <p className="text-sm text-[#8b9388]">No invoice history for this station yet.</p> : null}
           </article>
 
-          <article className="flex h-full flex-col rounded-xl border border-[#e6e8e3] bg-white p-4 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md">
+          <article className="flex h-full flex-col rounded-2xl border border-[#e4e7e1] bg-white p-4 shadow-[0_1px_2px_rgba(16,24,16,0.04)] transition duration-200 hover:shadow-[0_8px_24px_rgba(16,24,16,0.06)]">
             <h2 className="text-base font-semibold">Versus {metrics?.compareLabel ?? 'previous month'}</h2>
             <dl className="mt-4 space-y-3 text-sm">
               <Row label="This period" value={metrics ? formatInr(metrics.grossExclTax) : '—'} />
@@ -461,7 +462,7 @@ export function ExecutiveDashboard() {
             </p>
           </article>
 
-          <article className="flex h-full flex-col rounded-xl border border-[#e6e8e3] bg-white p-4 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md">
+          <article className="flex h-full flex-col rounded-2xl border border-[#e4e7e1] bg-white p-4 shadow-[0_1px_2px_rgba(16,24,16,0.04)] transition duration-200 hover:shadow-[0_8px_24px_rgba(16,24,16,0.06)]">
             <h2 className="text-base font-semibold">Service mix</h2>
             <p className="mt-1 text-sm text-[#667066]">Share of gross revenue by billed service.</p>
             <ul className="mt-4 space-y-3">
@@ -487,7 +488,7 @@ export function ExecutiveDashboard() {
             </p>
           </article>
 
-          <article className="flex h-full flex-col rounded-xl border border-[#e6e8e3] bg-white p-4 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md">
+          <article className="flex h-full flex-col rounded-2xl border border-[#e4e7e1] bg-white p-4 shadow-[0_1px_2px_rgba(16,24,16,0.04)] transition duration-200 hover:shadow-[0_8px_24px_rgba(16,24,16,0.06)]">
             <h2 className="text-base font-semibold">Airline concentration</h2>
             <p className="mt-1 text-sm text-[#667066]">How much of gross revenue sits with the largest airlines.</p>
             <ul className="mt-4 space-y-3">
@@ -517,7 +518,7 @@ export function ExecutiveDashboard() {
           </article>
         </div>
 
-        <article className="mt-3 rounded-xl border border-[#e6e8e3] bg-white shadow-sm transition duration-200 hover:shadow-md">
+        <article className="mt-3 rounded-2xl border border-[#e4e7e1] bg-white shadow-[0_1px_2px_rgba(16,24,16,0.04)]">
           <h2 className="border-b border-[#eef0ec] px-4 py-3 text-base font-semibold">Attention</h2>
           <ul>
             {attention.map((item) => (
@@ -594,11 +595,11 @@ function Kpi({
   positive: boolean;
 }) {
   return (
-    <article className="flex min-h-[7.5rem] flex-col justify-between rounded-xl border border-[#e6e8e3] bg-white p-4 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md">
+    <article className="flex min-h-[7.5rem] flex-col justify-between rounded-2xl border border-[#e4e7e1] bg-white p-4 shadow-[0_1px_2px_rgba(16,24,16,0.04)] transition duration-200 hover:shadow-[0_8px_24px_rgba(16,24,16,0.06)]">
       <p className="text-xs font-medium tracking-wide text-[#667066]">{title.toUpperCase()}</p>
       <div className="mt-2 flex items-end justify-between gap-2">
         <div>
-          <p className="text-2xl font-semibold">{value}</p>
+          <p className="text-[1.65rem] font-semibold tabular-nums tracking-tight">{value}</p>
           <p className={`mt-1 text-sm ${positive ? 'text-[#16803c]' : 'text-[#b91c1c]'}`}>{delta}</p>
         </div>
         <Sparkline up={positive} />
@@ -618,9 +619,9 @@ function Row({
 }) {
   const color = tone === 'positive' ? 'text-[#16803c]' : tone === 'negative' ? 'text-[#b91c1c]' : 'text-[#1c2430]';
   return (
-    <div className="flex items-center justify-between gap-3">
+    <div className="flex items-center justify-between gap-3 border-b border-[#eef0ec] pb-3">
       <dt className="text-[#667066]">{label}</dt>
-      <dd className={`font-medium ${color}`}>{value}</dd>
+      <dd className={`font-medium tabular-nums ${color}`}>{value}</dd>
     </div>
   );
 }
