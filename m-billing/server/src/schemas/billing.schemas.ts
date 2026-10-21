@@ -106,6 +106,38 @@ export class BillingCustomer {
   @Prop({ trim: true, uppercase: true })
   vatNumber?: string;
 
+  /** Airline annexure PDFs, one file each for ADS and BHS invoices. */
+  @Prop({
+    type: {
+      ads: {
+        fileKey: { type: String, trim: true },
+        originalName: { type: String, trim: true },
+        mimeType: { type: String, trim: true },
+        uploadedAt: { type: Date },
+      },
+      bhs: {
+        fileKey: { type: String, trim: true },
+        originalName: { type: String, trim: true },
+        mimeType: { type: String, trim: true },
+        uploadedAt: { type: Date },
+      },
+    },
+  })
+  annexures?: {
+    ads?: {
+      fileKey: string;
+      originalName: string;
+      mimeType?: string;
+      uploadedAt?: Date;
+    };
+    bhs?: {
+      fileKey: string;
+      originalName: string;
+      mimeType?: string;
+      uploadedAt?: Date;
+    };
+  };
+
   @Prop({ default: true })
   active: boolean;
 }

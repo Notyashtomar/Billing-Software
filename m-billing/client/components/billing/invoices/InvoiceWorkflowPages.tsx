@@ -17,6 +17,8 @@ import { StatusBadge } from '../StatusBadge';
 import { InvoiceHeaderActionButtons } from './InvoiceHeaderActionButtons';
 import { InvoiceViewPdfButton } from './InvoiceViewPdfButton';
 import { InvoiceViewAnnexureButton, invoiceShowsAdsAnnexure } from './InvoiceViewAnnexureButton';
+import { InvoiceCustomerAnnexureButton } from './InvoiceCustomerAnnexureButton';
+import { savedAnnexureForInvoice, type CustomerAnnexures } from './customerAnnexure';
 import { InvoiceSamplePdfButton } from './InvoiceSamplePdfButton';
 import { InvoiceDeleteDialog } from './InvoiceDeleteDialog';
 import { InvoiceBinDialog } from './InvoiceBinDialog';
@@ -290,6 +292,9 @@ function InvoiceCalculationDetails({
   splitting,
   onToggleSeparateLine,
   onCreateSeparateBill,
+  uploadedAnnexure,
+  openingAnnexure,
+  onOpenAnnexure,
 }: {
   header: BillingInvoiceHeader;
   lines: InvoiceLineItem[];
@@ -297,6 +302,9 @@ function InvoiceCalculationDetails({
   splitting?: boolean;
   onToggleSeparateLine?: (lineNo: number) => void;
   onCreateSeparateBill?: () => void;
+  uploadedAnnexure?: { category: string; fileName: string } | null;
+  openingAnnexure?: boolean;
+  onOpenAnnexure?: () => void;
 }) {
   const currency = header.currencyCode === 'USD' ? 'USD' : 'INR';
   const usdReceivable = currency === 'USD' && Boolean(header.totalReceivableInUsd);
@@ -330,7 +338,14 @@ function InvoiceCalculationDetails({
           ) : null}
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-2">
-          {showAdsAnnexure ? (
+          {uploadedAnnexure && onOpenAnnexure ? (
+            <InvoiceCustomerAnnexureButton
+              compact
+              busy={openingAnnexure}
+              title={`Open the ${uploadedAnnexure.category} annexure — ${uploadedAnnexure.fileName}`}
+              onClick={onOpenAnnexure}
+            />
+          ) : showAdsAnnexure ? (
             <InvoiceViewAnnexureButton compact customerCode={header.customerCode} />
           ) : null}
           {canSeparateAds ? (
@@ -2346,7 +2361,12 @@ export function InvoiceDetailPage({ api, id }: Props & { id: string }) {
     lines?: Array<Record<string, unknown>>;
     auditTrail?: Array<Record<string, unknown>>;
     preparationRecords?: BillingPreparationRecord[];
-    customerMaster?: { name?: string; address?: string; gstRegistrationNo?: string };
+    customerMaster?: {
+      name?: string;
+      address?: string;
+      gstRegistrationNo?: string;
+      annexures?: CustomerAnnexures;
+    };
   } | null>(null);
   const [tab, setTab] = useState(() => {
     const edit = searchParams.get('edit');
@@ -2368,6 +2388,7 @@ export function InvoiceDetailPage({ api, id }: Props & { id: string }) {
   const [regenerating, setRegenerating] = useState(false);
   const [separateAdsLineNos, setSeparateAdsLineNos] = useState<Set<number>>(new Set());
   const [splittingAds, setSplittingAds] = useState(false);
+  const [openingAnnexure, setOpeningAnnexure] = useState(false);
   const [masterExchangeRate, setMasterExchangeRate] = useState<number | null>(null);
 
   const reload = useCallback(async () => {
@@ -2474,6 +2495,25 @@ export function InvoiceDetailPage({ api, id }: Props & { id: string }) {
       setMsg(e instanceof Error ? e.message : 'PDF export failed');
     } finally {
       setExporting(false);
+    }
+  };
+
+  const uploadedAnnexure = savedAnnexureForInvoice(
+    header?.invoiceCategory,
+    detail?.customerMaster?.annexures,
+  );
+
+  const handleOpenAnnexure = async () => {
+    if (!header || !uploadedAnnexure) return;
+    setOpeningAnnexure(true);
+    setMsg('');
+    try {
+      await api.openCustomerAnnexure(header.customerCode, uploadedAnnexure.category);
+      setMsg('Annexure opened in a new tab.');
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : 'Could not open annexure');
+    } finally {
+      setOpeningAnnexure(false);
     }
   };
 
@@ -2774,7 +2814,13 @@ export function InvoiceDetailPage({ api, id }: Props & { id: string }) {
                   disabledTitle={rafPdfHint}
                   onView={() => void handleViewPdf()}
                 />
-                {showAdsAnnexure ? (
+                {uploadedAnnexure ? (
+                  <InvoiceCustomerAnnexureButton
+                    busy={openingAnnexure}
+                    title={`Open the ${uploadedAnnexure.category} annexure — ${uploadedAnnexure.file.originalName}`}
+                    onClick={() => void handleOpenAnnexure()}
+                  />
+                ) : showAdsAnnexure ? (
                   <InvoiceViewAnnexureButton customerCode={header.customerCode} />
                 ) : null}
                 <InvoiceHeaderActionButtons
@@ -3018,6 +3064,16 @@ export function InvoiceDetailPage({ api, id }: Props & { id: string }) {
             splitting={splittingAds}
             onToggleSeparateLine={toggleSeparateAdsLine}
             onCreateSeparateBill={() => void handleCreateSeparateAdsBill()}
+            uploadedAnnexure={
+              uploadedAnnexure
+                ? {
+                    category: uploadedAnnexure.category,
+                    fileName: uploadedAnnexure.file.originalName ?? 'annexure.pdf',
+                  }
+                : null
+            }
+            openingAnnexure={openingAnnexure}
+            onOpenAnnexure={uploadedAnnexure ? () => void handleOpenAnnexure() : undefined}
           />
         </div>
       ) : null}
