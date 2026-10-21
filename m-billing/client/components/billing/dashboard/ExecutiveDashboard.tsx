@@ -24,6 +24,11 @@ type ExecutiveMetrics = {
   completionPercent: number;
   additionalExclTax: number;
   invoicedInclTax: number;
+  unbilledFlights?: number;
+  missingRateInvoices?: number;
+  trend?: Array<{ label: string; current: number; prior: number }>;
+  serviceMix?: Array<{ name: string; amount: number }>;
+  airlines?: Array<{ code: string; name: string; amount: number }>;
 };
 
 function currentMonthValue(date = new Date()): string {
@@ -84,34 +89,6 @@ function yieldTone(metrics: ExecutiveMetrics | null): 'positive' | 'negative' | 
   return current - previous < 0 ? 'negative' : 'positive';
 }
 
-const TREND = [
-  { month: 'May', current: 42, prior: 28 },
-  { month: 'Jun', current: 58, prior: 40 },
-  { month: 'Jul', current: 64, prior: 36 },
-  { month: 'Aug', current: 60, prior: 32 },
-  { month: 'Sep', current: 72, prior: 48 },
-  { month: 'Oct', current: 68, prior: 50 },
-];
-
-const SERVICE_MIX = [
-  { name: 'BHS', share: 72, amount: '₹3.47 Cr' },
-  { name: 'ADS', share: 19, amount: '₹0.92 Cr' },
-  { name: 'RAF', share: 9, amount: '₹0.43 Cr' },
-];
-
-const AIRLINE_SHARE = [
-  { name: 'IndiGo', share: 34, amount: '₹1.64 Cr' },
-  { name: 'Air India Express', share: 22, amount: '₹1.06 Cr' },
-  { name: 'SpiceJet', share: 14, amount: '₹0.67 Cr' },
-  { name: 'Others', share: 30, amount: '₹1.45 Cr' },
-];
-
-const ATTENTION = [
-  { tone: 'High' as const, title: 'Unbilled flights at DEL', detail: '₹12.4 L' },
-  { tone: 'Medium' as const, title: 'Contract expiring SpiceJet 18 days', detail: '18 days' },
-  { tone: 'Medium' as const, title: 'USD bill missing rate 2 invoices', detail: '2 invoices' },
-];
-
 function Sparkline({ up }: { up: boolean }) {
   const d = up ? 'M2 18 L14 14 L26 16 L40 8 L54 10 L68 4' : 'M2 8 L16 10 L28 9 L42 12 L56 11 L68 14';
   return (
@@ -124,10 +101,13 @@ function Sparkline({ up }: { up: boolean }) {
 function linePath(values: number[]) {
   const w = 520;
   const h = 160;
+  const peak = Math.max(1, ...values);
+  if (values.length === 0) return '';
+  if (values.length === 1) return `M0 ${h - 8} L${w} ${h - 8}`;
   return values
     .map((value, index) => {
       const x = (index / (values.length - 1)) * w;
-      const y = h - (value / 100) * (h - 16) - 8;
+      const y = h - (value / peak) * (h - 16) - 8;
       return `${index === 0 ? 'M' : 'L'}${x.toFixed(1)} ${y.toFixed(1)}`;
     })
     .join(' ');
@@ -213,8 +193,39 @@ export function ExecutiveDashboard() {
     [airlines],
   );
   const selectedAirline = airlines.find((row) => row.code === airline);
-  const visibleServices =
-    service === 'All' ? SERVICE_MIX : SERVICE_MIX.filter((row) => row.name === service);
+  const trend = metrics?.trend ?? [];
+  const serviceRows = (metrics?.serviceMix ?? [])
+    .filter((row) => service === 'All' || row.name === service)
+    .map((row) => {
+      const total = (metrics?.serviceMix ?? []).reduce((sum, item) => sum + item.amount, 0);
+      return {
+        ...row,
+        share: total > 0 ? Math.round((row.amount / total) * 1000) / 10 : 0,
+      };
+    });
+  const airlineRows = (metrics?.airlines ?? []).map((row) => {
+    const total = (metrics?.airlines ?? []).reduce((sum, item) => sum + item.amount, 0);
+    return { ...row, share: total > 0 ? Math.round((row.amount / total) * 1000) / 10 : 0 };
+  });
+  const topTwoShare = airlineRows.slice(0, 2).reduce((sum, row) => sum + row.share, 0);
+  const attention = [
+    {
+      tone: (metrics?.unbilledFlights ?? 0) > 0 ? ('High' as const) : ('Clear' as const),
+      title:
+        (metrics?.unbilledFlights ?? 0) > 0
+          ? `${metrics?.unbilledFlights?.toLocaleString('en-IN')} eligible flights still unbilled`
+          : 'Every eligible flight in this period has an invoice',
+      detail: metrics ? `${metrics.completionPercent}% complete` : '—',
+    },
+    {
+      tone: (metrics?.missingRateInvoices ?? 0) > 0 ? ('Medium' as const) : ('Clear' as const),
+      title:
+        (metrics?.missingRateInvoices ?? 0) > 0
+          ? 'USD invoices are missing a conversion rate'
+          : 'USD invoices in this period have a conversion rate',
+      detail: metrics ? `${metrics.missingRateInvoices ?? 0} invoices` : '—',
+    },
+  ];
 
   const clearFilters = () => {
     setPeriod('This month');
@@ -400,12 +411,12 @@ export function ExecutiveDashboard() {
               <span className="inline-flex items-center gap-1.5">
                 <span className="h-0.5 w-4 border-t border-dashed border-[#9aa396]" /> Last year
               </span>
-              {showFlights ? <span>Flight counts stay on the card above until the series is connected.</span> : null}
+              {showFlights ? <span>Flight counts are on the card above for the selected period.</span> : null}
             </div>
             <svg viewBox="0 0 520 180" className="h-48 w-full">
-              <path d={linePath(TREND.map((point) => point.current))} fill="none" stroke="#1f8a3b" strokeWidth="2.5" />
+              <path d={linePath(trend.map((point) => point.current))} fill="none" stroke="#1f8a3b" strokeWidth="2.5" />
               <path
-                d={linePath(TREND.map((point) => point.prior))}
+                d={linePath(trend.map((point) => point.prior))}
                 fill="none"
                 stroke="#9aa396"
                 strokeWidth="2"
@@ -413,10 +424,11 @@ export function ExecutiveDashboard() {
               />
             </svg>
             <div className="grid grid-cols-6 text-center text-xs text-[#8b9388]">
-              {TREND.map((point) => (
-                <span key={point.month}>{point.month}</span>
+              {trend.map((point) => (
+                <span key={point.label}>{point.label}</span>
               ))}
             </div>
+            {trend.length === 0 ? <p className="text-sm text-[#8b9388]">No invoice history for this station yet.</p> : null}
           </article>
 
           <article className="flex h-full flex-col rounded-xl border border-[#e6e8e3] bg-white p-4 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md">
@@ -453,12 +465,12 @@ export function ExecutiveDashboard() {
             <h2 className="text-base font-semibold">Service mix</h2>
             <p className="mt-1 text-sm text-[#667066]">Share of gross revenue by billed service.</p>
             <ul className="mt-4 space-y-3">
-              {visibleServices.map((row) => (
+              {serviceRows.map((row) => (
                 <li key={row.name} className="transition-opacity">
                   <div className="mb-1 flex items-center justify-between text-sm">
                     <span className="font-medium">{row.name}</span>
                     <span className="text-[#3d463f]">
-                      {row.amount} · {row.share}%
+                      {formatInr(row.amount)} · {row.share}%
                     </span>
                   </div>
                   <div className="h-2 overflow-hidden rounded-full bg-[#eef0ec]">
@@ -471,7 +483,7 @@ export function ExecutiveDashboard() {
               ))}
             </ul>
             <p className="mt-auto pt-4 text-sm text-[#667066]">
-              BHS is still most of the bill. ADS and RAF are the add-on margin to watch.
+              Shares use gross revenue excluding GST for the selected period.
             </p>
           </article>
 
@@ -479,16 +491,15 @@ export function ExecutiveDashboard() {
             <h2 className="text-base font-semibold">Airline concentration</h2>
             <p className="mt-1 text-sm text-[#667066]">How much of gross revenue sits with the largest airlines.</p>
             <ul className="mt-4 space-y-3">
-              {AIRLINE_SHARE.map((row) => {
-                const selected =
-                  selectedAirline != null &&
-                  row.name.toLowerCase() === selectedAirline.name.toLowerCase();
+              {airlineRows.length === 0 ? <li className="text-sm text-[#8b9388]">No airline revenue in this period.</li> : null}
+              {airlineRows.map((row) => {
+                const selected = selectedAirline != null && row.code === selectedAirline.code;
                 return (
-                <li key={row.name} className={selected ? 'rounded-lg bg-[#e7f6ea] px-2 py-1' : undefined}>
+                <li key={row.code} className={selected ? 'rounded-lg bg-[#e7f6ea] px-2 py-1' : undefined}>
                   <div className="mb-1 flex items-center justify-between text-sm">
                     <span className="font-medium">{row.name}</span>
                     <span className="text-[#3d463f]">
-                      {row.amount} · {row.share}%
+                      {formatInr(row.amount)} · {row.share}%
                     </span>
                   </div>
                   <div className="h-2 overflow-hidden rounded-full bg-[#eef0ec]">
@@ -499,7 +510,9 @@ export function ExecutiveDashboard() {
               })}
             </ul>
             <p className="mt-auto pt-4 text-sm text-[#667066]">
-              The top two airlines are 56% of gross revenue. A rate or volume change there moves the station total.
+              {airlineRows.length > 1
+                ? `The largest airlines are ${topTwoShare.toFixed(1)}% of gross revenue.`
+                : 'Airline share uses the same gross revenue as the cards above.'}
             </p>
           </article>
         </div>
@@ -507,7 +520,7 @@ export function ExecutiveDashboard() {
         <article className="mt-3 rounded-xl border border-[#e6e8e3] bg-white shadow-sm transition duration-200 hover:shadow-md">
           <h2 className="border-b border-[#eef0ec] px-4 py-3 text-base font-semibold">Attention</h2>
           <ul>
-            {ATTENTION.map((item) => (
+            {attention.map((item) => (
               <li
                 key={item.title}
                 className="flex items-center justify-between gap-3 border-b border-[#eef0ec] px-4 py-3 transition-colors last:border-b-0 hover:bg-[#f7faf7]"
@@ -515,7 +528,11 @@ export function ExecutiveDashboard() {
                 <div className="flex min-w-0 items-center gap-3">
                   <span
                     className={`rounded-md px-2 py-0.5 text-xs font-medium ${
-                      item.tone === 'High' ? 'bg-[#fde8c8] text-[#9a5b12]' : 'bg-[#f3f0e4] text-[#6b6248]'
+                      item.tone === 'High'
+                        ? 'bg-[#fde8c8] text-[#9a5b12]'
+                        : item.tone === 'Medium'
+                          ? 'bg-[#f3f0e4] text-[#6b6248]'
+                          : 'bg-[#e7f6ea] text-[#146c2e]'
                     }`}
                   >
                     {item.tone}
@@ -524,7 +541,7 @@ export function ExecutiveDashboard() {
                 </div>
                 <div className="flex shrink-0 items-center gap-4 text-sm">
                   <span className="text-[#3d463f]">{item.detail}</span>
-                  <span className="text-[#667066]">View &gt;</span>
+                  <span className="text-[#667066]">{item.tone === 'Clear' ? 'Clear' : 'Review'}</span>
                 </div>
               </li>
             ))}

@@ -114,7 +114,7 @@ export function ChangeStationDialog({ open, currentCode, onClose }: Props) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="change-station-title"
-        className="change-station-dialog flex h-[min(92dvh,100dvh)] w-full max-w-none flex-col overflow-hidden rounded-t-2xl border border-slate-200 bg-white pb-[env(safe-area-inset-bottom)] text-slate-900 shadow-2xl sm:h-[min(80dvh,40rem)] sm:max-w-lg sm:rounded-2xl sm:pb-0 lg:max-w-md"
+        className="change-station-dialog flex max-h-[min(88dvh,44rem)] w-full max-w-none flex-col overflow-hidden rounded-t-2xl border border-slate-200 bg-white pb-[env(safe-area-inset-bottom)] text-slate-900 shadow-2xl sm:max-w-3xl sm:rounded-2xl sm:pb-0"
       >
         <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-100 px-4 py-3 sm:px-5">
           <div className="min-w-0">
@@ -161,7 +161,7 @@ export function ChangeStationDialog({ open, currentCode, onClose }: Props) {
           ) : filtered.length === 0 ? (
             <p className="py-8 text-center text-sm text-slate-500">No stations match that search.</p>
           ) : (
-            <ul className="space-y-1.5">
+            <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               {filtered.map((station) => {
                 const code = stationCodeOf(station);
                 const current = code === currentCode;
@@ -173,29 +173,45 @@ export function ChangeStationDialog({ open, currentCode, onClose }: Props) {
                       disabled={current || Boolean(pendingCode)}
                       onClick={() => void apply(station)}
                       className={cn(
-                        'flex min-h-11 w-full items-center gap-3 rounded-xl border px-3 py-2 text-left transition disabled:cursor-default',
+                        'group relative flex h-[5.5rem] w-full items-center gap-2.5 overflow-hidden rounded-xl border px-3 text-left transition duration-300 ease-out disabled:cursor-default',
                         current
-                          ? 'border-emerald-300 bg-emerald-50'
-                          : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50',
+                          ? 'border-emerald-400 bg-emerald-50 shadow-[0_8px_24px_-16px_rgba(16,185,129,0.9)]'
+                          : 'border-slate-200 bg-white hover:-translate-y-1 hover:border-emerald-300 hover:bg-gradient-to-r hover:from-white hover:to-emerald-50 hover:shadow-[0_16px_32px_-18px_rgba(15,23,42,0.45)]',
                       )}
                     >
-                      <MapPin className="h-4 w-4 shrink-0 text-slate-400" aria-hidden />
-                      <span className="min-w-0 flex-1">
-                        <span className="block text-sm font-medium text-slate-900 sm:truncate">
-                          {station.name}
-                        </span>
-                        <span className="block text-xs text-slate-500 sm:truncate">
-                          {code}
-                          {station.city ? ` · ${station.city}` : ''}
-                        </span>
+                      <span
+                        className={cn(
+                          'absolute inset-y-0 left-0 w-1 transition-all duration-300',
+                          current ? 'bg-emerald-500' : 'bg-transparent group-hover:w-1.5 group-hover:bg-emerald-400',
+                        )}
+                        aria-hidden
+                      />
+                      <span
+                        className={cn(
+                          'grid h-9 w-9 shrink-0 place-items-center rounded-lg transition duration-300',
+                          current
+                            ? 'bg-emerald-100 text-emerald-700'
+                            : 'bg-slate-100 text-slate-500 group-hover:scale-105 group-hover:bg-emerald-100 group-hover:text-emerald-700',
+                        )}
+                      >
+                        {busy ? (
+                          <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                        ) : (
+                          <MapPin className="h-4 w-4" aria-hidden />
+                        )}
                       </span>
-                      {busy ? (
-                        <Loader2 className="h-4 w-4 shrink-0 animate-spin text-emerald-600" aria-hidden />
-                      ) : current ? (
-                        <span className="shrink-0 rounded-md bg-emerald-200/80 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-900">
-                          Current
+                      <span className="min-w-0 flex-1">
+                        <span className="flex items-center gap-2">
+                          <span className="text-base font-semibold tracking-wide text-slate-900">{code}</span>
+                          {current ? (
+                            <span className="rounded-md bg-emerald-200/80 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-900">
+                              Current
+                            </span>
+                          ) : null}
                         </span>
-                      ) : null}
+                        <span className="mt-0.5 block truncate text-sm text-slate-700">{station.name}</span>
+                        <span className="block truncate text-xs text-slate-500">{station.city || 'Station'}</span>
+                      </span>
                     </button>
                   </li>
                 );

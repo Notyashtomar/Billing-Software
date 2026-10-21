@@ -16,6 +16,14 @@ import {
 
 export const EQUIPMENT_MASTER_STATION = 'GLOBAL';
 
+/** Codes whose catalog description is the full equipment name. */
+const CANONICAL_EQUIPMENT_DESCRIPTIONS: Record<string, string> = {
+  BFL: 'Baggage Freight Loader',
+  EBT: 'Electrical Baggage Loader',
+  GPU: 'Ground Power Unit',
+  LDL: 'Lower Deck Loader',
+};
+
 export type EquipmentMasterWrite = {
   itemNo?: string;
   description?: string;
@@ -46,6 +54,7 @@ export class BillingEquipmentMasterService implements OnModuleInit {
   async onModuleInit() {
     try {
       await this.seedFromWorkbookIfEmpty();
+      await this.applyCanonicalDescriptions();
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error(`Equipment master seed failed: ${message}`);
@@ -58,6 +67,35 @@ export class BillingEquipmentMasterService implements OnModuleInit {
       .sort({ sortIndex: 1, itemNo: 1, description: 1 })
       .lean();
     return { data };
+  }
+
+  async importRows(rows: EquipmentMasterWrite[]) {
+    let created = 0;
+    let updated = 0;
+    for (const body of rows) {
+      const row = this.normalizeWrite(body);
+      if (!row.itemNo && !row.description) continue;
+      const existing = row.itemNo
+        ? await this.model.findOne({
+            stationCode: EQUIPMENT_MASTER_STATION,
+            itemNo: new RegExp(`^${row.itemNo.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i'),
+          })
+        : null;
+      if (existing) {
+        if (row.description) existing.description = row.description;
+        if (row.unitType) existing.unitType = row.unitType;
+        if (row.uoms.length > 0) {
+          existing.uoms = row.uoms;
+          existing.markModified('uoms');
+        }
+        await existing.save();
+        updated += 1;
+      } else {
+        await this.create(row);
+        created += 1;
+      }
+    }
+    return { data: { created, updated } };
   }
 
   async create(body: EquipmentMasterWrite) {
@@ -106,6 +144,22 @@ export class BillingEquipmentMasterService implements OnModuleInit {
       unitType: cell(body.unitType),
       uoms: cleanEquipmentMasterUoms(body.uoms),
     };
+  }
+
+  private async applyCanonicalDescriptions() {
+    for (const [itemNo, description] of Object.entries(CANONICAL_EQUIPMENT_DESCRIPTIONS)) {
+      const result = await this.model.updateMany(
+        {
+          stationCode: EQUIPMENT_MASTER_STATION,
+          itemNo: new RegExp(`^${itemNo}$`, 'i'),
+          description: { $ne: description },
+        },
+        { $set: { description } },
+      );
+      if (result.modifiedCount > 0) {
+        this.logger.log(`Updated ${itemNo} description to "${description}".`);
+      }
+    }
   }
 
   private async seedFromWorkbookIfEmpty() {

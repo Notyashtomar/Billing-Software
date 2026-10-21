@@ -6,6 +6,8 @@ import NextLink from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   Menu,
+  Moon,
+  Sun,
   X,
   ChevronDown,
   Plane,
@@ -70,6 +72,7 @@ import {
 import { useFrisNavFlags } from '@/lib/use-fris-nav-flags';
 import { RaiseTicketDialog } from '@/components/fris/layout/RaiseTicketDialog';
 import { ChangeStationDialog } from '@/components/fris/layout/ChangeStationDialog';
+import { EmployeeProfilePanel } from '@/components/fris/layout/EmployeeProfilePanel';
 import { logoutFrisToStationMap, normalizeFrisUserRole, FRIS_SESSION_UPDATED_EVENT } from '@/lib/fris-session';
 import { StationCompanyLogo } from '@/components/fris/layout/StationCompanyLogo';
 import {
@@ -286,11 +289,13 @@ function billingDropdownIcon(href: string): React.ReactNode {
 function toBillingChromeDropdown(
   links: readonly { href: string; label: string }[],
 ) {
-  return links.map((link) => ({
-    label: link.label,
-    path: link.href,
-    icon: billingDropdownIcon(link.href),
-  }));
+  return [...links]
+    .sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base' }))
+    .map((link) => ({
+      label: link.label,
+      path: link.href,
+      icon: billingDropdownIcon(link.href),
+    }));
 }
 
 // Department structure interface
@@ -324,9 +329,7 @@ interface NavItem {
 
 /** Billing chrome top tabs — filtered by admin page grants. */
 function buildBillingChromeNavItems(): NavItem[] {
-  const master = [...filterBillingNavLinks(BILLING_MASTER_NAV)].sort((a, b) =>
-    a.label.localeCompare(b.label, undefined, { sensitivity: 'base' }),
-  );
+  const master = filterBillingNavLinks(BILLING_MASTER_NAV);
   const workflow = filterBillingNavLinks(BILLING_WORKFLOW_NAV);
   const sources = filterBillingNavLinks(BILLING_SOURCES_NAV);
   const others = filterBillingNavLinks(BILLING_OTHERS_NAV);
@@ -741,6 +744,7 @@ const Navbar: React.FC = () => {
   const userNavFlags = useFrisNavFlags();
   const [raiseTicketOpen, setRaiseTicketOpen] = useState(false);
   const [changeStationOpen, setChangeStationOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   const pathIsBillingApp =
     Boolean(pathname?.startsWith('/billing')) &&
     !Boolean(pathname?.startsWith('/billing/login'));
@@ -888,12 +892,25 @@ const Navbar: React.FC = () => {
         };
       };
       const mis = items.filter((item) => item.label === 'MIS');
+      const byLabel = (a: { label: string }, b: { label: string }) =>
+        a.label.localeCompare(b.label, undefined, { sensitivity: 'base' });
       return [
         ...buildBillingChromeNavItems(),
         openScheduledAirlines('Advance'),
         openScheduledAirlines('Flights'),
         ...mis,
-      ];
+      ].map((item) =>
+        item.dropdownItems
+          ? {
+              ...item,
+              dropdownItems: [...item.dropdownItems].sort(byLabel).map((entry) =>
+                entry.nestedItems
+                  ? { ...entry, nestedItems: [...entry.nestedItems].sort(byLabel) }
+                  : entry,
+              ),
+            }
+          : item,
+      );
     }
 
     return items;
@@ -1209,7 +1226,8 @@ const Navbar: React.FC = () => {
       fixed top-0 left-0 w-full z-[100] 
       transition-all duration-300 ease-in-out
       ${billingNavbarChrome ? 'billing-nav-chrome' : ''}
-      ${scrolled ? 'h-12 bg-white/95 backdrop-blur-lg shadow-lg' : 'h-12 bg-white shadow-md'}
+      ${billingNavbarChrome ? 'h-[3.3rem]' : 'h-12'}
+      ${scrolled ? 'bg-white/95 backdrop-blur-lg shadow-lg' : 'bg-white shadow-md'}
     `}
     >
       <div className="flex items-center justify-between h-full px-4 md:px-6">
@@ -1245,7 +1263,8 @@ const Navbar: React.FC = () => {
 
         {billingNavbarChrome && sessionStationCode ? (
           <div className="flex shrink-0 items-center px-3">
-            <span className="billing-nav-station whitespace-nowrap text-center font-bold text-sm lg:text-base text-gray-700">
+            <span className="billing-nav-station billing-nav-station-chip whitespace-nowrap">
+              <span className="billing-nav-station-kicker">Station</span>
               {sessionStationCode}
             </span>
           </div>
@@ -1258,7 +1277,9 @@ const Navbar: React.FC = () => {
         {/* Navigation links - Desktop - Moved to center */}
         <div
           className={`hidden nav-desktop:flex min-w-0 items-center justify-center ${
-            billingNavbarChrome && sessionStationCode ? 'shrink-0 px-2' : 'flex-1 px-4 lg:px-10'
+            billingNavbarChrome
+              ? 'billing-nav-track shrink-0 px-0'
+              : 'flex-1 px-4 lg:px-10'
           }`}
         >
           {navItems.map((item) => (
@@ -1559,7 +1580,8 @@ const Navbar: React.FC = () => {
         </div>
 
         {/* Right side - User Profile */}
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-3">
+          {billingNavbarChrome ? <BillingNightToggle /> : null}
           {/* Hamburger menu for mobile */}
           <button
             className={`
@@ -1584,6 +1606,7 @@ const Navbar: React.FC = () => {
               className={`
                 group box-border flex h-9 max-h-9 shrink-0 items-center gap-2 rounded-full
                 border-2 px-2.5 transition-[background-color,border-color,box-shadow] duration-200
+                ${billingNavbarChrome ? 'billing-nav-avatar' : ''}
                 focus-visible:outline-none ${navSkin.focusVisibleRing}
                 focus-visible:ring-offset-2 focus-visible:ring-offset-white
                 ${
@@ -1619,110 +1642,78 @@ const Navbar: React.FC = () => {
             {/* Profile Dropdown Menu - only in DOM when open so it can never capture clicks when closed */}
             {activeDropdown === 999 && (
             <div
-              className={`absolute top-full right-0 mt-2 min-w-[240px] bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden shadow-lg z-[101] ${navSkin.dropdownPanelExtra}`}
+              className="absolute right-0 top-full z-[101] mt-2 w-[17.5rem] overflow-hidden rounded-2xl border border-slate-200/80 bg-white text-slate-900 shadow-[0_18px_40px_-24px_rgba(15,23,42,0.45)]"
               role="menu"
             >
-              {/* User Info Header */}
-              <div className={`p-4 border-b border-gray-100 bg-gradient-to-r ${navSkin.profileHeader}`}>
-                <div className="flex items-center space-x-3">
+              <div className="border-b border-slate-100 px-4 py-3.5">
+                <div className="flex items-center gap-3">
                   <div
-                    className={`
-                      w-12 h-12 rounded-full
-                      bg-gradient-to-br ${user ? getRoleColor(user.role) : navSkin.fallbackGrad}
-                      flex items-center justify-center
-                      text-white font-bold text-lg
-                      border-2 border-white shadow
-                    `}
+                    className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${user ? getRoleColor(user.role) : navSkin.fallbackGrad} text-sm font-semibold text-white`}
                   >
                     {user?.avatarInitials || '—'}
                   </div>
-                  <div>
-                    <h4 className="font-bold text-gray-900">
+                  <div className="min-w-0">
+                    <h4 className="truncate text-sm font-semibold text-slate-900">
                       {user?.name ?? 'Guest'}
                     </h4>
-                    <p className="text-sm text-gray-600">
-                      {user?.email ?? '—'}
+                    {`${user?.name ?? ''} ${user?.email ?? ''}`
+                      .toLowerCase()
+                      .replace(/[^a-z0-9]/g, '')
+                      .match(/yashrajtomar|rishimehto/) ? (
+                      <p className="text-xs font-medium text-[#1c0770]">Ultra Admin</p>
+                    ) : null}
+                    <p className="truncate text-xs text-slate-500">{user?.email ?? '—'}</p>
+                    <p className="mt-1 inline-flex max-w-full truncate rounded-md bg-slate-100 px-1.5 py-0.5 text-[11px] font-medium text-slate-600">
+                      {stationDisplayName}
                     </p>
-                    <div className="mt-1 text-xs text-gray-500">
-                      Station: {stationDisplayName}
-                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Dropdown Items */}
-              <div className="py-2">
-                <AppNavLink
-                  href="/fris/profile"
-                  className={`
-                    flex items-center space-x-3 px-4 py-3
-                    ${navSkin.linkHover}
-                    transition-all duration-150
-                    group/item
-                    focus:outline-none ${navSkin.linkFocus}
-                    ${isActive('/fris/profile') ? navSkin.linkActive : 'text-gray-700'}
-                  `}
-                  onClick={() => setActiveDropdown(null)}
-                >
-                  <User className={`w-4 h-4 ${navSkin.linkHoverIcon}`} />
-                  <span className="font-medium">View Profile</span>
-                </AppNavLink>
-
+              <div className="p-1.5">
                 <button
                   type="button"
-                  className={`
-                    flex w-full items-center space-x-3 px-4 py-3
-                    text-gray-700 ${navSkin.linkHover}
-                    transition-all duration-150
-                    group/item
-                    focus:outline-none ${navSkin.linkFocus}
-                  `}
+                  className="flex h-10 w-full items-center gap-2.5 rounded-lg px-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+                  onClick={() => {
+                    setActiveDropdown(null);
+                    setProfileOpen(true);
+                  }}
+                >
+                  <User className="h-4 w-4 text-slate-400" />
+                  View profile
+                </button>
+                <button
+                  type="button"
+                  className="flex h-10 w-full items-center gap-2.5 rounded-lg px-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
                   onClick={() => {
                     setActiveDropdown(null);
                     setRaiseTicketOpen(true);
                   }}
                 >
-                  <Ticket className={`w-4 h-4 ${navSkin.linkHoverIcon}`} />
-                  <span className="font-medium">Raise Ticket</span>
+                  <Ticket className="h-4 w-4 text-slate-400" />
+                  Raise ticket
                 </button>
-
                 {canChangeStation ? (
                   <button
                     type="button"
-                    className={`
-                      flex w-full items-center space-x-3 px-4 py-3
-                      text-gray-700 ${navSkin.linkHover}
-                      transition-all duration-150
-                      group/item
-                      focus:outline-none ${navSkin.linkFocus}
-                    `}
+                    className="flex h-10 w-full items-center gap-2.5 rounded-lg px-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
                     onClick={() => {
                       setActiveDropdown(null);
                       setChangeStationOpen(true);
                     }}
                   >
-                    <MapPin className={`w-4 h-4 ${navSkin.linkHoverIcon}`} />
-                    <span className="font-medium">Change station</span>
+                    <MapPin className="h-4 w-4 text-slate-400" />
+                    Change station
                   </button>
                 ) : null}
-
-                <div className="border-t border-gray-100 my-1"></div>
-
+                <div className="my-1.5 h-px bg-slate-100" />
                 <button
                   type="button"
                   onClick={() => void handleLogout()}
-                  className="
-                    flex items-center space-x-3 px-4 py-3
-                    text-red-600 hover:text-red-700
-                    hover:bg-red-50
-                    w-full text-left
-                    transition-all duration-150
-                    group/item
-                    focus:outline-none focus:bg-red-50
-                  "
+                  className="flex h-10 w-full items-center gap-2.5 rounded-lg px-2.5 text-sm font-medium text-rose-600 transition hover:bg-rose-50"
                 >
-                  <LogOut className="w-4 h-4 group-hover/item:text-red-600" />
-                  <span className="font-medium">Logout</span>
+                  <LogOut className="h-4 w-4" />
+                  Log out
                 </button>
               </div>
             </div>
@@ -2108,6 +2099,7 @@ const Navbar: React.FC = () => {
           </div>
         </div>
       </div>
+      <EmployeeProfilePanel open={profileOpen} onClose={() => setProfileOpen(false)} />
       <ChangeStationDialog
         open={changeStationOpen}
         currentCode={sessionStationCode}
@@ -2122,5 +2114,36 @@ const Navbar: React.FC = () => {
     </nav>
   );
 };
+
+function BillingNightToggle() {
+  const [night, setNight] = useState(false);
+
+  useEffect(() => {
+    const on = localStorage.getItem('billing-night') === '1';
+    setNight(on);
+    document.documentElement.toggleAttribute('data-billing-night', on);
+  }, []);
+
+  const toggle = () => {
+    const next = !night;
+    setNight(next);
+    localStorage.setItem('billing-night', next ? '1' : '0');
+    document.documentElement.toggleAttribute('data-billing-night', next);
+    window.dispatchEvent(new Event('billing-night-change'));
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={toggle}
+      aria-pressed={night}
+      aria-label={night ? 'Switch to light appearance' : 'Switch to dark appearance'}
+      title={night ? 'Light' : 'Dark'}
+      className="billing-night-toggle inline-flex h-8 w-8 items-center justify-center rounded-full border border-black/10 bg-[#f2f2f7] text-[#1c1c1e] transition hover:bg-[#e5e5ea]"
+    >
+      {night ? <Sun className="h-4 w-4" aria-hidden /> : <Moon className="h-4 w-4" aria-hidden />}
+    </button>
+  );
+}
 
 export default Navbar;

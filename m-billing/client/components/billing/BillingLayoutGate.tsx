@@ -54,7 +54,7 @@ export function BillingLayoutGate({ children }: Props) {
         <BillingDesignRoot>
           <div className="flex h-[100dvh] min-h-[100dvh] max-h-[100dvh] flex-col overflow-hidden bg-[color:var(--billing-bg)] text-[color:var(--billing-text)]">
             <FrisNavbarLazy />
-            <main className="billing-shell-main min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-auto touch-pan-y pt-12 pb-[max(0.75rem,env(safe-area-inset-bottom))] [-webkit-overflow-scrolling:touch]">
+            <main className="billing-shell-main min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-auto touch-pan-y pt-[3.3rem] pb-[max(0.75rem,env(safe-area-inset-bottom))] [-webkit-overflow-scrolling:touch]">
               <Suspense
                 fallback={
                   <div className="mx-auto max-w-3xl px-6 py-16 text-center text-[color:var(--billing-text-muted)]">

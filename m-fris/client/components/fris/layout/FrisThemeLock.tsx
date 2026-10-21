@@ -18,16 +18,25 @@ export function FrisThemeLock() {
   useEffect(() => {
     const root = document.documentElement;
 
-    if (lockLight) {
-      root.setAttribute(FRIS_LIGHT_LOCK_ATTR, '');
-      root.classList.remove('dark');
-      root.style.colorScheme = 'light';
-    } else {
-      root.removeAttribute(FRIS_LIGHT_LOCK_ATTR);
-      // On dashboard, DashboardThemeProvider owns `dark` + colorScheme — do not reset here.
-    }
+    const apply = () => {
+      const night = root.getAttribute('data-billing-night') != null;
+      if (lockLight && !night) {
+        root.setAttribute(FRIS_LIGHT_LOCK_ATTR, '');
+        root.classList.remove('dark');
+        root.style.colorScheme = 'light';
+      } else if (night) {
+        root.setAttribute(FRIS_LIGHT_LOCK_ATTR, '');
+        root.classList.remove('dark');
+        root.style.colorScheme = 'dark';
+      } else {
+        root.removeAttribute(FRIS_LIGHT_LOCK_ATTR);
+      }
+    };
+    apply();
+    window.addEventListener('billing-night-change', apply);
 
     return () => {
+      window.removeEventListener('billing-night-change', apply);
       if (lockLight) {
         root.removeAttribute(FRIS_LIGHT_LOCK_ATTR);
       }
