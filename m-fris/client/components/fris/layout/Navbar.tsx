@@ -1643,7 +1643,7 @@ const Navbar: React.FC = () => {
             {/* Profile Dropdown Menu - only in DOM when open so it can never capture clicks when closed */}
             {activeDropdown === 999 && (
             <div
-              className="absolute right-0 top-full z-[101] mt-2 w-[17.5rem] overflow-hidden rounded-2xl border border-slate-200/80 bg-white text-slate-900 shadow-[0_18px_40px_-24px_rgba(15,23,42,0.45)]"
+              className="billing-profile-menu absolute right-0 top-full z-[101] mt-2 w-[17.5rem] overflow-hidden rounded-2xl border border-slate-200/80 bg-white text-slate-900 shadow-[0_18px_40px_-24px_rgba(15,23,42,0.45)]"
               role="menu"
             >
               <div className="border-b border-slate-100 px-4 py-3.5">

@@ -69,7 +69,7 @@ export function EmployeeProfilePanel({ open, onClose }: Props) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="employee-profile-title"
-        className="w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white text-slate-900 shadow-2xl"
+        className="employee-profile-panel w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white text-slate-900 shadow-2xl"
       >
         <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-5 py-4">
           <div>
