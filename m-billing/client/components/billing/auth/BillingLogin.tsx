@@ -368,7 +368,7 @@ export default function BillingLogin() {
         </div>
       </header>
 
-      <main className="relative z-10 flex min-h-0 flex-1 items-center justify-start overflow-hidden py-2 pl-6 pr-4 sm:pl-12 lg:pl-20">
+      <main className="relative z-10 flex min-h-0 flex-1 items-center justify-start overflow-y-auto py-3 pl-3 pr-3 sm:pl-8 lg:pl-12">
         <ModuleGlassLoginCard
           refined
           theme={BILLING_GLASS_THEME}
