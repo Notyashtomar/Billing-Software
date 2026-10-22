@@ -163,7 +163,7 @@ export default function ModuleGlassLoginCard({
   return (
     <div
       className={`w-full border ${
-        refined ? 'w-[min(100%,340px)] max-w-[340px] rounded-2xl bg-[rgba(10,14,24,0.42)] p-4 backdrop-blur-md sm:p-5' : `max-w-[460px] rounded-[1.35rem] bg-[rgba(8,12,28,0.72)] shadow-[0_0_0_1px_rgba(255,255,255,0.04),0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-xl ${compact ? 'p-4 sm:p-5' : 'p-6 sm:p-8'}`
+        refined ? 'max-w-[420px] rounded-2xl bg-[rgba(10,14,24,0.42)] p-6 backdrop-blur-md sm:p-7' : `max-w-[460px] rounded-[1.35rem] bg-[rgba(8,12,28,0.72)] shadow-[0_0_0_1px_rgba(255,255,255,0.04),0_24px_80px_rgba(0,0,0,0.45)] backdrop-blur-xl ${compact ? 'p-4 sm:p-5' : 'p-6 sm:p-8'}`
       }`}
       style={{
         borderColor: refined ? 'rgba(255,255,255,0.12)' : theme.cardBorder,
@@ -183,7 +183,7 @@ export default function ModuleGlassLoginCard({
                 key={companyLogo.src}
                 src={companyLogo.src}
                 alt={`${companyLogo.brand} company logo`}
-                className={`w-auto object-contain ${refined ? 'h-7 max-w-[150px]' : `max-w-[200px] ${compact ? 'h-8' : 'h-10 sm:h-11'}`}`}
+                className={`w-auto max-w-[200px] object-contain ${compact ? 'h-8' : 'h-10 sm:h-11'}`}
                 onError={() => setLogoFailed(true)}
               />
             </div>
@@ -192,19 +192,19 @@ export default function ModuleGlassLoginCard({
         <h1
           className={`font-semibold ${
             refined
-              ? 'text-xl tracking-tight text-white'
+              ? 'text-[1.65rem] tracking-tight text-white'
               : `font-bold uppercase tracking-[0.12em] ${compact ? 'text-xl sm:text-2xl' : 'text-[1.75rem] sm:text-[2rem]'}`
           }`}
           style={refined ? undefined : { color: theme.accent }}
         >
           {title}
         </h1>
-        <p className={`text-white/55 ${refined || compact ? 'mt-1 text-sm' : 'mt-2 text-base'}`}>{subtitle}</p>
+        <p className={`text-white/55 ${compact ? 'mt-1 text-sm' : 'mt-2 text-base'}`}>{subtitle}</p>
       </div>
 
       <div
         className={`flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3.5 text-white/85 ${
-          refined || compact ? 'mt-3 py-2 text-sm' : 'mt-5 py-3 text-base'
+          compact ? 'mt-3 py-2 text-sm' : 'mt-5 py-3 text-base'
         }`}
       >
         <MapPin
@@ -236,7 +236,7 @@ export default function ModuleGlassLoginCard({
         )}
       </div>
 
-      <form className={refined || compact ? 'mt-3 space-y-2.5' : 'mt-6 space-y-5'} onSubmit={onSubmit}>
+      <form className={compact ? 'mt-3 space-y-2.5' : 'mt-6 space-y-5'} onSubmit={onSubmit}>
         <div>
           <div className="mb-1.5 flex items-center justify-between gap-2">
             <label
@@ -258,7 +258,7 @@ export default function ModuleGlassLoginCard({
             autoComplete="username"
             placeholder="Enter your employee ID"
             className={`w-full rounded-xl border border-white/15 bg-[rgba(0,0,0,0.35)] px-3.5 text-white outline-none placeholder:text-white/35 transition focus:border-transparent ${
-              compact || refined ? 'py-2 text-sm' : 'py-3.5 text-base'
+              compact ? 'py-2 text-sm' : 'py-3.5 text-base'
             }`}
             style={
               {
@@ -302,7 +302,7 @@ export default function ModuleGlassLoginCard({
               autoComplete="current-password"
               placeholder="Enter your password"
               className={`w-full rounded-xl border border-white/15 bg-[rgba(0,0,0,0.35)] pl-3.5 pr-12 text-white outline-none placeholder:text-white/35 transition ${
-                compact || refined ? 'py-2 text-sm' : 'py-3.5 text-base'
+                compact ? 'py-2 text-sm' : 'py-3.5 text-base'
               }`}
               onFocus={(e) => {
                 e.currentTarget.style.boxShadow = `0 0 0 2px ${theme.accentMuted}`;

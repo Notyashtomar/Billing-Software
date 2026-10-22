@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Calendar, Info, Plus } from 'lucide-react';
 import { billingApi } from '@/lib/billing-api';
 
@@ -89,46 +89,11 @@ function yieldTone(metrics: ExecutiveMetrics | null): 'positive' | 'negative' | 
   return current - previous < 0 ? 'negative' : 'positive';
 }
 
-const OpenInfo = createContext<{
-  id: string | null;
-  toggle: (id: string) => void;
-}>({ id: null, toggle: () => undefined });
-
-function InfoTip({ id, text }: { id: string; text: string }) {
-  const open = useContext(OpenInfo);
-  const shown = open.id === id;
-  return (
-    <span className="relative inline-flex">
-      <button
-        type="button"
-        aria-expanded={shown}
-        aria-label={`How ${id} is calculated`}
-        onClick={() => open.toggle(id)}
-        className={`exec-info grid h-6 w-6 place-items-center rounded-full border transition ${
-          shown
-            ? 'border-[#2f6bff] bg-[#2f6bff] text-white'
-            : 'border-[#d7ddd4] text-[#667066] hover:border-[#2f6bff] hover:text-[#2f6bff]'
-        }`}
-      >
-        <Info className="h-3.5 w-3.5" aria-hidden />
-      </button>
-      {shown ? (
-        <span role="note" className="exec-info-pop absolute right-0 top-8 z-30 w-56 rounded-xl border border-[#d7e4ff] bg-white p-3 text-left text-[13px] font-medium leading-snug text-[#1c2430] shadow-[0_12px_32px_rgba(47,107,255,0.18)]">
-          <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.14em] text-[#2f6bff]">How it is calculated</span>
-          {text}
-        </span>
-      ) : null}
-    </span>
-  );
-}
-
 function Sparkline({ up }: { up: boolean }) {
-  const d = up ? 'M2 16 C14 16 18 8 28 10 C40 12 44 4 56 6 C62 7 66 5 68 4' : 'M2 6 C12 7 18 8 28 10 C40 12 46 13 56 15 C62 16 66 17 68 18';
-  const stroke = up ? '#3dde7a' : '#ff6b63';
+  const d = up ? 'M2 18 L14 14 L26 16 L40 8 L54 10 L68 4' : 'M2 8 L16 10 L28 9 L42 12 L56 11 L68 14';
   return (
-    <svg viewBox="0 0 70 22" className="h-8 w-24" aria-hidden>
-      <path d={`${d} L68 22 L2 22 Z`} fill={up ? 'rgba(61,222,122,0.16)' : 'rgba(255,107,99,0.16)'} />
-      <path d={d} fill="none" stroke={stroke} strokeWidth="1.75" strokeLinecap="round" />
+    <svg viewBox="0 0 70 22" className="h-8 w-20" aria-hidden>
+      <path d={d} fill="none" stroke={up ? '#16803c' : '#b91c1c'} strokeWidth="2" strokeLinecap="round" />
     </svg>
   );
 }
@@ -149,7 +114,7 @@ function linePath(values: number[]) {
 }
 
 export function ExecutiveDashboard() {
-  const [period, setPeriod] = useState('Last month');
+  const [period, setPeriod] = useState('This month');
   const [pickedMonth, setPickedMonth] = useState('');
   const [airline, setAirline] = useState('All airlines');
   const [service, setService] = useState('All');
@@ -160,18 +125,6 @@ export function ExecutiveDashboard() {
   const [metrics, setMetrics] = useState<ExecutiveMetrics | null>(null);
   const [metricsError, setMetricsError] = useState('');
   const [metricsLoading, setMetricsLoading] = useState(true);
-  const [openInfo, setOpenInfo] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!openInfo) return;
-    const close = (event: PointerEvent) => {
-      const target = event.target as HTMLElement | null;
-      if (target?.closest('.exec-info, .exec-info-pop')) return;
-      setOpenInfo(null);
-    };
-    document.addEventListener('pointerdown', close);
-    return () => document.removeEventListener('pointerdown', close);
-  }, [openInfo]);
 
   useEffect(() => {
     let cancelled = false;
@@ -275,7 +228,7 @@ export function ExecutiveDashboard() {
   ];
 
   const clearFilters = () => {
-    setPeriod('Last month');
+    setPeriod('This month');
     setPickedMonth('');
     setAirline('All airlines');
     setService('All');
@@ -294,8 +247,31 @@ export function ExecutiveDashboard() {
     : ['This month', 'Last month', 'This quarter'];
 
   return (
-    <OpenInfo.Provider value={{ id: openInfo, toggle: (next) => setOpenInfo((current) => (current === next ? null : next)) }}>
-    <div className="billing-executive -m-3 min-h-[calc(100dvh-4.5rem)] bg-[#eef1ec] px-4 py-3 text-[#1c2430] sm:-m-6 sm:px-6">
+    <div className="-m-3 min-h-[calc(100dvh-4.5rem)] bg-[#eef1ec] px-4 py-5 text-[#1c2430] sm:-m-6 sm:px-6">
+        <header className="mb-5 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#1f8a3b]">Station leadership</p>
+            <h1 className="mt-1 text-[1.75rem] font-semibold tracking-tight">Executive</h1>
+            <p className="mt-0.5 text-sm text-[#667066]">Billing performance for station leadership</p>
+          </div>
+          <label className="relative inline-flex cursor-pointer items-center gap-2 rounded-xl border border-[#e1e4de] bg-white px-3.5 py-2 text-sm font-medium text-[#3d463f] shadow-[0_1px_2px_rgba(16,24,16,0.04)] transition hover:border-[#1f8a3b]">
+            <span>{selectedMonthLabel}</span>
+            <Calendar className="h-4 w-4" />
+            <input
+              type="month"
+              aria-label="Select month"
+              min="2000-01"
+              max="2100-12"
+              value={selectedMonthValue}
+              onChange={(event) => {
+                const value = event.target.value;
+                if (/^\d{4}-\d{2}$/.test(value)) setPickedMonth(value);
+              }}
+              className="absolute inset-0 cursor-pointer opacity-0"
+            />
+          </label>
+        </header>
+
         <div className="mb-3 flex flex-wrap items-end gap-3 rounded-2xl border border-[#e4e7e1] bg-white p-3.5 shadow-[0_1px_2px_rgba(16,24,16,0.04)]">
           <Filter
             label="Period"
@@ -322,22 +298,6 @@ export function ExecutiveDashboard() {
           >
             Clear filters
           </button>
-          <label className="relative mb-0.5 ml-auto inline-flex cursor-pointer items-center gap-2 rounded-xl border border-[#e1e4de] bg-white px-3.5 py-2 text-sm font-medium text-[#3d463f] shadow-[0_1px_2px_rgba(16,24,16,0.04)] transition hover:border-[#1f8a3b]">
-            <span>{selectedMonthLabel}</span>
-            <Calendar className="h-4 w-4" />
-            <input
-              type="month"
-              aria-label="Select month"
-              min="2000-01"
-              max="2100-12"
-              value={selectedMonthValue}
-              onChange={(event) => {
-                const value = event.target.value;
-                if (/^\d{4}-\d{2}$/.test(value)) setPickedMonth(value);
-              }}
-              className="absolute inset-0 cursor-pointer opacity-0"
-            />
-          </label>
         </div>
         {airlinesNote ? <p className="mb-3 text-sm text-[#9a5b12]">{airlinesNote}</p> : null}
         {selectedAirline ? (
@@ -355,24 +315,21 @@ export function ExecutiveDashboard() {
         </p>
         {metricsError ? <p className="mb-3 text-sm text-[#9a5b12]">{metricsError}</p> : null}
 
-        <div key={`${pickedMonth || period}-${airline}-${service}`} className="exec-grid grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <div key={`${pickedMonth || period}-${airline}-${service}`} className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           <Kpi
             title="Gross revenue"
-            info="Before GST, including concession. Percent versus the previous period."
             value={metricsLoading || !metrics ? '—' : formatInr(metrics.grossExclTax)}
             delta={metrics ? formatPercent(metrics.grossChangePercent, metrics.compareLabel) : 'Excludes GST'}
             positive={(metrics?.grossChangePercent ?? 0) >= 0}
           />
           <Kpi
             title="Revenue change"
-            info="This period minus the previous period, before GST."
             value={metricsLoading || !metrics ? '—' : formatInr(metrics.grossChangeAmount, true)}
             delta={metrics ? `Versus ${metrics.compareLabel}, excluding GST` : 'Excludes GST'}
             positive={(metrics?.grossChangeAmount ?? 0) >= 0}
           />
           <Kpi
             title="Flights handled"
-            info="Scheduled flights this period. The line is the change versus last period."
             value={metricsLoading || !metrics ? '—' : Number(metrics.flights ?? 0).toLocaleString('en-IN')}
             delta={
               metrics
@@ -381,13 +338,10 @@ export function ExecutiveDashboard() {
             }
             positive={(metrics?.flights ?? 0) - (metrics?.previousFlights ?? 0) >= 0}
           />
-          <article className="exec-card flex min-h-[7.5rem] min-w-0 flex-col justify-between rounded-2xl border border-[#e4e7e1] bg-white p-4 shadow-[0_1px_2px_rgba(16,24,16,0.04)] sm:p-5">
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-xs font-medium tracking-wide text-[#667066]">BILLING COMPLETION</p>
-              <InfoTip id="billing completion" text="Invoiced flights divided by eligible flights." />
-            </div>
+          <article className="flex min-h-[7.5rem] flex-col justify-between rounded-2xl border border-[#e4e7e1] bg-white p-4 shadow-[0_1px_2px_rgba(16,24,16,0.04)] transition duration-200 hover:shadow-[0_8px_24px_rgba(16,24,16,0.06)]">
+            <p className="text-xs font-medium tracking-wide text-[#667066]">BILLING COMPLETION</p>
             <div>
-              <p className="text-[clamp(1.35rem,2.2vw,1.7rem)] font-semibold tabular-nums tracking-tight">{metrics ? `${metrics.completionPercent}%` : '—'}</p>
+              <p className="text-[1.65rem] font-semibold tabular-nums tracking-tight">{metrics ? `${metrics.completionPercent}%` : '—'}</p>
               <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#e7f6ea]">
                 <div
                   className="h-full rounded-full bg-[#1f8a3b] transition-all duration-700"
@@ -401,13 +355,10 @@ export function ExecutiveDashboard() {
               </p>
             </div>
           </article>
-          <article className="exec-card flex min-h-[7.5rem] min-w-0 flex-col justify-between rounded-2xl border border-[#e4e7e1] bg-white p-4 shadow-[0_1px_2px_rgba(16,24,16,0.04)] sm:p-5">
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-xs font-medium tracking-wide text-[#667066]">ADDITIONAL SERVICES</p>
-              <InfoTip id="additional services" text="ADS before GST. Zero when the filter is BHS or RAF." />
-            </div>
+          <article className="flex min-h-[7.5rem] flex-col justify-between rounded-2xl border border-[#e4e7e1] bg-white p-4 shadow-[0_1px_2px_rgba(16,24,16,0.04)] transition duration-200 hover:shadow-[0_8px_24px_rgba(16,24,16,0.06)]">
+            <p className="text-xs font-medium tracking-wide text-[#667066]">ADDITIONAL SERVICES</p>
             <div className="flex items-end justify-between">
-              <p className="text-[clamp(1.35rem,2.2vw,1.7rem)] font-semibold tabular-nums tracking-tight">
+              <p className="text-[1.65rem] font-semibold tabular-nums tracking-tight">
                 {metrics ? formatInr(service === 'BHS' || service === 'RAF' ? 0 : metrics.additionalExclTax) : '—'}
               </p>
               <span className="grid h-7 w-7 place-items-center rounded-full border border-[#d7ddd4] text-[#1f8a3b]">
@@ -415,20 +366,20 @@ export function ExecutiveDashboard() {
               </span>
             </div>
           </article>
-          <article className="exec-card flex min-h-[7.5rem] min-w-0 flex-col justify-between rounded-2xl border border-[#e4e7e1] bg-white p-4 shadow-[0_1px_2px_rgba(16,24,16,0.04)] sm:p-5">
+          <article className="flex min-h-[7.5rem] flex-col justify-between rounded-2xl border border-[#e4e7e1] bg-white p-4 shadow-[0_1px_2px_rgba(16,24,16,0.04)] transition duration-200 hover:shadow-[0_8px_24px_rgba(16,24,16,0.06)]">
             <div className="flex items-center justify-between">
               <p className="text-xs font-medium tracking-wide text-[#667066]">INVOICED INCL. GST</p>
-              <InfoTip id="invoiced including GST" text="Generated bills, including GST." />
+              <Info className="h-4 w-4 text-[#8b9388]" />
             </div>
             <div>
-              <p className="text-[clamp(1.35rem,2.2vw,1.7rem)] font-semibold tabular-nums tracking-tight">{metrics ? formatInr(metrics.invoicedInclTax) : '—'}</p>
+              <p className="text-[1.65rem] font-semibold tabular-nums tracking-tight">{metrics ? formatInr(metrics.invoicedInclTax) : '—'}</p>
               <p className="mt-1 text-xs text-[#8b9388]">Amount on generated bills</p>
             </div>
           </article>
         </div>
 
         <div className="mt-3 grid items-stretch gap-3 lg:grid-cols-2">
-          <article className="exec-card flex h-full min-w-0 flex-col rounded-2xl border border-[#e4e7e1] bg-white p-4 shadow-[0_1px_2px_rgba(16,24,16,0.04)] sm:p-5">
+          <article className="flex h-full flex-col rounded-2xl border border-[#e4e7e1] bg-white p-4 shadow-[0_1px_2px_rgba(16,24,16,0.04)] transition duration-200 hover:shadow-[0_8px_24px_rgba(16,24,16,0.06)]">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
               <h2 className="text-base font-semibold">Revenue trend</h2>
               <div className="flex items-center gap-3">
@@ -481,7 +432,7 @@ export function ExecutiveDashboard() {
             {trend.length === 0 ? <p className="text-sm text-[#8b9388]">No invoice history for this station yet.</p> : null}
           </article>
 
-          <article className="exec-card flex h-full min-w-0 flex-col rounded-2xl border border-[#e4e7e1] bg-white p-4 shadow-[0_1px_2px_rgba(16,24,16,0.04)] sm:p-5">
+          <article className="flex h-full flex-col rounded-2xl border border-[#e4e7e1] bg-white p-4 shadow-[0_1px_2px_rgba(16,24,16,0.04)] transition duration-200 hover:shadow-[0_8px_24px_rgba(16,24,16,0.06)]">
             <h2 className="text-base font-semibold">Versus {metrics?.compareLabel ?? 'previous month'}</h2>
             <dl className="mt-4 space-y-3 text-sm">
               <Row label="This period" value={metrics ? formatInr(metrics.grossExclTax) : '—'} />
@@ -511,7 +462,7 @@ export function ExecutiveDashboard() {
             </p>
           </article>
 
-          <article className="exec-card flex h-full min-w-0 flex-col rounded-2xl border border-[#e4e7e1] bg-white p-4 shadow-[0_1px_2px_rgba(16,24,16,0.04)] sm:p-5">
+          <article className="flex h-full flex-col rounded-2xl border border-[#e4e7e1] bg-white p-4 shadow-[0_1px_2px_rgba(16,24,16,0.04)] transition duration-200 hover:shadow-[0_8px_24px_rgba(16,24,16,0.06)]">
             <h2 className="text-base font-semibold">Service mix</h2>
             <p className="mt-1 text-sm text-[#667066]">Share of gross revenue by billed service.</p>
             <ul className="mt-4 space-y-3">
@@ -537,7 +488,7 @@ export function ExecutiveDashboard() {
             </p>
           </article>
 
-          <article className="exec-card flex h-full min-w-0 flex-col rounded-2xl border border-[#e4e7e1] bg-white p-4 shadow-[0_1px_2px_rgba(16,24,16,0.04)] sm:p-5">
+          <article className="flex h-full flex-col rounded-2xl border border-[#e4e7e1] bg-white p-4 shadow-[0_1px_2px_rgba(16,24,16,0.04)] transition duration-200 hover:shadow-[0_8px_24px_rgba(16,24,16,0.06)]">
             <h2 className="text-base font-semibold">Airline concentration</h2>
             <p className="mt-1 text-sm text-[#667066]">How much of gross revenue sits with the largest airlines.</p>
             <ul className="mt-4 space-y-3">
@@ -598,7 +549,6 @@ export function ExecutiveDashboard() {
           </ul>
         </article>
     </div>
-    </OpenInfo.Provider>
   );
 }
 
@@ -638,24 +588,19 @@ function Kpi({
   value,
   delta,
   positive,
-  info,
 }: {
   title: string;
   value: string;
   delta: string;
   positive: boolean;
-  info: string;
 }) {
   return (
-    <article className="exec-card flex min-h-[7.5rem] min-w-0 flex-col justify-between rounded-2xl border border-[#e4e7e1] bg-white p-4 shadow-[0_1px_2px_rgba(16,24,16,0.04)] sm:p-5">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-xs font-medium tracking-wide text-[#667066]">{title.toUpperCase()}</p>
-        <InfoTip id={title} text={info} />
-      </div>
+    <article className="flex min-h-[7.5rem] flex-col justify-between rounded-2xl border border-[#e4e7e1] bg-white p-4 shadow-[0_1px_2px_rgba(16,24,16,0.04)] transition duration-200 hover:shadow-[0_8px_24px_rgba(16,24,16,0.06)]">
+      <p className="text-xs font-medium tracking-wide text-[#667066]">{title.toUpperCase()}</p>
       <div className="mt-2 flex items-end justify-between gap-2">
         <div>
-          <p className="text-[clamp(1.35rem,2.2vw,1.7rem)] font-semibold tabular-nums tracking-tight">{value}</p>
-          <p className={`mt-1 text-sm leading-snug ${positive ? 'text-[#16803c]' : 'text-[#b91c1c]'}`}>{delta}</p>
+          <p className="text-[1.65rem] font-semibold tabular-nums tracking-tight">{value}</p>
+          <p className={`mt-1 text-sm ${positive ? 'text-[#16803c]' : 'text-[#b91c1c]'}`}>{delta}</p>
         </div>
         <Sparkline up={positive} />
       </div>
