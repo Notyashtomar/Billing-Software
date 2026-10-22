@@ -135,13 +135,28 @@ for (const { name, source } of mounts) {
     continue;
   }
   const dest = path.join(apiSrc, name);
-  if (fs.existsSync(dest)) {
+  // existsSync follows the link, so a junction left from another checkout path
+  // (for example OneDrive\Desktop vs Desktop) looks missing and symlinkSync then throws EEXIST.
+  let destStat = null;
+  try {
+    destStat = fs.lstatSync(dest);
+  } catch {
+    destStat = null;
+  }
+  if (destStat) {
     if (sameTarget(dest, source)) continue;
-    const stat = fs.lstatSync(dest);
-    if (stat.isSymbolicLink() || path.resolve(fs.realpathSync(dest)) !== path.resolve(dest)) {
+    if (destStat.isSymbolicLink()) {
       removeJunction(dest);
     } else {
-      fs.rmSync(dest, { recursive: true, force: true });
+      try {
+        if (path.resolve(fs.realpathSync(dest)) !== path.resolve(dest)) {
+          removeJunction(dest);
+        } else {
+          fs.rmSync(dest, { recursive: true, force: true });
+        }
+      } catch {
+        removeJunction(dest);
+      }
     }
     console.log(`replaced ${path.relative(repo, dest)}`);
   }

@@ -245,6 +245,14 @@ describe('fhr-equipment-to-ads-row', () => {
     expect(
       computeAdsUsedUnits({ qty: 1, usageHours: 3 / 60, uom: 'Per 15 Minutes' }),
     ).toBe(1);
+    expect(
+      computeAdsUsedUnits({ qty: 1, usageHours: null, uom: 'Per 15 Minutes' }),
+    ).toBe(0);
+    expect(
+      computeAdsUsedUnits({ qty: 1, usageHours: null, uom: 'Per Hour' }),
+    ).toBe(0);
+    expect(parseUsageHours('01:57 (USED)')).toBeCloseTo(1 + 57 / 60);
+    expect(parseUsageHours('00:00')).toBeNull();
   });
 
   it('maps FHR equipmentDetails into ADS rows and skips empty names', () => {
@@ -480,6 +488,7 @@ describe('fhr-equipment-to-ads-row', () => {
           TypeCraft: 'B737',
           STADate: '11/06/2026',
           ATDDate: '11/06/2026',
+          ATADate: '11/06/2026',
         },
         terminalDetails: {
           wcr: 5,
@@ -496,6 +505,7 @@ describe('fhr-equipment-to-ads-row', () => {
     const wchr = rows.find((r) => r.operationalData.equipment_name === 'WCHR');
     expect(wchr?.operationalData.qty).toBe(7);
     expect(wchr?.operationalData.particular).toBe('Wheel Chair -WCHR');
+    expect(wchr?.operationalData.ataDate).toBe('2026-06-11');
   });
 
   it('synthesizes Cabin Cleaning from ramp CleaningFr/To when equipment lacks it', () => {

@@ -114,6 +114,28 @@ async function parseJsonWithFallback<T>(res: Response, fallback: T): Promise<T> 
   return data as T;
 }
 
+export type AircraftMasterRecord = {
+  _id: string;
+  serialNo: string;
+  aircraftType: string;
+  icaoCode: string;
+  mtowKg: string;
+  passengerCapacity: string;
+  manufacturer: string;
+  aircraftBody: string;
+  wingspanM: string;
+  description: string;
+  active: string;
+  category: string;
+  categoryCode: string;
+  activeSecondary: string;
+  ceilingRate: string;
+  arrayRate: string;
+  validTill: string;
+};
+
+export type AircraftMasterWrite = Omit<AircraftMasterRecord, '_id'>;
+
 export type EquipmentMasterUomRecord = {
   uom: string;
   abbreviation: string;
@@ -506,15 +528,32 @@ export function createBillingApi({ getApiBase, fetch }: BillingApiConfig) {
 
     listAircraftMaster: () =>
       request('/billing/aircraft-master').then((r) =>
-        parseJson<{ data: Array<Record<string, unknown>> }>(r),
+        parseJson<{ data: AircraftMasterRecord[] }>(r),
       ),
 
-    importAircraftMaster: (body: { headers: string[]; rows: Array<Record<string, string>> }) =>
+    importAircraftMaster: (rows: AircraftMasterWrite[]) =>
       request('/billing/aircraft-master/import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rows }),
+      }).then((r) => parseJson<{ data: { created: number; updated: number } }>(r)),
+
+    createAircraftMaster: (body: AircraftMasterWrite) =>
+      request('/billing/aircraft-master', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
-      }).then((r) => parseJson<{ data: Array<Record<string, unknown>> }>(r)),
+      }).then((r) => parseJson<{ data: AircraftMasterRecord }>(r)),
+
+    updateAircraftMaster: (id: string, body: AircraftMasterWrite) =>
+      request(`/billing/aircraft-master/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      }).then((r) => parseJson<{ data: AircraftMasterRecord }>(r)),
+
+    deleteAircraftMaster: (id: string) =>
+      request(`/billing/aircraft-master/${id}`, { method: 'DELETE' }).then((r) => parseJson(r)),
 
     listEquipmentMaster: () =>
       request('/billing/equipment-master').then((r) =>

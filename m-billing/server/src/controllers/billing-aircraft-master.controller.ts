@@ -1,12 +1,8 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
 import { BillingPageAccess } from '../common/billing-page-access.decorator';
 import {
-  CurrentBillingStation,
-} from '../common/billing-context.decorator';
-import type { StationScopeContext } from '../common/station-scope';
-import {
   BillingAircraftMasterService,
-  type AircraftMasterImportRow,
+  type AircraftMasterWrite,
 } from '../services/billing-aircraft-master.service';
 
 @BillingPageAccess()
@@ -15,23 +11,27 @@ export class BillingAircraftMasterController {
   constructor(private readonly aircraftMaster: BillingAircraftMasterService) {}
 
   @Get()
-  list(@CurrentBillingStation() station: StationScopeContext) {
-    return this.aircraftMaster.list(station);
+  list() {
+    return this.aircraftMaster.list();
   }
 
   @Post('import')
-  importRows(
-    @CurrentBillingStation() station: StationScopeContext,
-    @Body()
-    body: {
-      headers?: unknown[];
-      rows?: AircraftMasterImportRow[];
-    },
-  ) {
-    return this.aircraftMaster.importRows(
-      station,
-      Array.isArray(body?.headers) ? body.headers : [],
-      Array.isArray(body?.rows) ? body.rows : [],
-    );
+  importRows(@Body() body: { rows?: AircraftMasterWrite[] }) {
+    return this.aircraftMaster.importRows(body?.rows ?? []);
+  }
+
+  @Post()
+  create(@Body() body: AircraftMasterWrite) {
+    return this.aircraftMaster.create(body ?? {});
+  }
+
+  @Patch(':id')
+  update(@Param('id') id: string, @Body() body: AircraftMasterWrite) {
+    return this.aircraftMaster.update(id, body ?? {});
+  }
+
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.aircraftMaster.remove(id);
   }
 }
