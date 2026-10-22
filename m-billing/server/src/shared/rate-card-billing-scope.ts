@@ -14,13 +14,18 @@ export function rateCardMatchesHandlingScope(
   return true;
 }
 
-/** True when UOM is billed by the hour (always charged on ADS). Includes "Per Half Hour". */
+/** True when UOM is billed by the started hour. Half-hour and 15-minute units are separate. */
 export function isAdsHourlyUom(uom: unknown): boolean {
   const raw = String(uom ?? '').trim();
   if (!raw) return false;
+  if (isAdsHalfHourUom(raw) || isAdsFifteenMinuteUom(raw)) return false;
   if (/^hr$/i.test(raw)) return true;
   if (/per\s*hour/i.test(raw)) return true;
-  return /hour/i.test(raw);
+  return /\bhour\b/i.test(raw);
+}
+
+export function isAdsTimeBasedUom(uom: unknown): boolean {
+  return isAdsFifteenMinuteUom(uom) || isAdsHalfHourUom(uom) || isAdsHourlyUom(uom);
 }
 
 /** True when UOM is billed per half hour (30-minute blocks). */

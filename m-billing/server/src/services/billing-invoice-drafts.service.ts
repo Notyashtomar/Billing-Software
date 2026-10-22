@@ -237,7 +237,7 @@ function splitPreparationGroupByFortnightConfig(
   const monthBuckets: Array<{
     range: (typeof config.ranges)[number];
     monthRange: { start: Date; end: Date };
-    exchangeRatePerUsd: number;
+    exchangeRatePerUsd?: number;
     records: BillingPreparationRecordDocument[];
   }> = [];
 
@@ -250,12 +250,10 @@ function splitPreparationGroupByFortnightConfig(
     }
     const range = assigned.range;
     const monthKey = assigned.monthKey;
-    const exchangeRatePerUsd = fortnightExchangeRateForPart(config, monthKey, range.startDay);
-    if (exchangeRatePerUsd == null) {
-      throw new BadRequestException(
-        `Add a USD to INR rate for ${monthKey} on the contract for ${item.record.customerCode} (part starting day ${range.startDay}). That rate is used only in ${monthKey}.`,
-      );
-    }
+    // A missing month rate must not drop the other fortnight part. The invoice
+    // then uses the station conversion rate for that month.
+    const exchangeRatePerUsd =
+      fortnightExchangeRateForPart(config, monthKey, range.startDay) ?? undefined;
     let bucket = monthBuckets.find(
       (part) =>
         part.range.startDay === range.startDay &&
@@ -551,8 +549,12 @@ export class BillingInvoiceDraftsService {
           },
           { documentDateFallback: group.every((row) => isAdsFamilySourceType(row.sourceType)) },
         );
+        if (invoiceContract?.fortnightBillingEnabled) {
+          await this.invoiceEngine.ensureFortnightArrivalDates(ctx, group);
+        }
         const periodGroups = splitPreparationGroupByFortnightConfig(group, invoiceContract);
         for (const periodGroup of periodGroups) {
+          try {
           const volumeOptions = await this.bhsVolumeComposeOptions(
             ctx,
             invoiceContract,
@@ -691,6 +693,19 @@ export class BillingInvoiceDraftsService {
           flightCounts[draftId] = composed.preparationRecordIds.length;
         });
         }
+          } catch (partErr) {
+            const reason = extractHttpExceptionMessage(partErr);
+            const skipPart =
+              /no billable/i.test(reason) ||
+              /fortnight billing/i.test(reason) ||
+              partErr instanceof BadRequestException;
+            if (!skipPart) throw partErr;
+            skippedGroups.push({
+              customerCode: customerCode || 'UNKNOWN',
+              recordCount: periodGroup.records.length,
+              reason,
+            });
+          }
         }
       } catch (err) {
         const reason = extractHttpExceptionMessage(err);
@@ -1472,6 +1487,7 @@ export class BillingInvoiceDraftsService {
     const canRebuildFromPrep = prepIds.length > 0 && !header.adsSplitFamilyId;
 
     const partRate = await this.fortnightExchangeRateForHeader(ctx, header);
+    const invoiceCurrency = String(header.currencyCode ?? 'INR').trim().toUpperCase();
     let factor: number;
     if (partRate != null) {
       factor = partRate;
@@ -1484,9 +1500,13 @@ export class BillingInvoiceDraftsService {
           header.billingPeriodStart,
         );
       } catch {
-        throw new BadRequestException(
-          'No conversion rate found for this draft billing period. Add one under Conversion Rates, then retry.',
-        );
+        if (invoiceCurrency === 'INR') {
+          factor = 1;
+        } else {
+          throw new BadRequestException(
+            'No conversion rate found for this draft billing period. Add one under Conversion Rates, then retry.',
+          );
+        }
       }
     }
     if (!(factor > 0)) {

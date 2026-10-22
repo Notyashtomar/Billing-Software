@@ -7,7 +7,7 @@ import { reportDateYmd } from '../utils/invoicing-flight-report.mapper';
 import { resolveBillingCustomerCode } from '../utils/billing-customer-code.util';
 import { lookupAdhocRate } from './ads-adhoc-tariff';
 import { adsEquipmentFamilyKey } from './ads-equipment-inclusion.util';
-import { adsTimeBasedUnits } from './rate-card-billing-scope';
+import { adsTimeBasedUnits, isAdsTimeBasedUom } from './rate-card-billing-scope';
 import { toBillingTrackableFullName } from 'src/common/billing-trackable-equipment-name';
 
 export type AdsEquipmentCatalogItem = {
@@ -149,7 +149,7 @@ export function resolveCatalogItem(
 export function parseUsageHours(raw: unknown): number | null {
   const text = String(raw ?? '').trim();
   if (!text) return null;
-  const hm = text.match(/^(\d{1,3}):(\d{2})$/);
+  const hm = text.match(/^(\d{1,3}):(\d{2})\b/);
   if (hm) {
     const h = Number(hm[1]);
     const m = Number(hm[2]);
@@ -329,7 +329,12 @@ export function computeAdsUsedUnits(opts: {
 
   const timeUnits = adsTimeBasedUnits(opts.uom, engagementMinutes);
   const quantityUnits = remarksQty != null ? qty * remarksQty : qty;
-  let used = timeUnits != null ? timeUnits : quantityUnits;
+  // Time-based UOMs bill only the engagement. No usage time means nothing to charge.
+  let used = isAdsTimeBasedUom(opts.uom)
+    ? timeUnits ?? 0
+    : timeUnits != null
+      ? timeUnits
+      : quantityUnits;
 
   const min = Number(opts.minBillableUnits);
   if (Number.isFinite(min) && min > used) used = min;
@@ -669,6 +674,14 @@ function mapDetailLine(opts: {
       remarks: opts.line.remarks,
       billingDateYmd: billingDate,
       atdDate: billingDate,
+      ataDate:
+        reportDateYmd(opts.main.ATADate) ??
+        reportDateYmd(opts.main.ataDate) ??
+        undefined,
+      ATADate:
+        reportDateYmd(opts.main.ATADate) ??
+        reportDateYmd(opts.main.ataDate) ??
+        undefined,
       staDate:
         reportDateYmd(opts.main.STADate) ??
         reportDateYmd(opts.main.staDate) ??

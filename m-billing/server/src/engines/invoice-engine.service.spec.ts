@@ -1158,8 +1158,10 @@ describe('InvoiceEngineService', () => {
     expect(composed.lines).toHaveLength(1);
     expect(composed.lines[0].description).toBe('PBNB');
     expect(composed.lines[0].serviceCode).toBe('ADS');
-    // used across flights = 1+1+1+2 = 5; free 1/flight → only the 2-use flight bills 1.
+    // used across flights = 1+1+1+2 = 5, including flights that billed nothing.
+    // free 1/flight → only the 2-use flight bills 1.
     expect(composed.lines[0].quantity).toBe(1);
+    expect(composed.lines[0].sourceRef?.usedQuantity).toBe(5);
     expect(composed.lines[0].sourceRef?.chargedQuantity).toBe(1);
   });
 
@@ -1211,8 +1213,9 @@ describe('InvoiceEngineService', () => {
       'INR',
       contract,
     );
-    // Two uses on one flight, one free → one chargeable × 1050.
+    // Two uses on one flight, one free → one chargeable × 1050. Both uses stay in the count.
     expect(composed.lines).toHaveLength(1);
+    expect(composed.lines[0].sourceRef?.usedQuantity).toBe(2);
     expect(composed.lines[0].quantity).toBe(1);
     expect(composed.lines[0].unitPrice).toBe(1050);
     expect(composed.lines[0].lineAmountExclTax).toBe(1050);

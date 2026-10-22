@@ -36,7 +36,7 @@ export type AdsEquipmentInclusionContract = {
 export type AdsContractRuleMatch = {
   /** Rule exists for this equipment × aircraft on the contract. */
   matched: boolean;
-  /** Tick box Included for ADS is off — never charge. */
+  /** Kept for callers. Charge on ADS is ignored, so this stays false. */
   excluded: boolean;
   rule: AdsEquipmentInclusionRule | null;
 };
@@ -71,12 +71,13 @@ function tokensMatch(a: string, b: string): boolean {
   const ca = compactToken(a);
   const cb = compactToken(b);
   if (ca && cb && ca === cb) return true;
-  // Short codes (C, CK, DT, …) must be exact — `"C"` must not match `"ACU-NB"`.
-  if (ca.length <= 2 || cb.length <= 2 || a.length <= 2 || b.length <= 2) {
-    return false;
-  }
-  if (ca && cb && (ca.includes(cb) || cb.includes(ca))) return true;
-  return a.includes(b) || b.includes(a);
+  return false;
+}
+
+/** 90 / 140 / 180 / 280. Different kV ratings are different equipment. */
+function gpuKvTag(value: string): string | null {
+  const match = compactToken(normalizeToken(value)).match(/(90|140|180|280)KV/);
+  return match?.[1] ?? null;
 }
 
 /**
@@ -160,7 +161,21 @@ export function adsEquipmentFamilyKey(value: unknown): string | null {
   return null;
 }
 
+function bodyTag(value: string): 'NB' | 'WB' | '' {
+  const text = normalizeToken(value);
+  const compact = compactToken(text);
+  if (/\bNARROW\b/.test(text) || compact.includes('NARROWBODY') || /\bNB\b/.test(text)) return 'NB';
+  if (/\bWIDE\b/.test(text) || compact.includes('WIDEBODY') || /\bWB\b/.test(text)) return 'WB';
+  return '';
+}
+
 function equipmentFamilyMatches(a: string, b: string): boolean {
+  const bodyA = bodyTag(a);
+  const bodyB = bodyTag(b);
+  if (bodyA && bodyB && bodyA !== bodyB) return false;
+  const ka = gpuKvTag(a);
+  const kb = gpuKvTag(b);
+  if (ka && kb && ka !== kb) return false;
   const fa = adsEquipmentFamilyKey(a);
   const fb = adsEquipmentFamilyKey(b);
   if (!fa || !fb) return false;
@@ -383,10 +398,20 @@ function findMatchingAdsRules(
   if (rules.length === 0) return [];
 
   const contractAircraft = sanitizeContractAircraftTypes(contract.aircraftTypes ?? []);
+  const equipmentName = String(opts.equipmentName ?? '').trim();
+  const particular = String(opts.particular ?? '').trim();
+  const serviceCode = String(opts.serviceCode ?? '').trim();
+  const named = equipmentName || particular;
+  // A stale prep service code must not price a different equipment row.
+  const codeAgrees =
+    !serviceCode ||
+    !named ||
+    serviceDirectlyMatchesRule(serviceCode, [named, particular].filter(Boolean)) ||
+    [named, particular].filter(Boolean).some((label) => equipmentFamilyMatches(serviceCode, label));
   const candidates = [
-    String(opts.serviceCode ?? ''),
-    String(opts.particular ?? ''),
-    String(opts.equipmentName ?? ''),
+    codeAgrees ? serviceCode : '',
+    particular,
+    equipmentName,
   ].filter((v) => v.trim());
   const aircraftType = String(opts.aircraftType ?? '');
 
@@ -442,55 +467,23 @@ export function matchAdsEquipmentContractRule(
     return { matched: false, excluded: false, rule: null };
   }
   const candidates = [
-    String(opts.serviceCode ?? ''),
-    String(opts.particular ?? ''),
     String(opts.equipmentName ?? ''),
+    String(opts.particular ?? ''),
+    String(opts.serviceCode ?? ''),
   ].filter((value) => value.trim());
-  const selectionMode = (contract?.adsEquipmentRules ?? []).some(
-    (rule) => rule.includedForAds === false,
-  );
   const directlyMatches = (rule: AdsEquipmentInclusionRule) =>
     serviceDirectlyMatchesRule(String(rule.serviceCode ?? ''), candidates);
-  const excludedDirect = matches.find(
-    (rule) => rule.includedForAds === false && directlyMatches(rule),
-  );
-  // An unticked clauses row is the equipment the user left off ADS, even when a
-  // ticked row only reaches it through a shared family (GPU-NB → GPU-140KV).
-  if (selectionMode && excludedDirect) {
-    return { matched: true, excluded: true, rule: excludedDirect };
-  }
-  if (selectionMode) {
-    const directIncluded = matches.filter(
-      (rule) => rule.includedForAds !== false && directlyMatches(rule) && ruleHasUnitPrice(rule),
-    );
-    if (directIncluded.length === 0) {
-      return {
-        matched: true,
-        excluded: true,
-        rule: matches.find((rule) => rule.includedForAds === false) ?? matches[0] ?? null,
-      };
-    }
-    const rule = directIncluded.reduce((best, candidate) => {
-      if (!best) return candidate;
-      const bestOwn = ruleListsOwnAircraft(best);
-      const candidateOwn = ruleListsOwnAircraft(candidate);
-      if (candidateOwn !== bestOwn) return candidateOwn ? candidate : best;
-      return candidate;
-    }, directIncluded[0]);
-    return { matched: true, excluded: false, rule: rule ?? null };
-  }
-  const excluded = matches.find((r) => r.includedForAds === false);
-  if (excluded && !matches.some((r) => r.includedForAds !== false && ruleHasUnitPrice(r))) {
-    return { matched: true, excluded: true, rule: excluded };
-  }
-  const included = matches.filter((r) => r.includedForAds !== false);
-  const priced = included.filter(ruleHasUnitPrice);
-  const pool = priced.length > 0 ? priced : included;
-  if (pool.length === 0) {
-    return { matched: true, excluded: true, rule: excluded ?? matches[0] ?? null };
-  }
+  const priced = matches.filter(ruleHasUnitPrice);
+  const pool = priced.length > 0 ? priced : matches;
   const rule = pool.reduce((best, candidate) => {
     if (!best) return candidate;
+    const bestDirect = directlyMatches(best);
+    const candidateDirect = directlyMatches(candidate);
+    if (candidateDirect !== bestDirect) return candidateDirect ? candidate : best;
+    const bestKv = gpuKvTag(String(best.serviceCode ?? ''));
+    const candidateKv = gpuKvTag(String(candidate.serviceCode ?? ''));
+    const wantedKv = candidates.map((value) => gpuKvTag(value)).find(Boolean) ?? null;
+    if (wantedKv && candidateKv === wantedKv && bestKv !== wantedKv) return candidate;
     const bestOwn = ruleListsOwnAircraft(best);
     const candidateOwn = ruleListsOwnAircraft(candidate);
     if (candidateOwn !== bestOwn) return candidateOwn ? candidate : best;
@@ -527,7 +520,7 @@ export type AdsContractRulePricing = {
 };
 
 /**
- * Price ADS usage from the tick-marked contract rule only (not Rate Cards tab).
+ * Price ADS usage from the clauses row (Always bill, UOM, price). Charge on ADS is ignored.
  */
 export function resolveAdsPricingFromContractRule(
   contract: AdsEquipmentInclusionContract,

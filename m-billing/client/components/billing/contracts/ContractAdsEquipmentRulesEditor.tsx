@@ -430,9 +430,11 @@ export function ContractAdsEquipmentRulesEditor({
     const equipmentUom = uomsForEquipment(serviceCode)[0]?.uom;
     const wheelchair = isWheelchairAdsService(serviceCode);
     const current = displayRules[index];
+    const keptUom =
+      current?.uom && current.uom !== 'EA' ? current.uom : '';
     updateRule(index, {
       serviceCode,
-      uom: equipmentUom || selected?.uom?.trim() || current?.uom || 'EA',
+      uom: keptUom || equipmentUom || selected?.uom?.trim() || 'EA',
       ...(wheelchair
         ? {
             freePerFlightNb: current?.freePerFlightNb ?? current?.freePerFlight ?? 0,
@@ -463,7 +465,7 @@ export function ContractAdsEquipmentRulesEditor({
           <p className="mt-0.5 text-xs text-gray-600">
             Equipment lines apply for the whole contract window{' '}
             <strong>{validityLabel}</strong>. Charge uses the UOM saved on each line.
-            Only rows ticked under Charge on ADS are invoiced. Anything unticked or not listed is left off the ADS invoice.
+            ADS invoices use Free / flight, Always bill, UOM, and price. Charge on ADS is ignored. Equipment with no priced row is left off the invoice.
           </p>
           {roeHint ? (
             <p
@@ -522,7 +524,7 @@ export function ContractAdsEquipmentRulesEditor({
                   <th className="sticky top-0 z-30 border-b border-gray-200 bg-gray-50 px-3 py-2">
                     Charge on ADS
                     <span className="mt-0.5 block text-[10px] font-normal normal-case tracking-normal text-gray-500">
-                      Only ticked rows are invoiced
+                      Ignored
                     </span>
                   </th>
                   <th className="sticky top-0 z-30 border-b border-gray-200 bg-gray-50 px-3 py-2">Always bill</th>
@@ -630,12 +632,10 @@ export function ContractAdsEquipmentRulesEditor({
                         <input
                           type="checkbox"
                           checked={rule.includedForAds !== false}
-                          disabled={disabled}
-                          onChange={(e) =>
-                            updateRule(index, { includedForAds: e.target.checked })
-                          }
-                          aria-label={`Charge on ADS row ${index + 1}`}
-                          className="h-4 w-4 rounded border-gray-300 text-[color:var(--billing-accent)] focus:ring-[color:var(--billing-accent)]"
+                          disabled
+                          aria-label={`Charge on ADS row ${index + 1} (ignored)`}
+                          title="Ignored. Always bill, UOM, and price decide the ADS line."
+                          className="h-4 w-4 rounded border-gray-300 text-gray-300"
                         />
                       </td>
                       <td className="px-3 py-2">
@@ -670,27 +670,9 @@ export function ContractAdsEquipmentRulesEditor({
                           className="min-w-[10rem] max-w-[16rem] rounded-md border border-gray-300 px-2 py-1.5 text-sm"
                         >
                           <option value="">Select UOM</option>
-                          {(uomsForEquipment(rule.serviceCode).length > 0
-                            ? (() => {
-                                const pairs = uomsForEquipment(rule.serviceCode);
-                                const current = String(rule.uom ?? '').trim();
-                                if (
-                                  current &&
-                                  !pairs.some((pair) => pair.uom.toLowerCase() === current.toLowerCase())
-                                ) {
-                                  pairs.unshift({ uom: current, abbreviation: '' });
-                                }
-                                return pairs.map((pair) => ({
-                                  value: pair.uom,
-                                  label: pair.abbreviation
-                                    ? `${pair.uom} (${pair.abbreviation})`
-                                    : pair.uom,
-                                }));
-                              })()
-                            : uomOptions.map((uom) => ({ value: uom, label: uom }))
-                          ).map((choice) => (
-                            <option key={choice.value} value={choice.value}>
-                              {choice.label}
+                          {uomOptions.map((uom) => (
+                            <option key={uom} value={uom}>
+                              {uom}
                             </option>
                           ))}
                         </select>

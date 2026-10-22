@@ -6,7 +6,8 @@ export type BillingAircraftMasterDocument = BillingAircraftMaster & Document;
 
 @Schema()
 export class BillingAircraftMaster {
-  @Prop({ required: true, trim: true, uppercase: true })
+  /** Shared catalog. GLOBAL so every station sees the same aircraft master. */
+  @Prop({ required: true, default: 'GLOBAL', trim: true, uppercase: true })
   stationCode: string;
 
   @Prop({ default: 0 })
@@ -44,6 +45,10 @@ export class BillingAircraftMaster {
 
   @Prop({ default: '' })
   category: string;
+
+  /** Second Category column on the sheet (A, B, C, E). */
+  @Prop({ default: '' })
+  categoryCode: string;
 
   /** Second "Active" column on the import sheet. */
   @Prop({ default: '' })

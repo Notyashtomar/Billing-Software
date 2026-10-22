@@ -34,6 +34,7 @@ import {
   calendarDayKey,
   incrementalSecondFlightIds,
 } from '../utils/incremental-flight-price.util';
+import { extractPreparationFlightYmd } from '../utils/contract-fortnight-billing.util';
 import {
   contractBillsBmeEquipment,
   isBmeAdsEquipmentLabel,
@@ -926,11 +927,14 @@ export class InvoiceEngineService {
       const head = rows[0];
       if (!head) continue;
       const usedSum = rows.reduce((sum, row) => sum + row.used, 0);
+      if (usedSum <= 0) continue;
       let charged = toWholeAdsUnits(Math.max(0, usedSum - head.effectiveFree));
       if (rows.some((row) => row.turnaroundCrew)) {
         charged = Math.min(charged, 1);
       }
-      if (charged <= 0) continue;
+      // A flight inside the free allowance still counts as used services.
+      // Only the chargeable excess is billed. The line is omitted later when
+      // every flight for this equipment stays inside the allowance.
 
       const chargePercent = 0;
       const concessionAppliedToUnitPrice = false;
@@ -1015,6 +1019,52 @@ export class InvoiceEngineService {
     }
 
     return lines;
+  }
+
+  /**
+   * Fortnight parts use actual arrival. ADS preparation stores the billing date
+   * and often omits ATA, so copy ATA from the flight report before the split.
+   */
+  async ensureFortnightArrivalDates(
+    ctx: StationScopeContext,
+    records: BillingPreparationRecordDocument[],
+  ): Promise<void> {
+    if (!String(ctx?.stationCode ?? '').trim()) return;
+    const missing = records.filter(
+      (rec) =>
+        !extractPreparationFlightYmd({
+          sourceRef: (rec.sourceRef ?? null) as Record<string, unknown> | null,
+          operationalSnapshot: (rec.operationalSnapshot ?? null) as Record<string, unknown> | null,
+        }),
+    );
+    if (missing.length === 0) return;
+    const serials = [
+      ...new Set(
+        missing
+          .map((rec) => preparationSerial(rec))
+          .filter((n): n is number => n != null),
+      ),
+    ];
+    if (serials.length === 0) return;
+    const docs = await this.fhrModel
+      .find(StationScope.filter({ SerialNo: { $in: serials } }, ctx))
+      .select('SerialNo mainDetails')
+      .lean();
+    const ataBySerial = new Map<number, string>();
+    for (const doc of docs) {
+      const serial = Number((doc as { SerialNo?: unknown }).SerialNo);
+      const main = ((doc as { mainDetails?: Record<string, unknown> }).mainDetails ??
+        {}) as Record<string, unknown>;
+      const ata = calendarDayKey(main.ATADate ?? main.ataDate ?? main['ATA Date']);
+      if (Number.isFinite(serial) && ata) ataBySerial.set(serial, ata);
+    }
+    for (const rec of missing) {
+      const serial = preparationSerial(rec);
+      const ata = serial == null ? '' : ataBySerial.get(serial) ?? '';
+      if (!ata) continue;
+      const snap = (rec.operationalSnapshot ?? {}) as Record<string, unknown>;
+      rec.operationalSnapshot = { ...snap, ataDate: ata, ATADate: ata };
+    }
   }
 
   /**

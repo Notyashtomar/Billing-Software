@@ -313,45 +313,52 @@ describe('ads-equipment-inclusion.util', () => {
     expect(priced.unitPrice).toBe(494.29);
   });
 
-  it('does not bill an unticked equipment row through a ticked family rule', () => {
-    const priced = resolveAdsPricingFromContractRule(
-      {
-        adsBillingEnabled: true,
-        aircraftTypes: ['A330'],
-        adsEquipmentRules: [
-          {
-            serviceCode: 'GPU-NB',
-            includedForAds: true,
-            unitPriceINR: 8000,
-            uom: 'Per Service',
-            aircraftTypes: ['A330'],
-          },
-          {
-            serviceCode: 'Ground Power Unit - 140KV',
-            includedForAds: false,
-            unitPriceINR: 8000,
-            uom: 'Per Service',
-            aircraftTypes: ['A330'],
-          },
-          {
-            serviceCode: 'ACU-NB',
-            includedForAds: true,
-            unitPriceINR: 5000,
-            uom: 'Per Service',
-            aircraftTypes: ['A330'],
-          },
-        ],
-      },
-      {
-        serviceCode: 'Ground Power Unit - 140KV',
-        particular: 'Ground Power Unit - 140KV',
-        equipmentName: 'Ground Power Unit - 140KV',
-        aircraftType: 'A330',
-        billingCurrency: 'INR',
-      },
-    );
-    expect(priced.excluded).toBe(true);
-    expect(priced.unitPrice).toBe(0);
+  it('prices GPU-180 from its own row and does not give that rate to other equipment', () => {
+    const contract = {
+      adsBillingEnabled: true,
+      aircraftTypes: ['B787-900'],
+      adsEquipmentRules: [
+        {
+          serviceCode: 'Ground Power Unit-180KV',
+          includedForAds: false,
+          alwaysChargeable: true,
+          unitPriceINR: 3301,
+          uom: 'Per 15 Minutes',
+          aircraftTypes: ['B787-900'],
+        },
+        {
+          serviceCode: 'GPU-NB',
+          includedForAds: true,
+          alwaysChargeable: true,
+          unitPriceINR: 3301,
+          uom: 'Per 15 Minutes',
+          aircraftTypes: ['B787-900'],
+        },
+      ],
+    };
+    const gpu = resolveAdsPricingFromContractRule(contract, {
+      serviceCode: 'Scheduled - Equipment - GPU-NB',
+      particular: 'Ground Power Unit-180KV',
+      equipmentName: 'Ground Power Unit-180KV',
+      aircraftType: 'B787-900',
+      billingCurrency: 'INR',
+    });
+    expect(gpu.matched).toBe(true);
+    expect(gpu.excluded).toBe(false);
+    expect(gpu.alwaysChargeable).toBe(true);
+    expect(gpu.unitPrice).toBe(3301);
+    expect(gpu.uom).toBe('Per 15 Minutes');
+    expect(gpu.serviceCode).toBe('Ground Power Unit-180KV');
+
+    const belt = resolveAdsPricingFromContractRule(contract, {
+      serviceCode: 'Scheduled - Equipment - GPU-NB',
+      particular: 'Conveyor Belt Loader',
+      equipmentName: 'Conveyor belt loader',
+      aircraftType: 'B787-900',
+      billingCurrency: 'INR',
+    });
+    expect(belt.matched).toBe(false);
+    expect(belt.unitPrice).toBeNull();
   });
 
   it('recognises BME equipment labels and keeps the toggle off unless explicitly true', () => {
