@@ -188,10 +188,10 @@ export function ChangeStationDialog({ open, currentCode, onClose }: Props) {
                       />
                       <span
                         className={cn(
-                          'grid h-9 w-9 shrink-0 place-items-center rounded-lg transition duration-300',
+                          'grid h-9 w-9 shrink-0 place-items-center rounded-full shadow-[inset_0_0_0_1px_rgba(255,255,255,0.18)] transition duration-300',
                           current
-                            ? 'bg-emerald-100 text-emerald-700'
-                            : 'bg-slate-100 text-slate-500 group-hover:scale-105 group-hover:bg-emerald-100 group-hover:text-emerald-700',
+                            ? 'bg-gradient-to-br from-emerald-400 to-emerald-600 text-white shadow-[0_0_0_3px_rgba(16,185,129,0.28)]'
+                            : 'bg-gradient-to-br from-sky-500 to-indigo-600 text-white group-hover:scale-105 group-hover:from-emerald-400 group-hover:to-teal-600',
                         )}
                       >
                         {busy ? (
