@@ -789,10 +789,10 @@ html[data-billing-night] {
   --billing-info: #4c8dff;
   --billing-info-soft: rgba(76, 141, 255, 0.16);
   --billing-info-border: rgba(76, 141, 255, 0.45);
-  --billing-bg: #1b1d24;
-  --billing-surface: #242733;
-  --billing-surface-muted: #1e212b;
-  --billing-surface-elevated: #2c3140;
+  --billing-bg: #050506;
+  --billing-surface: #101114;
+  --billing-surface-muted: #0a0b0d;
+  --billing-surface-elevated: #181a1e;
   --billing-border: rgba(120, 150, 210, 0.22);
   --billing-border-strong: rgba(76, 141, 255, 0.45);
   --billing-text: #ffffff;
@@ -808,12 +808,12 @@ html[data-billing-night] {
 
 html[data-billing-night],
 html[data-billing-night] body {
-  background-color: #1b1d24;
+  background-color: #050506;
 }
 
 html[data-billing-night] .billing-app {
   color-scheme: dark;
-  background-color: #1b1d24;
+  background-color: #050506;
   color: #ffffff;
 }
 
@@ -825,7 +825,7 @@ html[data-billing-night] .billing-app [class*='bg-[#f3f5f2]'],
 html[data-billing-night] .billing-app [class*='bg-[#eef0ec]'],
 html[data-billing-night] .billing-app [class*='bg-[#eef1ec]'],
 html[data-billing-night] .billing-app [class*='bg-[#e7f6ea]'] {
-  background-color: #242733 !important;
+  background-color: #101114 !important;
 }
 
 html[data-billing-night] .billing-app .text-gray-900,
@@ -849,7 +849,7 @@ html[data-billing-night] .billing-app [class*='bg-slate-50'],
 html[data-billing-night] .billing-app [class*='bg-gray-50'],
 html[data-billing-night] .billing-app [class*='bg-gray-100'],
 html[data-billing-night] .billing-app [class*='bg-gray-200'] {
-  background-color: #2c3140 !important;
+  background-color: #181a1e !important;
   color: #ffffff !important;
 }
 
@@ -871,13 +871,13 @@ html[data-billing-night] .billing-app [class*='border-gray-'] {
 html[data-billing-night] .billing-app input,
 html[data-billing-night] .billing-app select,
 html[data-billing-night] .billing-app textarea {
-  background-color: #16181f !important;
+  background-color: #050506 !important;
   color: #ffffff !important;
   border-color: #3d7dff !important;
 }
 
 html[data-billing-night] nav.billing-nav-chrome {
-  background: #241c3d !important;
+  background: #050506 !important;
   border-bottom: 1px solid rgba(90, 120, 200, 0.35) !important;
   box-shadow: none !important;
 }
@@ -905,26 +905,177 @@ html[data-billing-night] nav.billing-nav-chrome .billing-nav-dropdown button {
 }
 
 html[data-billing-night] nav.billing-nav-chrome .billing-nav-item-idle:hover {
-  background: #31285a !important;
+  background: #1a1c22 !important;
   color: #ffffff !important;
 }
 
 html[data-billing-night] nav.billing-nav-chrome .billing-nav-dropdown {
-  background: #242733 !important;
+  background: #101114 !important;
   color: #ffffff !important;
   border-color: rgba(76, 141, 255, 0.35) !important;
   box-shadow: 0 16px 36px rgba(0, 0, 0, 0.45) !important;
 }
 
 html[data-billing-night] nav.billing-nav-chrome .billing-night-toggle {
-  background: #31285a !important;
+  background: #16181c !important;
   color: #ffffff !important;
-  border-color: rgba(76, 141, 255, 0.4) !important;
+  border-color: rgba(255, 255, 255, 0.16) !important;
 }
 
 html[data-billing-night] .billing-app [class*='bg-[#1f8a3b]'],
 html[data-billing-night] .billing-app [class*='bg-[#146c2e]'] {
   background-color: #30d158 !important;
+}
+
+/* Pastel chips, panels, and outline buttons used across invoices and masters. */
+html[data-billing-night] .billing-app [class*='bg-violet-50'],
+html[data-billing-night] .billing-app [class*='bg-violet-100'],
+html[data-billing-night] .billing-app [class*='bg-purple-50'],
+html[data-billing-night] .billing-app [class*='bg-purple-100'] {
+  background-color: rgba(124, 92, 255, 0.2) !important;
+  color: #efe8ff !important;
+  border-color: rgba(167, 139, 250, 0.45) !important;
+}
+
+html[data-billing-night] .billing-app [class*='bg-emerald-50'],
+html[data-billing-night] .billing-app [class*='bg-emerald-100'],
+html[data-billing-night] .billing-app [class*='bg-green-50'],
+html[data-billing-night] .billing-app [class*='bg-green-100'] {
+  background-color: rgba(48, 209, 88, 0.16) !important;
+  color: #d8ffe4 !important;
+  border-color: rgba(48, 209, 88, 0.4) !important;
+}
+
+html[data-billing-night] .billing-app [class*='bg-sky-50'],
+html[data-billing-night] .billing-app [class*='bg-sky-100'],
+html[data-billing-night] .billing-app [class*='bg-blue-50'],
+html[data-billing-night] .billing-app [class*='bg-blue-100'],
+html[data-billing-night] .billing-app [class*='bg-indigo-50'],
+html[data-billing-night] .billing-app [class*='bg-indigo-100'] {
+  background-color: rgba(47, 107, 255, 0.16) !important;
+  color: #ffffff !important;
+  border-color: rgba(76, 141, 255, 0.4) !important;
+}
+
+html[data-billing-night] .billing-app [class*='bg-red-50'],
+html[data-billing-night] .billing-app [class*='bg-red-100'],
+html[data-billing-night] .billing-app [class*='bg-rose-50'],
+html[data-billing-night] .billing-app [class*='bg-rose-100'] {
+  background-color: rgba(255, 69, 58, 0.16) !important;
+  color: #ffd4d0 !important;
+  border-color: rgba(255, 69, 58, 0.45) !important;
+}
+
+html[data-billing-night] .billing-app [class*='bg-amber-50'],
+html[data-billing-night] .billing-app [class*='bg-amber-100'],
+html[data-billing-night] .billing-app [class*='bg-yellow-50'],
+html[data-billing-night] .billing-app [class*='bg-yellow-100'],
+html[data-billing-night] .billing-app [class*='bg-orange-50'],
+html[data-billing-night] .billing-app [class*='bg-orange-100'] {
+  background-color: rgba(255, 180, 40, 0.16) !important;
+  color: #ffe7b0 !important;
+  border-color: rgba(255, 180, 40, 0.4) !important;
+}
+
+html[data-billing-night] .billing-app [class*='text-violet-'],
+html[data-billing-night] .billing-app [class*='text-purple-'] {
+  color: #efe8ff !important;
+}
+
+html[data-billing-night] .billing-app [class*='text-emerald-'],
+html[data-billing-night] .billing-app [class*='text-green-'] {
+  color: #7dffa8 !important;
+}
+
+html[data-billing-night] .billing-app [class*='text-sky-'],
+html[data-billing-night] .billing-app [class*='text-blue-'] {
+  color: #c5d8ff !important;
+}
+
+html[data-billing-night] .billing-app [class*='text-amber-'],
+html[data-billing-night] .billing-app [class*='text-yellow-'],
+html[data-billing-night] .billing-app [class*='text-orange-'] {
+  color: #ffd58a !important;
+}
+
+html[data-billing-night] .billing-app [class*='text-red-'],
+html[data-billing-night] .billing-app [class*='text-rose-'] {
+  color: #ff8d86 !important;
+}
+
+html[data-billing-night] .billing-app button[class*='bg-white'],
+html[data-billing-night] .billing-app a[class*='bg-white'] {
+  background-color: #16181c !important;
+  color: #ffffff !important;
+  border-color: rgba(255, 255, 255, 0.14) !important;
+}
+
+html[data-billing-night] .billing-app button[class*='text-red-'],
+html[data-billing-night] .billing-app a[class*='text-red-'] {
+  color: #ff8d86 !important;
+  border-color: rgba(255, 69, 58, 0.45) !important;
+}
+
+html[data-billing-night] .billing-executive {
+  background:
+    radial-gradient(900px 420px at 8% -10%, rgba(47, 107, 255, 0.16), transparent 55%),
+    #050506 !important;
+}
+
+html[data-billing-night] .billing-executive article,
+html[data-billing-night] .billing-executive > div[class*='rounded-2xl'] {
+  background: linear-gradient(180deg, #14161c 0%, #0c0d11 100%) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35) !important;
+}
+
+html[data-billing-night] .billing-executive article:hover {
+  border-color: rgba(90, 140, 255, 0.45) !important;
+}
+
+html[data-billing-night] .billing-executive [class*='text-[#667066]'],
+html[data-billing-night] .billing-executive [class*='text-[#8b9388]'] {
+  color: #9aa3b5 !important;
+}
+
+html[data-billing-night] .billing-executive [class*='text-[#1f8a3b]'] {
+  color: #7eb6ff !important;
+}
+
+html[data-billing-night] .billing-executive [class*='text-[#16803c]'],
+html[data-billing-night] .billing-executive [class*='text-[#146c2e]'] {
+  color: #3ee0a0 !important;
+}
+
+html[data-billing-night] .billing-executive [class*='text-[#b91c1c]'] {
+  color: #ff7a72 !important;
+}
+
+html[data-billing-night] .billing-executive [class*='text-[#3d6b46]'] {
+  color: #9ecbff !important;
+}
+
+html[data-billing-night] .billing-executive .executive-spark.is-up {
+  color: #3ee0a0;
+}
+
+html[data-billing-night] .billing-executive .executive-spark.is-down {
+  color: #ff7a72;
+}
+
+html[data-billing-night] .billing-executive svg path[stroke='#1f8a3b'] {
+  stroke: #3ee0a0;
+}
+
+html[data-billing-night] .billing-executive [class*='bg-[#1f8a3b]'],
+html[data-billing-night] .billing-executive [class*='bg-[#146c2e]'] {
+  background-color: #3ee0a0 !important;
+}
+
+html[data-billing-night] .billing-executive input,
+html[data-billing-night] .billing-executive select {
+  background-color: #08090c !important;
+  border-color: rgba(255, 255, 255, 0.14) !important;
 }
 
 @keyframes equipment-filter-drop {
@@ -952,6 +1103,74 @@ html[data-billing-night] .billing-app [class*='bg-[#146c2e]'] {
 
 @media (prefers-reduced-motion: reduce) {
   .equipment-filter-drop > * {
+    animation: none;
+  }
+}
+
+@keyframes exec-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.billing-executive .exec-card {
+  position: relative;
+  animation: exec-card-in 0.55s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.28s ease, border-color 0.28s ease;
+}
+
+.billing-executive .exec-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 1.25rem;
+  right: 1.25rem;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #1f8a3b, #2f6bff);
+}
+
+html[data-billing-night] .billing-executive .exec-info {
+  background: #101114 !important;
+  border-color: rgba(255, 255, 255, 0.16) !important;
+  color: #d5dbe8 !important;
+}
+
+html[data-billing-night] .billing-executive .exec-info-pop {
+  background: #10131a !important;
+  border-color: rgba(126, 182, 255, 0.55) !important;
+  color: #ffffff !important;
+  box-shadow: 0 16px 40px rgba(47, 107, 255, 0.28) !important;
+}
+
+html[data-billing-night] .billing-executive .exec-card::before {
+  background: linear-gradient(90deg, #3ee0a0, #7eb6ff);
+}
+
+.billing-executive .exec-grid > :nth-child(2) { animation-delay: 0.05s; }
+.billing-executive .exec-grid > :nth-child(3) { animation-delay: 0.1s; }
+.billing-executive .exec-grid > :nth-child(4) { animation-delay: 0.15s; }
+.billing-executive .exec-grid > :nth-child(5) { animation-delay: 0.2s; }
+.billing-executive .exec-grid > :nth-child(6) { animation-delay: 0.25s; }
+
+.billing-executive .exec-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.18);
+}
+
+@media (max-width: 640px) {
+  .billing-executive .exec-card:hover {
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .billing-executive .exec-card {
     animation: none;
   }
 }
