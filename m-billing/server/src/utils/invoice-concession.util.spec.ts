@@ -147,7 +147,7 @@ describe('exclusive BHS invoice concession', () => {
     expect(totals.grossAmount).toBe(23_600);
   });
 
-  it('keeps ADS concession as a straight percent when extended royalty is checked', () => {
+  it('applies exclusive extended royalty on ADS invoices for the same airline', () => {
     const totals = calculateInvoiceConcessionFromLines(
       1000,
       [
@@ -164,9 +164,128 @@ describe('exclusive BHS invoice concession', () => {
       },
       { adsConcession: true },
     );
+    const extended = roundBillingMoney(1000 * (18 / 82));
+    expect(totals.concessionFeePercent).toBe(18);
+    expect(totals.concessionFeeAmount).toBe(extended);
+    expect(totals.grossAmount).toBe(roundBillingMoney(1000 + extended));
+  });
+
+  it('adds no separate ADS concession for inclusive contracts', () => {
+    const totals = calculateInvoiceConcessionFromLines(
+      1502743,
+      [
+        {
+          lineAmountExclTax: 1502743,
+          sourceType: 'ads',
+          sourceRef: { categoryOfFlight: 'International', concessionFeePercent: 18 },
+        },
+      ],
+      {
+        bhsConcessionCoverage: 'comprehensive',
+        extendedRoyaltyEnabled: true,
+        concessionRates: { int: 18 },
+        stationFlightConcession: { int: 18, dom: 5, ga: 18 },
+      },
+      { adsConcession: true },
+    );
+    expect(totals.concessionFeePercent).toBe(0);
+    expect(totals.concessionFeeAmount).toBe(0);
+    expect(totals.grossAmount).toBe(1502743);
+  });
+
+  it('keeps ADS concession as a straight percent when exclusive extended royalty is off', () => {
+    const totals = calculateInvoiceConcessionFromLines(
+      1000,
+      [
+        {
+          lineAmountExclTax: 1000,
+          sourceType: 'ads',
+          sourceRef: { categoryOfFlight: 'International', concessionFeePercent: 18 },
+        },
+      ],
+      {
+        bhsConcessionCoverage: 'non_comprehensive',
+        extendedRoyaltyEnabled: false,
+        concessionRates: { int: 18 },
+      },
+      { adsConcession: true },
+    );
     expect(totals.concessionFeePercent).toBe(18);
     expect(totals.concessionFeeAmount).toBe(180);
     expect(totals.grossAmount).toBe(1180);
+  });
+
+  it('applies exclusive extended royalty on RAF invoices for the same airline', () => {
+    const totals = calculateInvoiceConcessionFromLines(
+      2000,
+      [
+        {
+          lineAmountExclTax: 2000,
+          sourceType: 'raf',
+          serviceCode: 'RAF',
+          sourceRef: { categoryOfFlight: 'International', concessionFeePercent: 18 },
+        },
+      ],
+      {
+        bhsConcessionCoverage: 'non_comprehensive',
+        extendedRoyaltyEnabled: true,
+        concessionRates: { int: 18 },
+        ceilingRatePerFlightINR: 50000,
+      },
+      { invoiceCategory: 'RAF' },
+    );
+    const extended = roundBillingMoney(2000 * (18 / 82));
+    expect(totals.concessionFeePercent).toBe(18);
+    expect(totals.concessionFeeAmount).toBe(extended);
+    expect(totals.grossAmount).toBe(roundBillingMoney(2000 + extended));
+  });
+
+  it('adds no separate RAF concession for inclusive contracts', () => {
+    const totals = calculateInvoiceConcessionFromLines(
+      2000,
+      [
+        {
+          lineAmountExclTax: 2000,
+          sourceType: 'raf',
+          serviceCode: 'RAF',
+          sourceRef: { categoryOfFlight: 'International', concessionFeePercent: 18 },
+        },
+      ],
+      {
+        bhsConcessionCoverage: 'comprehensive',
+        concessionRates: { int: 18 },
+        ceilingRatePerFlightINR: 50000,
+        stationFlightConcession: { int: 18, dom: 5, ga: 18 },
+      },
+      { invoiceCategory: 'RAF' },
+    );
+    expect(totals.concessionFeePercent).toBe(0);
+    expect(totals.concessionFeeAmount).toBe(0);
+    expect(totals.grossAmount).toBe(2000);
+  });
+
+  it('does not apply the BHS flight ceiling to exclusive RAF invoices', () => {
+    const totals = calculateInvoiceConcessionFromLines(
+      2000,
+      [
+        {
+          lineAmountExclTax: 2000,
+          sourceType: 'raf',
+          serviceCode: 'RAF',
+          sourceRef: { categoryOfFlight: 'International', concessionFeePercent: 18 },
+        },
+      ],
+      {
+        bhsConcessionCoverage: 'non_comprehensive',
+        extendedRoyaltyEnabled: false,
+        concessionRates: { int: 18 },
+        ceilingRatePerFlightINR: 50000,
+      },
+      { invoiceCategory: 'RAF', scheduledFlightCount: 4 },
+    );
+    expect(totals.concessionFeePercent).toBe(18);
+    expect(totals.concessionFeeAmount).toBe(360);
+    expect(totals.grossAmount).toBe(2360);
   });
 
   it('uses the concession typed on an ADS invoice as a straight percent', () => {

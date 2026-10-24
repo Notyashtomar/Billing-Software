@@ -68,6 +68,7 @@ import {
 import type { BillingBhsVolumeSchedule } from '@/lib/billing-shared/types';
 import { roundBillingAmount, resolveRateToInr } from '@/lib/billing-shared/currency-convert';
 import {
+  canonicalizeWchrSServiceCode,
   collapseAdsEquipmentRules,
   expandAdsEquipmentRulesAcrossValidity,
 } from '@/lib/billing-shared/ads-equipment-rules-validity';
@@ -716,7 +717,7 @@ export function ContractFormDialog({
           .filter(Boolean);
         const legacy = rule.aircraftType?.trim().toUpperCase();
         return {
-          serviceCode: rule.serviceCode ?? '',
+          serviceCode: canonicalizeWchrSServiceCode(rule.serviceCode) || rule.serviceCode || '',
           freePerFlight: rule.freePerFlight,
           freePerFlightNb:
             rule.freePerFlightNb ??
@@ -1113,7 +1114,7 @@ export function ContractFormDialog({
             .filter(Boolean);
           const selectedAircraft = fromRule.length > 0 ? fromRule : aircraftTypes;
           return {
-            serviceCode: String(rule.serviceCode ?? '').trim(),
+            serviceCode: canonicalizeWchrSServiceCode(rule.serviceCode) || String(rule.serviceCode ?? '').trim(),
             freePerFlight: rule.alwaysChargeable ? 0 : rule.freePerFlight,
             freePerFlightNb: rule.alwaysChargeable ? 0 : rule.freePerFlightNb,
             freePerFlightWb: rule.alwaysChargeable ? 0 : rule.freePerFlightWb,
@@ -1397,9 +1398,7 @@ export function ContractFormDialog({
               <nav
                 className={cn(
                   sidebarCollapsed ? contractUi.railCollapsed : contractUi.rail,
-                  'flex-row overflow-x-auto sm:overflow-visible',
-                  !sidebarCollapsed && 'sm:flex-col',
-                  sidebarCollapsed && 'sm:flex-col sm:overflow-visible',
+                  'flex-col flex-nowrap overflow-x-hidden overflow-y-auto',
                 )}
                 aria-label="Contract sections"
               >
@@ -1446,7 +1445,7 @@ export function ContractFormDialog({
                 ))}
               </nav>
 
-              <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden pr-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+              <div className="relative z-10 min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden bg-white pr-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                 {!isEdit && loadingCustomers ? (
                   <p className="mb-4 text-sm text-[color:var(--billing-text-muted)]">Loading customers…</p>
                 ) : null}
@@ -1454,7 +1453,7 @@ export function ContractFormDialog({
                   <ContractAlert tone="warning">Add a customer first (Priority 2).</ContractAlert>
                 ) : null}
 
-              <TabsContent value="general" className="mt-0 focus-visible:outline-none">
+              <TabsContent value="general" className="mt-0 bg-white focus-visible:outline-none data-[state=inactive]:hidden">
                 <ContractSection
                   title="Identity & validity"
                   description="Contract number, airline, flight category, and price window."
@@ -1768,12 +1767,12 @@ export function ContractFormDialog({
 
                   <fieldset className="min-w-0 rounded-xl border border-[color:var(--billing-border)] bg-[color:var(--billing-surface-muted)]/60 p-4">
                     <legend className="px-1 text-sm font-semibold text-[color:var(--billing-heading)]">
-                      BHS pricing mode
+                      Concession pricing mode
                     </legend>
                     {loadedMixedCoverage ? (
                       <ContractAlert tone="warning">
                         This contract was imported as Mixed coverage. Choose Inclusive or Exclusive
-                        below — save to apply a single mode on invoices.
+                        below — save to apply a single mode on BHS, ADS, and RAF invoices.
                       </ContractAlert>
                     ) : null}
                     <div className="mt-2 flex flex-col gap-3">
@@ -1795,8 +1794,8 @@ export function ContractFormDialog({
                             Inclusive
                           </span>
                           <span className="mt-0.5 block text-xs text-[color:var(--billing-text-muted)]">
-                            Concession is part of the BHS package. Invoices do not add a separate
-                            concession line.
+                            Concession is part of the BHS package. BHS, ADS, and RAF invoices do not
+                            add a separate concession line.
                           </span>
                         </span>
                       </label>
@@ -1817,8 +1816,10 @@ export function ContractFormDialog({
                             Exclusive
                           </span>
                           <span className="mt-0.5 block text-xs text-[color:var(--billing-text-muted)]">
-                            Concession is billed separately — the higher of the percent saved on this
-                            station&apos;s Concessions page or the ceiling rate × flight count.
+                            Concession is billed separately on BHS, ADS, and RAF invoices. BHS uses
+                            the higher of the percent saved on this station&apos;s Concessions page
+                            or the ceiling rate × flight count. ADS and RAF use that same percent of
+                            the invoice total (extended royalty when checked).
                           </span>
                         </span>
                       </label>
@@ -1831,8 +1832,8 @@ export function ContractFormDialog({
                         title="Extended royalty"
                         description={
                           bhsConcessionCoverage === 'non_comprehensive'
-                            ? 'Exclusive pricing only. Royalty is total × saved % / (100 − saved %) instead of total × saved % / 100, using the percent on this station’s contract. The invoice layout stays the same.'
-                            : 'Turn on Exclusive pricing to use extended royalty. Inclusive contracts keep royalty inside the package.'
+                            ? 'Exclusive pricing only. Royalty is total × saved % / (100 − saved %) instead of total × saved % / 100, using the percent on this station’s contract. Applies to BHS, ADS, and RAF invoices. The invoice layout stays the same.'
+                            : 'Turn on Exclusive pricing to use extended royalty. Inclusive contracts keep royalty inside the package and off BHS, ADS, and RAF invoices.'
                         }
                       />
                     </div>
@@ -2102,7 +2103,7 @@ export function ContractFormDialog({
                 </ContractSection>
               </TabsContent>
 
-              <TabsContent value="aircraft" className="mt-0 focus-visible:outline-none">
+              <TabsContent value="aircraft" className="mt-0 bg-white focus-visible:outline-none data-[state=inactive]:hidden">
                 <ContractSection
                   title="Aircraft coverage"
                   description="Pick types this agreement prices. The same list is applied to every ADS equipment rule on Clauses."
@@ -2125,7 +2126,7 @@ export function ContractFormDialog({
                 </ContractSection>
               </TabsContent>
 
-              <TabsContent value="sgha" className="mt-0 focus-visible:outline-none">
+              <TabsContent value="sgha" className="mt-0 bg-white focus-visible:outline-none data-[state=inactive]:hidden">
                 <ContractSection
                   title="Comprehensive volume rates"
                   description="Optional. Use this when the BHS package rate changes with how many flights the airline operates in the month. Leave it empty to keep the saved price-card rate."
@@ -2675,15 +2676,32 @@ export function ContractFormDialog({
                 </ContractSection>
               </TabsContent>
 
-              <TabsContent value="clauses" className="mt-0 focus-visible:outline-none">
+              <TabsContent value="clauses" className="mt-0 bg-white focus-visible:outline-none data-[state=inactive]:hidden">
                 <div className="grid min-w-0 gap-4">
                   <ContractSection
-                    title="Contract clauses"
-                    description="SGHA clause pack for this agreement."
+                    title="ADS equipment rules"
+                    description="Uses the aircraft chosen on the Aircraft tab. Change a row only when that equipment covers a smaller set."
                   >
-                    <ContractClausesEditor
-                      clauses={clauses}
-                      onChange={setClauses}
+                    <ContractAdsEquipmentRulesEditor
+                      rules={adsEquipmentRules}
+                      onChange={setAdsEquipmentRules}
+                      aircraftTypes={selectedAircraftTypes}
+                      services={adsServices}
+                      equipmentMaster={equipmentMaster}
+                      airlineName={selectedCustomer?.name || record?.customerName || ''}
+                      airlineCode={form.customerCode}
+                      validFrom={form.priceValidFrom}
+                      validTo={form.priceValidTo}
+                      rateToInr={resolvedRoeRate}
+                      roeHint={
+                        resolvedRoeRate != null
+                          ? `ROE: 1 USD = ${resolvedRoeRate} INR${
+                              roe?.startingDate
+                                ? ` (from ${formatBillingDate(roe.startingDate)})`
+                                : ''
+                            }`
+                          : 'No USD exchange rate for this validity date — add one in Master → Conversion Rates'
+                      }
                       disabled={saving}
                     />
                   </ContractSection>
@@ -2702,34 +2720,19 @@ export function ContractFormDialog({
                   </ContractSection>
 
                   <ContractSection
-                    title="ADS equipment rules"
-                    description="Uses the aircraft chosen on the Aircraft tab. Change a row only when that equipment covers a smaller set."
+                    title="Contract clauses"
+                    description="SGHA clause pack for this agreement."
                   >
-                    <ContractAdsEquipmentRulesEditor
-                      rules={adsEquipmentRules}
-                      onChange={setAdsEquipmentRules}
-                      aircraftTypes={selectedAircraftTypes}
-                      services={adsServices}
-                      equipmentMaster={equipmentMaster}
-                      validFrom={form.priceValidFrom}
-                      validTo={form.priceValidTo}
-                      rateToInr={resolvedRoeRate}
-                      roeHint={
-                        resolvedRoeRate != null
-                          ? `ROE: 1 USD = ${resolvedRoeRate} INR${
-                              roe?.startingDate
-                                ? ` (from ${formatBillingDate(roe.startingDate)})`
-                                : ''
-                            }`
-                          : 'No USD exchange rate for this validity date — add one in Master → Conversion Rates'
-                      }
+                    <ContractClausesEditor
+                      clauses={clauses}
+                      onChange={setClauses}
                       disabled={saving}
                     />
                   </ContractSection>
                 </div>
               </TabsContent>
 
-              <TabsContent value="document" className="mt-0 focus-visible:outline-none">
+              <TabsContent value="document" className="mt-0 bg-white focus-visible:outline-none data-[state=inactive]:hidden">
                 <ContractSection
                   title="Contract document"
                   description="Upload the signed PDF. Preview and download stay with this agreement."

@@ -58,3 +58,72 @@ export function cleanEquipmentMasterUoms(value: unknown): EquipmentMasterUom[] {
   }
   return uoms;
 }
+
+export const EQUIPMENT_MASTER_REPLACE_COLUMNS = [
+  'itemNo',
+  'description',
+  'unitType',
+  'uom',
+  'abbreviation',
+] as const;
+
+export type EquipmentMasterReplaceColumn = (typeof EQUIPMENT_MASTER_REPLACE_COLUMNS)[number];
+
+export function isEquipmentMasterReplaceColumn(value: unknown): value is EquipmentMasterReplaceColumn {
+  return (
+    typeof value === 'string' &&
+    (EQUIPMENT_MASTER_REPLACE_COLUMNS as readonly string[]).includes(value)
+  );
+}
+
+/** Rename a UOM on one catalog row and drop a duplicate if the new name already exists. */
+export function replaceEquipmentMasterUomValue(
+  uoms: EquipmentMasterUom[] | null | undefined,
+  fromUom: string,
+  toUom: string,
+): { uoms: EquipmentMasterUom[]; changed: boolean } {
+  const from = cell(fromUom);
+  const to = cell(toUom);
+  if (!from || !to || from === to) {
+    return { uoms: Array.isArray(uoms) ? uoms.map((pair) => ({ ...pair })) : [], changed: false };
+  }
+  const next: EquipmentMasterUom[] = [];
+  const seen = new Set<string>();
+  let changed = false;
+  for (const pair of uoms ?? []) {
+    const current = cell(pair.uom);
+    const uom = current === from ? to : current;
+    if (current === from) changed = true;
+    const abbreviation = cell(pair.abbreviation);
+    if (!uom && !abbreviation) continue;
+    const key = uom.toLowerCase();
+    if (uom && seen.has(key)) continue;
+    if (uom) seen.add(key);
+    next.push({ uom, abbreviation });
+  }
+  return { uoms: next, changed };
+}
+
+/** Rename an abbreviation on one catalog row. Matching UOM pairs stay distinct. */
+export function replaceEquipmentMasterAbbreviationValue(
+  uoms: EquipmentMasterUom[] | null | undefined,
+  fromRaw: string,
+  toRaw: string,
+): { uoms: EquipmentMasterUom[]; changed: boolean } {
+  const from = cell(fromRaw);
+  const to = cell(toRaw);
+  if (!from || !to || from === to) {
+    return { uoms: Array.isArray(uoms) ? uoms.map((pair) => ({ ...pair })) : [], changed: false };
+  }
+  let changed = false;
+  const next: EquipmentMasterUom[] = [];
+  for (const pair of uoms ?? []) {
+    const uom = cell(pair.uom);
+    const current = cell(pair.abbreviation);
+    const abbreviation = current === from ? to : current;
+    if (current === from) changed = true;
+    if (!uom && !abbreviation) continue;
+    next.push({ uom, abbreviation });
+  }
+  return { uoms: next, changed };
+}

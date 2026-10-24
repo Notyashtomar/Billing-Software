@@ -108,6 +108,8 @@
     "seed:equipment-sept:import": "npm run build && node dist/excel-import/seed-scheduled-equipment-excel.cli.js --sept",
     "seed:raf-adhoc": "npm run build && node dist/billing/cli/seed-raf-adhoc-rates.cli.js",
     "seed:raf-adhoc:dry-run": "npm run build && node dist/billing/cli/seed-raf-adhoc-rates.cli.js --dry-run",
+    "sync:del-ads-equipment-master": "npm run build && node dist/billing/cli/sync-del-ads-equipment-master.cli.js",
+    "sync:del-ads-equipment-master:dry-run": "npm run build && node dist/billing/cli/sync-del-ads-equipment-master.cli.js --dry-run",
     "seed:maa-raf": "npm run build && node dist/excel-import/seed-maa-raf-excel.cli.js",
     "seed:maa-raf:dry-run": "npm run build && node dist/excel-import/seed-maa-raf-excel.cli.js --dry-run",
     "seed:maa-raf-aug": "npm run build && node dist/excel-import/seed-maa-raf-excel.cli.js --aug",

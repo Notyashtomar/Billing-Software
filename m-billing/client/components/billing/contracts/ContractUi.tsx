@@ -45,9 +45,9 @@ export const contractUi = {
   sectionDesc: 'mt-0.5 text-[11px] font-medium text-[#F1FF5E]',
 
   rail:
-    'flex shrink-0 flex-row flex-wrap gap-1 rounded-2xl border border-slate-200 bg-slate-50 p-1.5 sm:w-52 sm:flex-col',
+    'flex shrink-0 flex-col flex-nowrap gap-1 overflow-y-auto rounded-2xl border border-slate-200 bg-slate-50 p-1.5 sm:w-52',
   railCollapsed:
-    'flex shrink-0 flex-row flex-wrap gap-1 rounded-2xl border border-slate-200 bg-slate-50 p-1.5 sm:w-14 sm:flex-col sm:items-center',
+    'flex shrink-0 flex-col flex-nowrap items-center gap-1 overflow-y-auto rounded-2xl border border-slate-200 bg-slate-50 p-1.5 sm:w-14',
   railItem:
     'rounded-xl px-3 py-2.5 text-left text-sm font-semibold transition-[background-color,color,transform] duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--billing-accent)]/40',
   railItemCollapsed:
@@ -111,7 +111,7 @@ export const contractUi = {
   skeleton: 'h-24 animate-pulse rounded-2xl bg-slate-100',
 
   dialogShell:
-    'contract-dialog !flex h-[min(92vh,56rem)] w-[min(96vw,80rem)] max-w-[80rem] !flex-col gap-0 overflow-hidden !border-slate-200 !bg-white p-0 !text-slate-800 shadow-lg sm:rounded-2xl',
+    'contract-dialog !flex h-[min(94vh,56rem)] !w-[calc(100vw-0.75rem)] !max-w-[calc(100vw-0.75rem)] !flex-col gap-0 overflow-hidden !border-slate-200 !bg-white p-0 !text-slate-800 shadow-lg sm:rounded-2xl',
   dialogHeader:
     'contract-dialog-header shrink-0 space-y-1 border-b border-[#1C0770] !bg-[#1C0770] px-5 py-4 pr-12 text-left sm:px-6',
   dialogFooter:

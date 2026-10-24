@@ -7,6 +7,10 @@ import { billingUi } from '../billingUi';
 import { getExcelJSModule } from '@/lib/dynamic-imports';
 import type { BillingApi } from '@/lib/billing-api';
 import type { EquipmentMasterRecord, EquipmentMasterUomRecord } from '@/lib/billing-api';
+import {
+  applyEquipmentMasterColumnReplace,
+  EquipmentMasterUomReplace,
+} from './EquipmentMasterUomReplace';
 
 const PAGE_SIZE = 40;
 
@@ -97,29 +101,25 @@ export function EquipmentMasterPage({ api }: { api: BillingApi }) {
   }, [rows]);
 
   const uomOptions = useMemo(() => {
-    const values = new Map<string, string>();
+    const values = new Set<string>();
     for (const row of rows) {
       for (const pair of row.uoms ?? []) {
         const uom = pair.uom?.trim();
-        if (!uom) continue;
-        const key = uom.toLowerCase();
-        if (!values.has(key)) values.set(key, uom);
+        if (uom) values.add(uom);
       }
     }
-    return [...values.values()].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+    return [...values].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
   }, [rows]);
 
   const abbreviationOptions = useMemo(() => {
-    const values = new Map<string, string>();
+    const values = new Set<string>();
     for (const row of rows) {
       for (const pair of row.uoms ?? []) {
         const abbreviation = pair.abbreviation?.trim();
-        if (!abbreviation) continue;
-        const key = abbreviation.toLowerCase();
-        if (!values.has(key)) values.set(key, abbreviation);
+        if (abbreviation) values.add(abbreviation);
       }
     }
-    return [...values.values()].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+    return [...values].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
   }, [rows]);
 
   const stats = useMemo(() => {
@@ -138,13 +138,13 @@ export function EquipmentMasterPage({ api }: { api: BillingApi }) {
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
     const type = typeFilter.trim().toLowerCase();
-    const uom = uomFilter.trim().toLowerCase();
-    const abbreviation = abbreviationFilter.trim().toLowerCase();
+    const uom = uomFilter.trim();
+    const abbreviation = abbreviationFilter.trim();
     return rows.filter((row) => {
       const filled = filledUoms(row.uoms ?? []);
       if (type && row.unitType.trim().toLowerCase() !== type) return false;
-      if (uom && !filled.some((pair) => pair.uom.trim().toLowerCase() === uom)) return false;
-      if (abbreviation && !filled.some((pair) => pair.abbreviation.trim().toLowerCase() === abbreviation)) {
+      if (uom && !filled.some((pair) => pair.uom.trim() === uom)) return false;
+      if (abbreviation && !filled.some((pair) => pair.abbreviation.trim() === abbreviation)) {
         return false;
       }
       if (catalogFilter === 'multi' && filled.length < 2) return false;
@@ -413,6 +413,25 @@ export function EquipmentMasterPage({ api }: { api: BillingApi }) {
           tone={stats.missingDescription + stats.missingUom > 0 ? 'warning' : 'success'}
         />
       </div>
+
+      <EquipmentMasterUomReplace
+        api={api}
+        rows={rows}
+        onApplied={(column, fromValue, toValue) => {
+          setRows((current) =>
+            current.map((row) => applyEquipmentMasterColumnReplace(row, column, fromValue, toValue)),
+          );
+          if (column === 'uom') {
+            setUomFilter((current) => (current === fromValue ? toValue : current));
+          }
+          if (column === 'abbreviation') {
+            setAbbreviationFilter((current) => (current === fromValue ? toValue : current));
+          }
+          if (column === 'unitType') {
+            setTypeFilter((current) => (current === fromValue ? toValue : current));
+          }
+        }}
+      />
 
       <section className={`${billingUi.card} mb-4 overflow-hidden`}>
         <div className="flex h-14 items-center justify-between gap-3 px-4">

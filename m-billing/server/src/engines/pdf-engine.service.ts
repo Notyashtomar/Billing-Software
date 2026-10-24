@@ -3,6 +3,10 @@ import { buildInvoicePdfBuffer, buildInvoicePlainTextSummary } from './invoice-p
 import { buildInvoicePdfInput, type BuildInvoicePdfInputParams } from './invoice-pdf.mapper';
 import { buildSampleInvoicePdfInput } from './invoice-pdf.sample-data';
 import type { InvoicePdfInput, InvoicePdfSnapshot } from './invoice-pdf.types';
+import {
+  buildAdsAnnexurePdfBuffer,
+  type AdsAnnexurePdfInput,
+} from './ads-equipment-annexure.pdf';
 
 /** @deprecated Use InvoicePdfInput via buildInvoicePdfInput */
 export interface PdfDocumentInput {
@@ -35,6 +39,16 @@ export class PdfEngineService {
       pageCount: 2,
       generatedAt: new Date().toISOString(),
       plainText: buildInvoicePlainTextSummary(input),
+    };
+  }
+
+  async buildAdsAnnexureSnapshot(input: AdsAnnexurePdfInput): Promise<InvoicePdfSnapshot> {
+    const pdfBuffer = await buildAdsAnnexurePdfBuffer(input);
+    return {
+      format: 'pdf',
+      pdfBase64: pdfBuffer.toString('base64'),
+      pageCount: 1,
+      generatedAt: new Date().toISOString(),
     };
   }
 

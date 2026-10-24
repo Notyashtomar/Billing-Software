@@ -3,6 +3,10 @@
  * BC audit: docs/invoicing/audit/BC_SCREEN_INVENTORY.md §A2
  */
 import { toBillingTrackableFullName } from './billing-trackable-equipment-name';
+import {
+  ADS_WCHR_S_SERVICE_CODE,
+  isWchrSCombinedAdsService,
+} from './ads-equipment-rules-validity';
 
 export const SERVICE_CATALOG_LABELS: readonly string[] = [
   'Cancel Scheduled - Equipment - Cabin Cleaning',
@@ -354,7 +358,35 @@ const ADS_CATALOG_DROPPED_LABELS = new Set([
  * White Collar for manpower. BC is Baggage Cart for equipment and Blue Collar
  * for manpower.
  */
+/**
+ * Keep kV-rated GPU names in the ADS dropdown. Trackable aliases fold
+ * 180KV / 280KV into Wide Body (and 90KV into Narrow Body), which hides the
+ * Equipment Master row `Ground Power Unit - 180KV`.
+ */
+function adsGpuKvCatalogName(stripped: string): string | null {
+  const raw = String(stripped ?? '').trim();
+  if (!raw) return null;
+  const upper = raw.toUpperCase().replace(/[–—]/g, '-');
+  const compact = upper.replace(/[^A-Z0-9]/g, '');
+  const isGpu = /\bGPU\b/.test(upper) || compact.includes('GPU') || compact.includes('GROUNDPOWER');
+  if (!isGpu) return null;
+  const kv = compact.match(/(90|140|180|280)KVA?/);
+  if (!kv) return null;
+  const hasBody =
+    /\bNARROW\b/.test(upper) ||
+    /\bWIDE\b/.test(upper) ||
+    /(^|[^A-Z])NB([^A-Z]|$)/.test(upper) ||
+    /(^|[^A-Z])WB([^A-Z]|$)/.test(upper) ||
+    compact.includes('NARROWBODY') ||
+    compact.includes('WIDEBODY');
+  if (hasBody) return null;
+  return `Ground Power Unit - ${kv[1]}KV`;
+}
+
 function adsCatalogDisplayName(rawLabel: string, stripped: string): string {
+  if (isWchrSCombinedAdsService(rawLabel, stripped)) return ADS_WCHR_S_SERVICE_CODE;
+  const kvName = adsGpuKvCatalogName(stripped) ?? adsGpuKvCatalogName(rawLabel);
+  if (kvName) return kvName;
   const lower = String(rawLabel ?? '').trim().toLowerCase();
   const kind = lower.includes('manpower')
     ? 'manpower'
@@ -576,7 +608,7 @@ export function buildAdsContractCatalogOptions(
       const existingRank = catalogPrefixRank(existing.value);
       if (incomingRank < existingRank) {
         unique.set(key, {
-          value: raw,
+          value: isWchrSCombinedAdsService(display, raw) ? ADS_WCHR_S_SERVICE_CODE : raw,
           label: display,
           uom: String(existing.uom ?? '').trim() || incomingUom || meta.uom,
           category: meta.category,
@@ -587,7 +619,7 @@ export function buildAdsContractCatalogOptions(
       continue;
     }
     unique.set(key, {
-      value: raw,
+      value: isWchrSCombinedAdsService(display, raw) ? ADS_WCHR_S_SERVICE_CODE : raw,
       label: display,
       uom: String(source.uom ?? '').trim() || meta.uom,
       category: meta.category,

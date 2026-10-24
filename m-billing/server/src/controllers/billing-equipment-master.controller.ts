@@ -20,6 +20,22 @@ export class BillingEquipmentMasterController {
     return this.equipmentMaster.importRows(body?.rows ?? []);
   }
 
+  @Post('replace-uom')
+  replaceUom(@Body() body: { fromUom?: string; toUom?: string }) {
+    return this.equipmentMaster.replaceUom(body?.fromUom ?? '', body?.toUom ?? '');
+  }
+
+  @Post('replace')
+  replace(
+    @Body() body: { column?: string; fromValue?: string; toValue?: string },
+  ) {
+    return this.equipmentMaster.replaceColumn(
+      body?.column ?? '',
+      body?.fromValue ?? '',
+      body?.toValue ?? '',
+    );
+  }
+
   @Post()
   create(@Body() body: EquipmentMasterWrite) {
     return this.equipmentMaster.create(body ?? {});

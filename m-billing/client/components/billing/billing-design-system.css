@@ -654,6 +654,12 @@ nav.billing-nav-chrome .billing-logo-plate img {
   background: #ffffff;
 }
 
+.contract-dialog [data-radix-tabs-content][data-state='inactive'],
+.contract-dialog [role='tabpanel'][hidden],
+.contract-dialog [role='tabpanel'][data-state='inactive'] {
+  display: none !important;
+}
+
 /* Section bands inside form / view (navy + lemon) */
 .contract-dialog .contract-section > header,
 .contract-dialog section > header.border-b {

@@ -7,14 +7,7 @@ import {
   Patch,
   Post,
   Query,
-  Res,
-  StreamableFile,
-  UploadedFile,
-  UseInterceptors,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
-import type { Response } from 'express';
-import { memoryStorage } from 'multer';
 import { BillingCustomersService } from '../services/billing-customers.service';
 import {
   CurrentBillingActor,
@@ -77,19 +70,6 @@ export class BillingCustomersController {
     return this.customersService.removeAll(station, actor);
   }
 
-  @Get('annexure-file')
-  async annexureFile(
-    @CurrentBillingStation() station: StationScopeContext,
-    @Query('customerCode') customerCode: string,
-    @Query('category') category: string,
-    @Res({ passthrough: true }) res: Response,
-  ): Promise<StreamableFile> {
-    const file = await this.customersService.readAnnexure(station, customerCode, category);
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', file.contentDisposition);
-    return new StreamableFile(Uint8Array.from(file.buffer));
-  }
-
   @Get(':id')
   findOne(
     @CurrentBillingStation() station: StationScopeContext,
@@ -117,33 +97,6 @@ export class BillingCustomersController {
     return this.customersService.update(station, id, dto, actor);
   }
 
-  @Post(':id/annexure')
-  @UseInterceptors(
-    FileInterceptor('file', {
-      storage: memoryStorage(),
-      limits: { fileSize: 12 * 1024 * 1024 },
-    }),
-  )
-  uploadAnnexure(
-    @CurrentBillingStation() station: StationScopeContext,
-    @Param('id') id: string,
-    @UploadedFile() file: Express.Multer.File,
-    @Body('category') category: string,
-    @CurrentBillingActor() actor: { userId: string; userName: string },
-  ) {
-    return this.customersService.saveAnnexure(station, id, category, file, actor);
-  }
-
-  @Delete(':id/annexure')
-  removeAnnexure(
-    @CurrentBillingStation() station: StationScopeContext,
-    @Param('id') id: string,
-    @Query('category') category: string,
-    @CurrentBillingActor() actor: { userId: string; userName: string },
-  ) {
-    return this.customersService.removeAnnexure(station, id, category, actor);
-  }
-
   @Delete(':id')
   remove(
     @CurrentBillingStation() station: StationScopeContext,
@@ -153,4 +106,3 @@ export class BillingCustomersController {
     return this.customersService.remove(station, id, actor);
   }
 }
-

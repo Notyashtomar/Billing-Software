@@ -36,8 +36,10 @@ import {
 } from '../utils/incremental-flight-price.util';
 import { extractPreparationFlightYmd } from '../utils/contract-fortnight-billing.util';
 import {
+  ADS_WCHR_S_PARTICULAR,
   contractBillsBmeEquipment,
   isBmeAdsEquipmentLabel,
+  isWchrSCombinedAdsService,
   resolveAdsPricingFromContractRule,
   type AdsEquipmentInclusionContract,
   type AdsEquipmentInclusionRule,
@@ -245,14 +247,14 @@ export class InvoiceEngineService {
       otherRecords.length === 0 &&
       customRecords.length === 0
     ) {
-      const rafLines = await this.composeRafLines(ctx, rafRecords, documentDate);
+      const rafLines = await this.composeRafLines(ctx, rafRecords, documentDate, contract);
       for (const line of rafLines) {
         lineNo += 1;
         lines.push({ ...line, lineNo });
       }
     } else {
       if (rafRecords.length > 0) {
-        const rafLines = await this.composeRafLines(ctx, rafRecords, documentDate);
+        const rafLines = await this.composeRafLines(ctx, rafRecords, documentDate, contract);
         for (const line of rafLines) {
           lineNo += 1;
           lines.push({ ...line, lineNo });
@@ -435,12 +437,14 @@ export class InvoiceEngineService {
     ctx: StationScopeContext,
     records: BillingPreparationRecordDocument[],
     documentDate: Date,
+    contract?: InvoiceChargeContractLike,
   ): Promise<Omit<ComposedInvoiceLine, 'lineNo'>[]> {
     type RafBucket = {
       particular: string;
       aircraftType: string;
       unitPrice: number;
       uom: string;
+      feeConcessionPercent: number;
       records: BillingPreparationRecordDocument[];
     };
 
@@ -473,8 +477,17 @@ export class InvoiceEngineService {
       ).trim();
       const uom =
         String(rateMatch.uom ?? snap.adsUom ?? 'Per Service').trim() || 'Per Service';
+      const sourceRef = {
+        operationalSnapshot: snap,
+        sourceType: rec.sourceType,
+        categoryOfFlight: pickCategoryOfFlight(snap) || undefined,
+      } satisfies Record<string, unknown>;
+      const feeConcessionPercent = resolveLineFeeConcessionPercent(
+        { sourceRef },
+        contractFromPreparationRecord(rec, contract),
+      );
 
-      const key = `${particular.toLowerCase()}|${aircraftType.toLowerCase()}|${unitPrice}|${uom}`;
+      const key = `${particular.toLowerCase()}|${aircraftType.toLowerCase()}|${unitPrice}|${uom}|${feeConcessionPercent}`;
       const bucket =
         map.get(key) ??
         ({
@@ -482,6 +495,7 @@ export class InvoiceEngineService {
           aircraftType,
           unitPrice,
           uom,
+          feeConcessionPercent,
           records: [],
         } satisfies RafBucket);
       bucket.records.push(rec);
@@ -530,6 +544,7 @@ export class InvoiceEngineService {
           invoiceCategory: 'RAF',
           categoryOfFlight: categoriesOfFlight[0],
           categoriesOfFlight: categoriesOfFlight.length > 0 ? categoriesOfFlight : undefined,
+          concessionFeePercent: bucket.feeConcessionPercent || undefined,
           pricingBasis: bucket.unitPrice > 0 ? 'adhoc' : 'pending',
         },
         preparationRecordIds,
@@ -875,8 +890,21 @@ export class InvoiceEngineService {
           : unitPrice;
       if (!(billedUnitPrice > 0) || !(used > 0)) continue;
 
-      const equipmentServiceCode =
-        String(liveAds.serviceCode || rateMatch.serviceCode || particular).trim() || particular;
+      const combinedWheelchair = isWchrSCombinedAdsService(
+        particular,
+        equipmentName,
+        liveAds.serviceCode,
+        rateMatch.serviceCode,
+      );
+      const liveRuleName = String(liveAds.serviceCode ?? '').trim();
+      const billedParticular = combinedWheelchair
+        ? ADS_WCHR_S_PARTICULAR
+        : liveAds.matched && liveRuleName
+          ? liveRuleName
+          : particular;
+      const equipmentServiceCode = combinedWheelchair
+        ? ADS_WCHR_S_PARTICULAR
+        : String(liveAds.serviceCode || rateMatch.serviceCode || particular).trim() || particular;
       const sourceRef = {
         ...(rec.sourceRef as Record<string, unknown>),
         operationalSnapshot: snap,
@@ -894,7 +922,7 @@ export class InvoiceEngineService {
       const flightKey = adsInvoiceFlightKey(rec, snap);
       pending.push({
         rec,
-        particular,
+        particular: billedParticular,
         aircraftType,
         uom,
         used,
@@ -903,9 +931,11 @@ export class InvoiceEngineService {
         equipmentServiceCode,
         pricingBasis,
         flightKey,
-        equipmentKey: `${equipmentServiceCode.toLowerCase()}|${uom.toLowerCase()}|${billedUnitPrice}|${
-          isBmeAdsEquipmentLabel(particular, equipmentName) ? 'bme' : ''
-        }`,
+        equipmentKey: combinedWheelchair
+          ? `wchr/s|${uom.toLowerCase()}`
+          : `${equipmentServiceCode.toLowerCase()}|${uom.toLowerCase()}|${billedUnitPrice}|${
+              isBmeAdsEquipmentLabel(particular, equipmentName) ? 'bme' : ''
+            }`,
         turnaroundCrew:
           isCrewCoachEquipmentLabel(particular) &&
           isTurnaroundFlightContext(snap, snap.flightNo ?? snap.flightNoEquipmentNo),
@@ -928,7 +958,8 @@ export class InvoiceEngineService {
       if (!head) continue;
       const usedSum = rows.reduce((sum, row) => sum + row.used, 0);
       if (usedSum <= 0) continue;
-      let charged = toWholeAdsUnits(Math.max(0, usedSum - head.effectiveFree));
+      const groupFree = rows.reduce((max, row) => Math.max(max, row.effectiveFree), 0);
+      let charged = toWholeAdsUnits(Math.max(0, usedSum - groupFree));
       if (rows.some((row) => row.turnaroundCrew)) {
         charged = Math.min(charged, 1);
       }
@@ -962,7 +993,7 @@ export class InvoiceEngineService {
 
       bucket.used += usedSum;
       bucket.charged += charged;
-      bucket.freeAllowance = Math.max(bucket.freeAllowance, head.effectiveFree);
+      bucket.freeAllowance = Math.max(bucket.freeAllowance, groupFree);
       for (const row of rows) bucket.records.push(row.rec);
       if (!bucket.pricingBasis && head.pricingBasis) bucket.pricingBasis = head.pricingBasis;
       map.set(key, bucket);

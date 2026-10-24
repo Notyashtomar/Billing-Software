@@ -782,6 +782,7 @@ export class BillingSourceEnrichmentService {
             input.serviceCode ??
             '',
         ).trim() || input.serviceCode;
+    let billedParticular = particular;
     const aircraftType = String(
       input.operationalData.aircraftType ??
         input.operationalData.TypeCraft ??
@@ -880,6 +881,10 @@ export class BillingSourceEnrichmentService {
           ),
           billingCurrency,
         });
+        const liveRuleName = String(rulePricing.serviceCode ?? '').trim();
+        if (rulePricing.matched && liveRuleName) {
+          billedParticular = liveRuleName;
+        }
 
         if (!rulePricing.matched) {
           // Used on flight but not on contract ADS list — free / BHS package.
@@ -1008,7 +1013,7 @@ export class BillingSourceEnrichmentService {
         undefined,
       ...(isAds
         ? {
-            adsParticular: particular,
+            adsParticular: billedParticular,
             adsUsedUnits: usedUnits,
             adsFreeAllowance: freeAllowance,
             adsPricingBasis: pricingBasis,
@@ -1232,7 +1237,7 @@ export class BillingSourceEnrichmentService {
               freeAllowance,
               pricingBasis,
               ...(omitBmeFromAds ? { omitBmeFromAds: true } : {}),
-              particular,
+              particular: billedParticular,
               aircraftType: aircraftType || undefined,
               uom: adsUom,
             }

@@ -80,15 +80,40 @@ function gpuKvTag(value: string): string | null {
   return match?.[1] ?? null;
 }
 
+export const ADS_WCHR_S_PARTICULAR = 'Wheel Chair - WCHR/S';
+
+/** WCHR and WCHS bill as one unit. WCHC stays separate. */
+export function isWchrSCombinedAdsService(...values: unknown[]): boolean {
+  return values.some((value) => {
+    const raw = normalizeToken(value);
+    if (!raw) return false;
+    const compact = compactToken(raw);
+    if (compact.includes('WCHC') || /\bWHEEL\s*CHAIR\s*C\b/.test(raw)) return false;
+    return (
+      compact.includes('WCHRS') ||
+      compact.includes('WCHR') ||
+      compact.includes('WCHS') ||
+      /\bWHEEL\s*CHAIR\s*[RS]\b/.test(raw)
+    );
+  });
+}
+
 /**
  * Canonical equipment family keys so contract `GPU-NB` matches FHR `GPU-90KV` /
- * `Ground Power Unit -90KV` (and WB / ACU / ASU equivalents).
+ * `Ground Power Unit -90KV` (and WB / ACU / ASU equivalents). WCHR and WCHS
+ * share `WCHR/S`; WCHC stays its own family.
  */
 export function adsEquipmentFamilyKey(value: unknown): string | null {
   const raw = normalizeToken(value);
   if (!raw) return null;
   const stripped = stripServiceWrapper(raw);
   const compact = compactToken(stripped);
+  if (compact.includes('WCHC') || /\bWHEEL\s*CHAIR\s*C\b/.test(stripped)) {
+    return 'WCHC';
+  }
+  if (isWchrSCombinedAdsService(stripped, compact)) {
+    return 'WCHR/S';
+  }
 
   const isGpu =
     /\bGPU\b/.test(stripped) ||
@@ -588,6 +613,13 @@ export function resolveAdsPricingFromContractRule(
     freePerFlight,
     unitPrice: match.excluded ? 0 : unitPrice,
     uom,
-    serviceCode: String(rule.serviceCode ?? opts.serviceCode ?? '').trim(),
+    serviceCode: isWchrSCombinedAdsService(
+      rule.serviceCode,
+      opts.serviceCode,
+      opts.particular,
+      opts.equipmentName,
+    )
+      ? ADS_WCHR_S_PARTICULAR
+      : String(rule.serviceCode ?? opts.serviceCode ?? '').trim(),
   };
 }

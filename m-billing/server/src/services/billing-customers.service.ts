@@ -43,16 +43,7 @@ import {
 import { AuditEngineService } from '../engines/audit-engine.service';
 import { formatParentCompanyAddress } from '../utils/customer-address.util';
 import { FileStorageService } from 'src/common/storage/file-storage.service';
-import {
-  annexureContentDisposition,
-  annexureDownloadName,
-  annexureStorageField,
-  isPdfAnnexure,
-  parseCustomerAnnexureCategory,
-  publicCustomerAnnexures,
-  type CustomerAnnexureCategory,
-  type StoredCustomerAnnexures,
-} from '../utils/customer-annexure.util';
+import { type StoredCustomerAnnexures } from '../utils/customer-annexure.util';
 
 export interface BillingActor {
   userId: string;
@@ -87,10 +78,9 @@ function normalizeCustomerScheduleLines(
 }
 
 function presentCustomer<T extends { annexures?: StoredCustomerAnnexures | null }>(doc: T) {
-  return {
-    ...doc,
-    annexures: publicCustomerAnnexures(doc.annexures) ?? null,
-  };
+  const rest = { ...doc };
+  delete rest.annexures;
+  return rest;
 }
 
 function joinCustomerFlightNumbers(
@@ -715,135 +705,6 @@ export class BillingCustomersService {
     });
 
     return successResponse(result);
-  }
-
-  async saveAnnexure(
-    ctx: StationScopeContext,
-    id: string,
-    categoryRaw: string,
-    file: Express.Multer.File | undefined,
-    actor: BillingActor,
-  ) {
-    const category = this.requireAnnexureCategory(categoryRaw);
-    if (!isPdfAnnexure(file ?? {})) {
-      throw new BadRequestException('Annexure must be a PDF file.');
-    }
-    const doc = await this.customerModel.findById(id);
-    if (!doc) throw new NotFoundException('Customer not found');
-    StationScope.assertOwnership(doc, ctx);
-
-    const field = annexureStorageField(category);
-    const stationCode = doc.stationCode;
-    const fileKey = `billing-annexures/${stationCode}/${doc._id}/${field}.pdf`;
-    const previousKey = doc.annexures?.[field]?.fileKey;
-    await this.fileStorage.write(fileKey, file!.buffer);
-    const originalName = String(file!.originalname || `${doc.customerCode}-${category}-annexure.pdf`)
-      .replace(/[\r\n"\\]/g, '')
-      .trim()
-      .slice(0, 180);
-    doc.set(`annexures.${field}`, {
-      fileKey,
-      originalName: originalName || `${doc.customerCode}-${category}-annexure.pdf`,
-      mimeType: 'application/pdf',
-      uploadedAt: new Date(),
-    });
-    doc.markModified('annexures');
-    await doc.save();
-    if (previousKey && previousKey !== fileKey) {
-      await this.fileStorage.delete(previousKey).catch(() => undefined);
-    }
-    await this.auditEngine.log({
-      entityType: 'customer',
-      entityId: doc._id,
-      action: 'updated',
-      userId: actor.userId,
-      userName: actor.userName,
-      actor,
-      stationCode,
-      changes: { annexure: category, originalName },
-    });
-    return successResponse(presentCustomer(doc.toObject()));
-  }
-
-  async removeAnnexure(
-    ctx: StationScopeContext,
-    id: string,
-    categoryRaw: string,
-    actor: BillingActor,
-  ) {
-    const category = this.requireAnnexureCategory(categoryRaw);
-    const doc = await this.customerModel.findById(id);
-    if (!doc) throw new NotFoundException('Customer not found');
-    StationScope.assertOwnership(doc, ctx);
-    const field = annexureStorageField(category);
-    const current = doc.toObject().annexures;
-    const fileKey = current?.[field]?.fileKey;
-    if (fileKey) {
-      await this.fileStorage.delete(fileKey).catch(() => undefined);
-    }
-    const keep = (file?: StoredCustomerAnnexures['ads']) => {
-      const fileKey = String(file?.fileKey ?? '').trim();
-      const originalName = String(file?.originalName ?? '').trim();
-      if (!fileKey || !originalName) return undefined;
-      const uploadedAt = file?.uploadedAt ? new Date(file.uploadedAt) : undefined;
-      return {
-        fileKey,
-        originalName,
-        mimeType: file?.mimeType,
-        uploadedAt: uploadedAt && !Number.isNaN(uploadedAt.getTime()) ? uploadedAt : undefined,
-      };
-    };
-    doc.annexures = {
-      ads: field === 'ads' ? undefined : keep(current?.ads),
-      bhs: field === 'bhs' ? undefined : keep(current?.bhs),
-    };
-    doc.markModified('annexures');
-    await doc.save();
-    await this.auditEngine.log({
-      entityType: 'customer',
-      entityId: doc._id,
-      action: 'updated',
-      userId: actor.userId,
-      userName: actor.userName,
-      actor,
-      stationCode: doc.stationCode,
-      changes: { annexureRemoved: category },
-    });
-    return successResponse(presentCustomer(doc.toObject()));
-  }
-
-  async readAnnexure(ctx: StationScopeContext, customerCodeRaw: string, categoryRaw: string) {
-    const category = this.requireAnnexureCategory(categoryRaw);
-    const customerCode = String(customerCodeRaw ?? '').trim().toUpperCase();
-    if (!customerCode) throw new BadRequestException('Customer code is required.');
-    const doc = await this.customerModel
-      .findOne(StationScope.filter({ customerCode }, ctx))
-      .lean();
-    if (!doc) throw new NotFoundException('Customer not found');
-    const field = annexureStorageField(category);
-    const saved = doc.annexures?.[field];
-    if (!saved?.fileKey) {
-      throw new NotFoundException(`No ${category} annexure saved for ${customerCode}.`);
-    }
-    try {
-      const stored = await this.fileStorage.read(saved.fileKey);
-      const fileName = annexureDownloadName(saved.originalName, customerCode, category);
-      return {
-        buffer: stored.buffer,
-        fileName,
-        contentDisposition: annexureContentDisposition(fileName),
-      };
-    } catch {
-      throw new NotFoundException(`No ${category} annexure saved for ${customerCode}.`);
-    }
-  }
-
-  private requireAnnexureCategory(value: string): CustomerAnnexureCategory {
-    const category = parseCustomerAnnexureCategory(value);
-    if (!category) {
-      throw new BadRequestException('Annexure category must be ADS or BHS.');
-    }
-    return category;
   }
 
   private async deleteAnnexureFiles(annexures?: StoredCustomerAnnexures | null) {

@@ -125,6 +125,17 @@ export class BillingInvoicesController {
     return successResponse(file);
   }
 
+  @Get(':id/annexure')
+  @SkipTimeout()
+  async annexure(
+    @CurrentBillingStation() station: StationScopeContext,
+    @Param('id') id: string,
+    @CurrentBillingActor() actor: { userId: string; userName: string },
+  ) {
+    const file = await this.invoicesService.getAnnexurePdf(station, id, actor);
+    return successResponse(file);
+  }
+
   @Get(':id/backing-sheet/pdf')
   @SkipTimeout()
   async backingPdf(

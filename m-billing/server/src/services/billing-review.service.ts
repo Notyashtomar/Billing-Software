@@ -117,7 +117,10 @@ export class BillingReviewService {
       .find({ invoiceId: inv._id })
       .sort({ lineNo: 1 })
       .lean();
-    applyConcessionTotalsToHeader(inv, invoiceLines, contract);
+    applyConcessionTotalsToHeader(inv, invoiceLines, contract, {
+      adsConcession: String(inv.invoiceCategory ?? '').trim().toUpperCase() === 'ADS',
+      invoiceCategory: String(inv.invoiceCategory ?? '').trim().toUpperCase() || undefined,
+    });
 
     inv.status = this.approvalWorkflow.approve(inv.status);
     inv.approvalStatus = 'approved';
