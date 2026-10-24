@@ -1,5 +1,44 @@
 import type { BillingContractAdsEquipmentRule } from './types';
 
+/** Invoice / clauses label: WCHR and WCHS bill as one wheelchair unit. */
+export const ADS_WCHR_S_SERVICE_CODE = 'Wheel Chair - WCHR/S';
+
+function compactAdsEquipmentToken(value: string): string {
+  return value.replace(/\s+/g, '');
+}
+
+function normalizeAdsEquipmentToken(value: unknown): string {
+  return String(value ?? '')
+    .trim()
+    .toUpperCase()
+    .replace(/[\u2013\u2014]/g, '-')
+    .replace(/[^A-Z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/** WCHR and WCHS only — WCHC stays a separate billed line. */
+export function isWchrSCombinedAdsService(...values: unknown[]): boolean {
+  return values.some((value) => {
+    const raw = normalizeAdsEquipmentToken(value);
+    if (!raw) return false;
+    const compact = compactAdsEquipmentToken(raw);
+    if (compact.includes('WCHC') || /\bWHEEL\s*CHAIR\s*C\b/.test(raw)) return false;
+    return (
+      compact.includes('WCHRS') ||
+      compact.includes('WCHR') ||
+      compact.includes('WCHS') ||
+      /\bWHEEL\s*CHAIR\s*[RS]\b/.test(raw)
+    );
+  });
+}
+
+export function canonicalizeWchrSServiceCode(value: string | undefined | null): string {
+  const raw = String(value ?? '').trim();
+  if (!raw) return '';
+  return isWchrSCombinedAdsService(raw) ? ADS_WCHR_S_SERVICE_CODE : raw;
+}
+
 /** Build inclusive YYYY-MM list from contract validity dates. */
 export function yearMonthsBetween(validFrom: string, validTo: string): string[] {
   const from = String(validFrom ?? '').trim().slice(0, 10);
@@ -36,13 +75,9 @@ function sortedAircraft(rule: BillingContractAdsEquipmentRule): string[] {
 
 /** Identity for equipment rules ignoring calendar month (for UI collapse). */
 export function adsEquipmentIdentity(serviceCode: string | undefined | null): string {
-  return String(serviceCode ?? '')
-    .trim()
-    .toUpperCase()
-    .replace(/[\u2013\u2014]/g, '-')
-    .replace(/[^A-Z0-9]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
+  const raw = normalizeAdsEquipmentToken(serviceCode);
+  if (isWchrSCombinedAdsService(raw)) return 'WCHR S';
+  return raw;
 }
 
 /** Identity for equipment rules ignoring calendar month (for UI collapse). */
@@ -92,6 +127,7 @@ function collapseSameEquipment(
   }
   return {
     ...chosen,
+    serviceCode: canonicalizeWchrSServiceCode(chosen.serviceCode) || chosen.serviceCode,
     aircraftTypes: mergeAircraft(rules),
     aircraftType: undefined,
     category: undefined,
@@ -107,7 +143,10 @@ export function collapseAdsEquipmentRules(
   const order: string[] = [];
   rules.forEach((rule, index) => {
     const identity = adsEquipmentIdentity(rule.serviceCode);
-    const key = identity || `blank:${index}`;
+    const uom = String(rule.uom ?? '')
+      .trim()
+      .toUpperCase() || 'EA';
+    const key = identity ? `${identity}::${uom}` : `blank:${index}`;
     const list = groups.get(key);
     if (list) {
       list.push(rule);

@@ -303,9 +303,9 @@ function ContractCoverageBadge({ contract }: { contract: BillingContract }) {
   const hint =
     contract.bhsConcessionNote ||
     (coverage === 'comprehensive'
-      ? 'Concession is already inside the BHS package.'
+      ? 'Concession is already inside the BHS package. BHS, ADS, and RAF invoices do not add a separate concession line.'
       : coverage === 'non_comprehensive'
-        ? 'Charge concession separately from the BHS package.'
+        ? 'Charge concession separately on BHS, ADS, and RAF invoices.'
         : 'Scheduled and non-scheduled flights treat concession differently.');
   return (
     <span className={cn(contractUi.coverageBadge, tone)} title={hint}>

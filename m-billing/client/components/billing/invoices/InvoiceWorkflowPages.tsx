@@ -17,8 +17,6 @@ import { StatusBadge } from '../StatusBadge';
 import { InvoiceHeaderActionButtons } from './InvoiceHeaderActionButtons';
 import { InvoiceViewPdfButton } from './InvoiceViewPdfButton';
 import { InvoiceViewAnnexureButton, invoiceShowsAdsAnnexure } from './InvoiceViewAnnexureButton';
-import { InvoiceCustomerAnnexureButton } from './InvoiceCustomerAnnexureButton';
-import { savedAnnexureForInvoice, type CustomerAnnexures } from './customerAnnexure';
 import { InvoiceSamplePdfButton } from './InvoiceSamplePdfButton';
 import { InvoiceDeleteDialog } from './InvoiceDeleteDialog';
 import { InvoiceBinDialog } from './InvoiceBinDialog';
@@ -292,7 +290,6 @@ function InvoiceCalculationDetails({
   splitting,
   onToggleSeparateLine,
   onCreateSeparateBill,
-  uploadedAnnexure,
   openingAnnexure,
   onOpenAnnexure,
 }: {
@@ -302,7 +299,6 @@ function InvoiceCalculationDetails({
   splitting?: boolean;
   onToggleSeparateLine?: (lineNo: number) => void;
   onCreateSeparateBill?: () => void;
-  uploadedAnnexure?: { category: string; fileName: string } | null;
   openingAnnexure?: boolean;
   onOpenAnnexure?: () => void;
 }) {
@@ -319,11 +315,7 @@ function InvoiceCalculationDetails({
     String(header.invoiceCategory ?? '').trim().toUpperCase() === 'ADS' &&
     lines.length > 1 &&
     Boolean(onToggleSeparateLine && onCreateSeparateBill);
-  const showAdsAnnexure = invoiceShowsAdsAnnexure(
-    header.invoiceCategory,
-    lines,
-    header.customerCode,
-  );
+  const showAdsAnnexure = invoiceShowsAdsAnnexure(header.invoiceCategory);
   const allSelected = selectedCount === lines.length;
   return (
     <div className="mt-4 rounded-lg border border-[color:var(--billing-accent-border)] bg-[color:var(--billing-accent-soft)] p-4">
@@ -338,15 +330,12 @@ function InvoiceCalculationDetails({
           ) : null}
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-2">
-          {uploadedAnnexure && onOpenAnnexure ? (
-            <InvoiceCustomerAnnexureButton
+          {showAdsAnnexure && onOpenAnnexure ? (
+            <InvoiceViewAnnexureButton
               compact
               busy={openingAnnexure}
-              title={`Open the ${uploadedAnnexure.category} annexure — ${uploadedAnnexure.fileName}`}
               onClick={onOpenAnnexure}
             />
-          ) : showAdsAnnexure ? (
-            <InvoiceViewAnnexureButton compact customerCode={header.customerCode} />
           ) : null}
           {canSeparateAds ? (
             <button
@@ -2365,7 +2354,6 @@ export function InvoiceDetailPage({ api, id }: Props & { id: string }) {
       name?: string;
       address?: string;
       gstRegistrationNo?: string;
-      annexures?: CustomerAnnexures;
     };
   } | null>(null);
   const [tab, setTab] = useState(() => {
@@ -2498,17 +2486,12 @@ export function InvoiceDetailPage({ api, id }: Props & { id: string }) {
     }
   };
 
-  const uploadedAnnexure = savedAnnexureForInvoice(
-    header?.invoiceCategory,
-    detail?.customerMaster?.annexures,
-  );
-
   const handleOpenAnnexure = async () => {
-    if (!header || !uploadedAnnexure) return;
+    if (!header) return;
     setOpeningAnnexure(true);
     setMsg('');
     try {
-      await api.openCustomerAnnexure(header.customerCode, uploadedAnnexure.category);
+      await api.openInvoiceAnnexure(id);
       setMsg('Annexure opened in a new tab.');
     } catch (e) {
       setMsg(e instanceof Error ? e.message : 'Could not open annexure');
@@ -2638,7 +2621,7 @@ export function InvoiceDetailPage({ api, id }: Props & { id: string }) {
       setMsg(
         canRecomputeFromPrep
           ? `Invoice regenerated for ${header.customerCode} from the latest customers, contracts, concessions, rate cards, service catalog, taxes, and conversion rates. ADS drafts also include flights still unsent on the billed-services ADS page, so wheelchair counts match that page.${roeNote}`
-          : `Invoice regenerated with the latest customers, taxes, and conversion rates. Royalty Setup, Airport Setup configure rules, Aircraft Master, and Equipment Master were not used.${roeNote}`,
+          : `Invoice regenerated with the latest customers, contracts, concession pricing, taxes, and conversion rates. Royalty Setup, Airport Setup configure rules, Aircraft Master, and Equipment Master were not used.${roeNote}`,
       );
     } catch (e) {
       setMsg(e instanceof Error ? e.message : 'Invoice regeneration failed');
@@ -2756,11 +2739,7 @@ export function InvoiceDetailPage({ api, id }: Props & { id: string }) {
     'Save a Rate/Unit for every RAF particular (Edit invoice) before View / Generate PDF.';
   const canEditCustomBill = isDraftStatus(header.status) && !header.inBin;
   const canEditInvoiceLines = canEditInvoice(header);
-  const showAdsAnnexure = invoiceShowsAdsAnnexure(
-    header.invoiceCategory,
-    lines,
-    header.customerCode,
-  );
+  const showAdsAnnexure = invoiceShowsAdsAnnexure(header.invoiceCategory);
   const tabs = [
     'general',
     'lines',
@@ -2814,14 +2793,11 @@ export function InvoiceDetailPage({ api, id }: Props & { id: string }) {
                   disabledTitle={rafPdfHint}
                   onView={() => void handleViewPdf()}
                 />
-                {uploadedAnnexure ? (
-                  <InvoiceCustomerAnnexureButton
+                {showAdsAnnexure ? (
+                  <InvoiceViewAnnexureButton
                     busy={openingAnnexure}
-                    title={`Open the ${uploadedAnnexure.category} annexure — ${uploadedAnnexure.file.originalName}`}
                     onClick={() => void handleOpenAnnexure()}
                   />
-                ) : showAdsAnnexure ? (
-                  <InvoiceViewAnnexureButton customerCode={header.customerCode} />
                 ) : null}
                 <InvoiceHeaderActionButtons
                   exporting={exporting}
@@ -3064,16 +3040,8 @@ export function InvoiceDetailPage({ api, id }: Props & { id: string }) {
             splitting={splittingAds}
             onToggleSeparateLine={toggleSeparateAdsLine}
             onCreateSeparateBill={() => void handleCreateSeparateAdsBill()}
-            uploadedAnnexure={
-              uploadedAnnexure
-                ? {
-                    category: uploadedAnnexure.category,
-                    fileName: uploadedAnnexure.file.originalName ?? 'annexure.pdf',
-                  }
-                : null
-            }
             openingAnnexure={openingAnnexure}
-            onOpenAnnexure={uploadedAnnexure ? () => void handleOpenAnnexure() : undefined}
+            onOpenAnnexure={showAdsAnnexure ? () => void handleOpenAnnexure() : undefined}
           />
         </div>
       ) : null}

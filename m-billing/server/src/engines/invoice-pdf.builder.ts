@@ -168,7 +168,7 @@ const STATION_LOGO_BRANDS: Record<string, InvoiceLogoBrand> = {
   TRV: 'GSEC',
 };
 
-function resolveInvoiceLogoBrand(serviceStation: string): InvoiceLogoBrand {
+export function resolveInvoiceLogoBrand(serviceStation: string): InvoiceLogoBrand {
   const key = serviceStation.trim().toUpperCase();
   return STATION_LOGO_BRANDS[key] ?? 'BAS';
 }

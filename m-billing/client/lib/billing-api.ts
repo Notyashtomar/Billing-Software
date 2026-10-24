@@ -21,7 +21,7 @@ const RETRYABLE_STATUSES = new Set([408, 425, 429, 500, 502, 503, 504]);
 
 /** Paths that often exceed the default client deadline (also often @SkipTimeout server-side). */
 const LONG_BILLING_PATH_RE =
-  /\/billing\/(preparation\/(ingest|refresh|create-drafts|submit-custom|bulk-ready|bulk-delete(?:-by-filter)?|unsend)|sources\/(ads|raf)(?:\/|$)|invoices\/[^/]+\/(generate|pdf|backing-sheet\/pdf|send-to-airline)|invoices\/send-to-airline|customers\/sync-from-advance|price-card-airlines\/bulk|cutover\/|mis-bhs\/|mis-ads\/|invoice-drafts\/?$|invoice-drafts\/(merge|bulk-delete|custom-bill|refresh-all)|invoice-drafts\/[^/]+\/(recompute|refresh-rates|split-ads-lines|custom-lines|lines|custom-bill|total-receivable-usd))/i;
+  /\/billing\/(preparation\/(ingest|refresh|create-drafts|submit-custom|bulk-ready|bulk-delete(?:-by-filter)?|unsend)|sources\/(ads|raf)(?:\/|$)|invoices\/[^/]+\/(generate|pdf|annexure|backing-sheet\/pdf|send-to-airline)|invoices\/send-to-airline|customers\/sync-from-advance|price-card-airlines\/bulk|cutover\/|mis-bhs\/|mis-ads\/|invoice-drafts\/?$|invoice-drafts\/(merge|bulk-delete|custom-bill|refresh-all)|invoice-drafts\/[^/]+\/(recompute|refresh-rates|split-ads-lines|custom-lines|lines|custom-bill|total-receivable-usd))/i;
 
 function resolveBillingTimeoutMs(path: string, init?: FrisFetchInit): number | null {
   if (init?.timeoutMs !== undefined) return init.timeoutMs;
@@ -155,20 +155,6 @@ export type EquipmentMasterWrite = {
   unitType?: string;
   uoms?: EquipmentMasterUomRecord[];
 };
-
-function annexureFileNameFromDisposition(header: string | null, fallback: string): string {
-  if (!header) return fallback;
-  const encoded = /filename\*=UTF-8''([^;]+)/i.exec(header);
-  if (encoded?.[1]) {
-    try {
-      return decodeURIComponent(encoded[1].trim());
-    } catch {
-      /* use the plain filename */
-    }
-  }
-  const plain = /filename="([^"]+)"/i.exec(header);
-  return plain?.[1]?.trim() || fallback;
-}
 
 export function createBillingApi({ getApiBase, fetch }: BillingApiConfig) {
   const request = async (path: string, init?: FrisFetchInit) => {
@@ -475,43 +461,6 @@ export function createBillingApi({ getApiBase, fetch }: BillingApiConfig) {
     deleteAllCustomers: () =>
       request('/billing/customers/delete-all', { method: 'POST' }).then((r) => parseJson(r)),
 
-    uploadCustomerAnnexure: (id: string, category: 'ADS' | 'BHS', file: File) => {
-      const body = new FormData();
-      body.append('category', category);
-      body.append('file', file);
-      return request(`/billing/customers/${id}/annexure`, {
-        method: 'POST',
-        body,
-      }).then((r) => parseJson(r));
-    },
-
-    deleteCustomerAnnexure: (id: string, category: 'ADS' | 'BHS') =>
-      request(`/billing/customers/${id}/annexure?category=${category}`, { method: 'DELETE' }).then(
-        (r) => parseJson(r),
-      ),
-
-    openCustomerAnnexure: async (customerCode: string, category: 'ADS' | 'BHS') => {
-      const qs = new URLSearchParams({
-        customerCode: customerCode.trim().toUpperCase(),
-        category,
-      });
-      const res = await request(`/billing/customers/annexure-file?${qs.toString()}`);
-      const type = res.headers.get('content-type') ?? '';
-      if (!res.ok || type.includes('application/json')) {
-        await parseJson(res);
-        return;
-      }
-      const blob = await res.blob();
-      const pdf = blob.type.includes('pdf')
-        ? blob
-        : new Blob([await blob.arrayBuffer()], { type: 'application/pdf' });
-      const fileName = annexureFileNameFromDisposition(
-        res.headers.get('content-disposition'),
-        `${customerCode.trim().toUpperCase()}-${category}-annexure.pdf`,
-      );
-      openPdfBlob(pdf, fileName);
-    },
-
     listAircraftMaster: () =>
       request('/billing/aircraft-master').then((r) =>
         parseJson<{ data: AircraftMasterRecord[] }>(r),
@@ -562,6 +511,51 @@ export function createBillingApi({ getApiBase, fetch }: BillingApiConfig) {
 
     deleteEquipmentMaster: (id: string) =>
       request(`/billing/equipment-master/${id}`, { method: 'DELETE' }).then((r) => parseJson(r)),
+
+    replaceEquipmentMasterUom: (body: { fromUom: string; toUom: string }) =>
+      request('/billing/equipment-master/replace-uom', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      }).then(
+        (r) =>
+          parseJson<{
+            data: {
+              fromUom: string;
+              toUom: string;
+              equipmentMaster: number;
+              serviceCatalog: number;
+              contracts: number;
+              rateCards: number;
+              rafAdhoc: number;
+            };
+          }>(r),
+      ),
+
+    replaceEquipmentMasterColumn: (body: {
+      column: 'itemNo' | 'description' | 'unitType' | 'uom' | 'abbreviation';
+      fromValue: string;
+      toValue: string;
+    }) =>
+      request('/billing/equipment-master/replace', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      }).then(
+        (r) =>
+          parseJson<{
+            data: {
+              column: 'itemNo' | 'description' | 'unitType' | 'uom' | 'abbreviation';
+              fromValue: string;
+              toValue: string;
+              equipmentMaster: number;
+              serviceCatalog: number;
+              contracts: number;
+              rateCards: number;
+              rafAdhoc: number;
+            };
+          }>(r),
+      ),
 
     listServiceCatalog: (params?: { category?: string; search?: string }) => {
       const qs = new URLSearchParams();
@@ -1516,6 +1510,12 @@ export function createBillingApi({ getApiBase, fetch }: BillingApiConfig) {
 
     openInvoicePdf: async (id: string) => {
       const { blob, fileName } = await fetchInvoicePdfBlob(id);
+      openPdfBlob(blob, fileName);
+    },
+
+    openInvoiceAnnexure: async (id: string) => {
+      const res = await request(`/billing/invoices/${id}/annexure`);
+      const { blob, fileName } = await parsePdfDownloadResponse(res);
       openPdfBlob(blob, fileName);
     },
 

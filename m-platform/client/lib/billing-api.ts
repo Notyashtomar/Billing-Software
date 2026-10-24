@@ -21,7 +21,7 @@ const RETRYABLE_STATUSES = new Set([408, 425, 429, 500, 502, 503, 504]);
 
 /** Paths that often exceed the default client deadline (also often @SkipTimeout server-side). */
 const LONG_BILLING_PATH_RE =
-  /\/billing\/(preparation\/(ingest|refresh|create-drafts|submit-custom|bulk-ready|bulk-delete(?:-by-filter)?|unsend)|sources\/ads(?:\/|$)|invoices\/[^/]+\/(generate|pdf|backing-sheet\/pdf|send-to-airline)|invoices\/send-to-airline|customers\/sync-from-advance|price-card-airlines\/bulk|cutover\/|mis-bhs\/|mis-ads\/|invoice-drafts\/?$|invoice-drafts\/(merge|bulk-delete|custom-bill|refresh-all)|invoice-drafts\/[^/]+\/(recompute|refresh-rates|split-ads-lines|custom-lines|lines|custom-bill|total-receivable-usd))/i;
+  /\/billing\/(preparation\/(ingest|refresh|create-drafts|submit-custom|bulk-ready|bulk-delete(?:-by-filter)?|unsend)|sources\/ads(?:\/|$)|invoices\/[^/]+\/(generate|pdf|annexure|backing-sheet\/pdf|send-to-airline)|invoices\/send-to-airline|customers\/sync-from-advance|price-card-airlines\/bulk|cutover\/|mis-bhs\/|mis-ads\/|invoice-drafts\/?$|invoice-drafts\/(merge|bulk-delete|custom-bill|refresh-all)|invoice-drafts\/[^/]+\/(recompute|refresh-rates|split-ads-lines|custom-lines|lines|custom-bill|total-receivable-usd))/i;
 
 function resolveBillingTimeoutMs(path: string, init?: FrisFetchInit): number | null {
   if (init?.timeoutMs !== undefined) return init.timeoutMs;
@@ -583,6 +583,51 @@ export function createBillingApi({ getApiBase, fetch }: BillingApiConfig) {
 
     deleteEquipmentMaster: (id: string) =>
       request(`/billing/equipment-master/${id}`, { method: 'DELETE' }).then((r) => parseJson(r)),
+
+    replaceEquipmentMasterUom: (body: { fromUom: string; toUom: string }) =>
+      request('/billing/equipment-master/replace-uom', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      }).then(
+        (r) =>
+          parseJson<{
+            data: {
+              fromUom: string;
+              toUom: string;
+              equipmentMaster: number;
+              serviceCatalog: number;
+              contracts: number;
+              rateCards: number;
+              rafAdhoc: number;
+            };
+          }>(r),
+      ),
+
+    replaceEquipmentMasterColumn: (body: {
+      column: 'itemNo' | 'description' | 'unitType' | 'uom' | 'abbreviation';
+      fromValue: string;
+      toValue: string;
+    }) =>
+      request('/billing/equipment-master/replace', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      }).then(
+        (r) =>
+          parseJson<{
+            data: {
+              column: 'itemNo' | 'description' | 'unitType' | 'uom' | 'abbreviation';
+              fromValue: string;
+              toValue: string;
+              equipmentMaster: number;
+              serviceCatalog: number;
+              contracts: number;
+              rateCards: number;
+              rafAdhoc: number;
+            };
+          }>(r),
+      ),
 
     listServiceCatalog: (params?: { category?: string; search?: string }) => {
       const qs = new URLSearchParams();
@@ -1508,6 +1553,12 @@ export function createBillingApi({ getApiBase, fetch }: BillingApiConfig) {
 
     openInvoicePdf: async (id: string) => {
       const { blob, fileName } = await fetchInvoicePdfBlob(id);
+      openPdfBlob(blob, fileName);
+    },
+
+    openInvoiceAnnexure: async (id: string) => {
+      const res = await request(`/billing/invoices/${id}/annexure`);
+      const { blob, fileName } = await parsePdfDownloadResponse(res);
       openPdfBlob(blob, fileName);
     },
 

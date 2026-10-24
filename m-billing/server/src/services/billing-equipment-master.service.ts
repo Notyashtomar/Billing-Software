@@ -1,18 +1,38 @@
 import { existsSync, readFileSync } from 'fs';
 import * as path from 'path';
-import { Injectable, Logger, NotFoundException, OnModuleInit } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+  OnModuleInit,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, type AnyBulkWriteOperation } from 'mongoose';
 import * as XLSX from 'xlsx';
 import {
   cleanEquipmentMasterUoms,
   equipmentMasterRowsFromSheet,
+  isEquipmentMasterReplaceColumn,
+  replaceEquipmentMasterAbbreviationValue,
+  replaceEquipmentMasterUomValue,
+  type EquipmentMasterReplaceColumn,
   type EquipmentMasterUom,
 } from '../equipment-master/equipment-master-sheet';
 import {
   BillingEquipmentMaster,
   type BillingEquipmentMasterDocument,
 } from '../schemas/billing-equipment-master.schema';
+import {
+  BillingContract,
+  BillingContractDocument,
+  BillingRafAdhocRate,
+  BillingRafAdhocRateDocument,
+  BillingRateCard,
+  BillingRateCardDocument,
+  BillingServiceCatalog,
+  BillingServiceCatalogDocument,
+} from '../schemas/billing.schemas';
 
 export const EQUIPMENT_MASTER_STATION = 'GLOBAL';
 
@@ -35,6 +55,13 @@ function cell(value: unknown): string {
   return String(value ?? '').trim();
 }
 
+function replaceColumnLabel(column: EquipmentMasterReplaceColumn): string {
+  if (column === 'itemNo') return 'code';
+  if (column === 'unitType') return 'type';
+  if (column === 'uom') return 'UOM';
+  return column;
+}
+
 function workbookCandidates(): string[] {
   return [
     path.join(process.cwd(), 'data', 'Equipment Master.xlsx'),
@@ -49,6 +76,14 @@ export class BillingEquipmentMasterService implements OnModuleInit {
   constructor(
     @InjectModel(BillingEquipmentMaster.name)
     private readonly model: Model<BillingEquipmentMasterDocument>,
+    @InjectModel(BillingServiceCatalog.name)
+    private readonly catalogModel: Model<BillingServiceCatalogDocument>,
+    @InjectModel(BillingContract.name)
+    private readonly contractModel: Model<BillingContractDocument>,
+    @InjectModel(BillingRateCard.name)
+    private readonly rateCardModel: Model<BillingRateCardDocument>,
+    @InjectModel(BillingRafAdhocRate.name)
+    private readonly rafAdhocModel: Model<BillingRafAdhocRateDocument>,
   ) {}
 
   async onModuleInit() {
@@ -135,6 +170,170 @@ export class BillingEquipmentMasterService implements OnModuleInit {
     }
     await doc.deleteOne();
     return { data: { deleted: true } };
+  }
+
+  async replaceUom(fromRaw: string, toRaw: string) {
+    const result = await this.replaceColumn('uom', fromRaw, toRaw);
+    return {
+      data: {
+        fromUom: result.data.fromValue,
+        toUom: result.data.toValue,
+        equipmentMaster: result.data.equipmentMaster,
+        serviceCatalog: result.data.serviceCatalog,
+        contracts: result.data.contracts,
+        rateCards: result.data.rateCards,
+        rafAdhoc: result.data.rafAdhoc,
+      },
+    };
+  }
+
+  async replaceColumn(columnRaw: string, fromRaw: string, toRaw: string) {
+    if (!isEquipmentMasterReplaceColumn(columnRaw)) {
+      throw new BadRequestException('Choose a column to replace.');
+    }
+    const column: EquipmentMasterReplaceColumn = columnRaw;
+    const fromValue = String(fromRaw ?? '').trim();
+    const toValue = String(toRaw ?? '').trim();
+    const label = replaceColumnLabel(column);
+    if (!fromValue) {
+      throw new BadRequestException(`Choose a ${label} from the list.`);
+    }
+    if (!toValue) {
+      throw new BadRequestException(`Type the ${label} that should appear instead.`);
+    }
+    if (fromValue === toValue) {
+      throw new BadRequestException(`The replacement must be different from the current ${label}.`);
+    }
+
+    const equipmentMaster = await this.replaceOnCatalog(column, fromValue, toValue);
+    if (equipmentMaster === 0) {
+      throw new BadRequestException(
+        `No equipment, service, or manpower row uses “${fromValue}”. Pick a ${label} from the list.`,
+      );
+    }
+
+    const related = await this.replaceRelated(column, fromValue, toValue);
+    return {
+      data: {
+        column,
+        fromValue,
+        toValue,
+        equipmentMaster,
+        ...related,
+      },
+    };
+  }
+
+  private async replaceOnCatalog(
+    column: EquipmentMasterReplaceColumn,
+    fromValue: string,
+    toValue: string,
+  ): Promise<number> {
+    if (column === 'itemNo' || column === 'description' || column === 'unitType') {
+      const result = await this.model.updateMany(
+        { stationCode: EQUIPMENT_MASTER_STATION, [column]: fromValue },
+        { $set: { [column]: toValue } },
+      );
+      return result.modifiedCount;
+    }
+
+    const catalog = await this.model.find({ stationCode: EQUIPMENT_MASTER_STATION }).exec();
+    const ops: AnyBulkWriteOperation<BillingEquipmentMasterDocument>[] = [];
+    for (const doc of catalog) {
+      const replaced =
+        column === 'abbreviation'
+          ? replaceEquipmentMasterAbbreviationValue(doc.uoms ?? [], fromValue, toValue)
+          : replaceEquipmentMasterUomValue(doc.uoms ?? [], fromValue, toValue);
+      if (!replaced.changed) continue;
+      ops.push({
+        updateOne: {
+          filter: { _id: doc._id },
+          update: { $set: { uoms: replaced.uoms } },
+        },
+      });
+    }
+    if (ops.length === 0) return 0;
+    await this.model.bulkWrite(ops, { ordered: false });
+    return ops.length;
+  }
+
+  private async replaceRelated(
+    column: EquipmentMasterReplaceColumn,
+    fromValue: string,
+    toValue: string,
+  ): Promise<{
+    serviceCatalog: number;
+    contracts: number;
+    rateCards: number;
+    rafAdhoc: number;
+  }> {
+    const empty = { serviceCatalog: 0, contracts: 0, rateCards: 0, rafAdhoc: 0 };
+    if (column === 'unitType' || column === 'abbreviation') return empty;
+
+    if (column === 'uom') {
+      const [serviceCatalog, contracts, rateCards, rafAdhoc] = await Promise.all([
+        this.catalogModel.updateMany({ uom: fromValue }, { $set: { uom: toValue } }),
+        this.contractModel.updateMany(
+          { 'adsEquipmentRules.uom': fromValue },
+          { $set: { 'adsEquipmentRules.$[rule].uom': toValue } },
+          { arrayFilters: [{ 'rule.uom': fromValue }] },
+        ),
+        this.rateCardModel.updateMany({ uom: fromValue }, { $set: { uom: toValue } }),
+        this.rafAdhocModel.updateMany({ uom: fromValue }, { $set: { uom: toValue } }),
+      ]);
+      return {
+        serviceCatalog: serviceCatalog.modifiedCount,
+        contracts: contracts.modifiedCount,
+        rateCards: rateCards.modifiedCount,
+        rafAdhoc: rafAdhoc.modifiedCount,
+      };
+    }
+
+    if (column === 'itemNo') {
+      const [contracts, rateCards] = await Promise.all([
+        this.contractModel.updateMany(
+          { 'adsEquipmentRules.serviceCode': fromValue },
+          { $set: { 'adsEquipmentRules.$[rule].serviceCode': toValue } },
+          { arrayFilters: [{ 'rule.serviceCode': fromValue }] },
+        ),
+        this.rateCardModel.updateMany({ serviceCode: fromValue }, { $set: { serviceCode: toValue } }),
+      ]);
+      let serviceCatalog = 0;
+      try {
+        const catalog = await this.catalogModel.updateMany(
+          { serviceCode: fromValue },
+          { $set: { serviceCode: toValue } },
+        );
+        serviceCatalog = catalog.modifiedCount;
+      } catch (err) {
+        this.logger.warn(
+          `Service catalog codes were left unchanged while replacing “${fromValue}”: ${
+            err instanceof Error ? err.message : String(err)
+          }`,
+        );
+      }
+      return {
+        serviceCatalog,
+        contracts: contracts.modifiedCount,
+        rateCards: rateCards.modifiedCount,
+        rafAdhoc: 0,
+      };
+    }
+
+    const [serviceCatalog, contracts] = await Promise.all([
+      this.catalogModel.updateMany({ description: fromValue }, { $set: { description: toValue } }),
+      this.contractModel.updateMany(
+        { 'adsEquipmentRules.serviceCode': fromValue },
+        { $set: { 'adsEquipmentRules.$[rule].serviceCode': toValue } },
+        { arrayFilters: [{ 'rule.serviceCode': fromValue }] },
+      ),
+    ]);
+    return {
+      serviceCatalog: serviceCatalog.modifiedCount,
+      contracts: contracts.modifiedCount,
+      rateCards: 0,
+      rafAdhoc: 0,
+    };
   }
 
   private normalizeWrite(body: EquipmentMasterWrite) {

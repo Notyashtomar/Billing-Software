@@ -537,7 +537,7 @@ describe('InvoiceEngineService', () => {
 
     // Flight1: max(0,2−1)=1; Flight2: max(0,5−1)=4 → charged 5 (not period pool 7−1).
     expect(composed.lines).toHaveLength(1);
-    expect(composed.lines[0].description).toBe('Wheel Chair -WCHR');
+    expect(composed.lines[0].description).toBe('Wheel Chair - WCHR/S');
     expect(composed.lines[0].quantity).toBe(5);
     expect(composed.lines[0].unitPrice).toBe(850);
     expect(composed.lines[0].lineAmountExclTax).toBe(4250);
@@ -1098,6 +1098,64 @@ describe('InvoiceEngineService', () => {
     expect(composed.lines.some((l) => /cones/i.test(l.description))).toBe(false);
   });
 
+  it('ADS: FHR Wide Body usage bills under the live 180KV contract rule name', async () => {
+    const contract = {
+      adsBillingEnabled: true,
+      aircraftTypes: ['B787-900'],
+      adsEquipmentRules: [
+        {
+          serviceCode: 'Ground Power Unit - 180KV',
+          includedForAds: true,
+          alwaysChargeable: true,
+          unitPriceINR: 3176,
+          uom: 'Per 15 Min',
+          aircraftTypes: ['B787-900'],
+        },
+      ],
+    };
+    const records = [
+      {
+        _id: new Types.ObjectId(),
+        customerCode: 'VS',
+        customerName: 'Virgin Atlantic',
+        billingPeriodStart: new Date('2026-09-01'),
+        billingPeriodEnd: new Date('2026-09-30'),
+        sourceType: 'ads',
+        sourceRef: { serialNo: '216111', usageRowId: '216111:gpu', flightNo: 'VS300' },
+        operationalSnapshot: {
+          aircraftType: 'B787-900',
+          equipment_name: 'GPU-WB',
+          adsParticular: 'Ground Power Unit - Wide Body',
+          qty: 9,
+        },
+        rateMatch: {
+          serviceCode: 'ADS - Equipment - Ground Power Unit - Wide Body',
+          unitPrice: 3176,
+          usedUnits: 9,
+          freeAllowance: 0,
+          particular: 'Ground Power Unit - Wide Body',
+          aircraftType: 'B787-900',
+          uom: 'Per 15 Min',
+          pricingBasis: 'rate_card',
+        },
+      },
+    ] as never;
+
+    const composed = await service.composeFromPreparation(
+      {} as never,
+      records,
+      new Date('2026-10-01'),
+      'INR',
+      contract,
+    );
+
+    expect(composed.lines).toHaveLength(1);
+    expect(composed.lines[0].description).toBe('Ground Power Unit - 180KV');
+    expect(composed.lines[0].sourceRef?.particular).toBe('Ground Power Unit - 180KV');
+    expect(composed.lines[0].quantity).toBe(9);
+    expect(composed.lines[0].unitPrice).toBe(3176);
+  });
+
   it('ADS: live contract free-per-flight overrides stale prep freeAllowance', async () => {
     // Contract now gives 1 free pushback/flight. Prep records are stale (free=0),
     // so before the fix every use billed (the "33 pushbacks" bug).
@@ -1220,6 +1278,65 @@ describe('InvoiceEngineService', () => {
     expect(composed.lines[0].unitPrice).toBe(1050);
     expect(composed.lines[0].lineAmountExclTax).toBe(1050);
     expect(composed.lines[0].uom).toBe('Per Usage');
+    expect(composed.lines[0].description).toBe('Wheel Chair - WCHR/S');
+  });
+
+  it('ADS: WCHR and WCHS share one FOC and bill as Wheel Chair - WCHR/S', async () => {
+    const contract = {
+      adsBillingEnabled: true,
+      aircraftTypes: ['B787-900'],
+      adsEquipmentRules: [
+        {
+          serviceCode: 'WCHR',
+          includedForAds: true,
+          freePerFlight: 10,
+          unitPriceINR: 1091,
+          uom: 'Per Service',
+          aircraftTypes: ['B787-900'],
+        },
+      ],
+    };
+    const line = (usageRowId: string, particular: string, qty: number) => ({
+      _id: new Types.ObjectId(),
+      customerCode: 'VS',
+      customerName: 'Virgin Atlantic',
+      billingPeriodStart: new Date('2026-09-01'),
+      billingPeriodEnd: new Date('2026-09-30'),
+      sourceType: 'ads',
+      sourceRef: { serialNo: '216111', usageRowId, flightNo: 'VS300' },
+      operationalSnapshot: {
+        aircraftType: 'B787-900',
+        equipment_name: particular,
+        adsParticular: particular,
+        qty,
+        serialNumber: '216111',
+      },
+      rateMatch: {
+        serviceCode: particular.includes('WCHS') ? 'WCHS' : 'WCHR',
+        unitPrice: 1091,
+        usedUnits: qty,
+        freeAllowance: 0,
+        particular,
+        aircraftType: 'B787-900',
+        uom: 'Per Service',
+        pricingBasis: 'rate_card',
+      },
+    });
+    const composed = await service.composeFromPreparation(
+      {} as never,
+      [
+        line('216111:wchs', 'Wheel Chair -WCHS', 24),
+        line('216111:wchr', 'Wheel Chair -WCHR', 17),
+      ] as never,
+      new Date('2026-10-01'),
+      'INR',
+      contract,
+    );
+    expect(composed.lines).toHaveLength(1);
+    expect(composed.lines[0].description).toBe('Wheel Chair - WCHR/S');
+    expect(composed.lines[0].sourceRef?.usedQuantity).toBe(41);
+    expect(composed.lines[0].quantity).toBe(31);
+    expect(composed.lines[0].unitPrice).toBe(1091);
   });
 
   it('ADS: equipment on an aircraft that is not on the contract rule is not billed', async () => {

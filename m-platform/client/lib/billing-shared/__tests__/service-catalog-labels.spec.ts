@@ -123,6 +123,23 @@ describe('adsCatalogServiceDisplayName', () => {
     expect(adsCatalogServiceDisplayName('Scheduled - Equipment - MG')).toBe('Vehicle - MG');
     expect(isDroppedAdsCatalogService('Scheduled - Equipment - URB')).toBe(true);
     expect(adsCatalogServiceDisplayName('Scheduled - Equipment - URB')).toBe('');
+    expect(adsCatalogServiceDisplayName('WCHR')).toBe('Wheel Chair - WCHR/S');
+    expect(adsCatalogServiceDisplayName('Wheel Chair - WCHS')).toBe('Wheel Chair - WCHR/S');
+    expect(adsCatalogServiceDisplayName('Scheduled Flight - WCHR')).toBe('Wheel Chair - WCHR/S');
+    expect(adsCatalogServiceDisplayName('WCHC')).toBe('Wheel Chair - WCHC');
+    expect(adsCatalogServiceDisplayName('Ground Power Unit - 180KV')).toBe(
+      'Ground Power Unit - 180KV',
+    );
+    expect(adsCatalogServiceDisplayName('GPU-180KV')).toBe('Ground Power Unit - 180KV');
+    expect(adsCatalogServiceDisplayName('Scheduled - Equipment - GPU-180KV')).toBe(
+      'Ground Power Unit - 180KV',
+    );
+    expect(adsCatalogServiceDisplayName('Ground Power Unit - Wide Body')).toBe(
+      'Ground Power Unit - Wide Body',
+    );
+    expect(adsCatalogServiceDisplayName('Ground Power Unit-180KV-Wide Body')).toBe(
+      'Ground Power Unit-180KV-Wide Body',
+    );
   });
 });
 
@@ -162,6 +179,39 @@ describe('buildAdsContractCatalogOptions', () => {
       options[0]?.value,
     );
     expect(resolveAdsContractCatalogValue('Scheduled - Equipment - c1', options)).toBe('');
+  });
+
+  it('shows one Wheel Chair - WCHR/S option for WCHR and WCHS', () => {
+    const options = buildAdsContractCatalogOptions([
+      { serviceCode: 'Wheel Chair - WCHR', uom: 'Per Service' },
+      { serviceCode: 'Wheel Chair - WCHS', uom: 'Per Service' },
+      { serviceCode: 'Wheel Chair - WCHC', uom: 'Per Service' },
+    ]);
+    const wheelchair = options.filter((option) => /wheel chair/i.test(option.label));
+    expect(wheelchair.map((option) => option.label).sort()).toEqual([
+      'Wheel Chair - WCHC',
+      'Wheel Chair - WCHR/S',
+    ]);
+    expect(resolveAdsContractCatalogValue('WCHS', options)).toBe('Wheel Chair - WCHR/S');
+    expect(resolveAdsContractCatalogValue('WCHR', options)).toBe('Wheel Chair - WCHR/S');
+  });
+
+  it('keeps Ground Power Unit - 180KV separate from Wide Body', () => {
+    const options = buildAdsContractCatalogOptions([
+      { serviceCode: 'Ground Power Unit - 180KV' },
+      { serviceCode: 'Ground Power Unit - Wide Body' },
+      { serviceCode: 'Scheduled - Equipment - GPU-180KV' },
+      { serviceCode: 'Ground Power Unit-180KV-Wide Body' },
+    ]);
+    const labels = options.map((option) => option.label).sort();
+    expect(labels).toEqual([
+      'Ground Power Unit - 180KV',
+      'Ground Power Unit - Wide Body',
+      'Ground Power Unit-180KV-Wide Body',
+    ]);
+    expect(resolveAdsContractCatalogValue('Ground Power Unit - 180KV', options)).toBe(
+      'Ground Power Unit - 180KV',
+    );
     expect(resolveAdsContractCatalogValue('', options)).toBe('');
   });
 

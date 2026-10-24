@@ -1,8 +1,10 @@
 import {
+  ADS_WCHR_S_PARTICULAR,
   adsEquipmentFamilyKey,
   adsEquipmentLabelsMatch,
   contractBillsBmeEquipment,
   isBmeAdsEquipmentLabel,
+  isWchrSCombinedAdsService,
   resolveAdsPricingFromContractRule,
 } from './ads-equipment-inclusion.util';
 
@@ -28,6 +30,14 @@ describe('ads-equipment-inclusion.util', () => {
     expect(adsEquipmentFamilyKey('ADS - Equipment - GPU-90KV')).toBe('GPU-NB');
     expect(adsEquipmentFamilyKey('GPU-NB')).toBe('GPU-NB');
     expect(adsEquipmentFamilyKey('GPU-180KV')).toBe('GPU-WB');
+    expect(adsEquipmentFamilyKey('WCHR')).toBe('WCHR/S');
+    expect(adsEquipmentFamilyKey('Wheel Chair - WCHS')).toBe('WCHR/S');
+    expect(adsEquipmentFamilyKey('Wheel Chair - WCHR/S')).toBe('WCHR/S');
+    expect(adsEquipmentFamilyKey('WCHC')).toBe('WCHC');
+    expect(isWchrSCombinedAdsService('WCHR', 'WCHS')).toBe(true);
+    expect(isWchrSCombinedAdsService('Wheel Chair - WCHC')).toBe(false);
+    expect(adsEquipmentLabelsMatch('WCHR', 'WCHS')).toBe(true);
+    expect(adsEquipmentLabelsMatch('WCHR', 'WCHC')).toBe(false);
   });
 
   it('prices FHR GPU-90KV from contract GPU-NB rule', () => {
@@ -281,6 +291,20 @@ describe('ads-equipment-inclusion.util', () => {
       effectiveMonth: '2026-07',
     });
     expect(inferredNb.freePerFlight).toBe(1);
+    expect(nb.serviceCode).toBe(ADS_WCHR_S_PARTICULAR);
+
+    const wchs = resolveAdsPricingFromContractRule(contract, {
+      particular: 'WCHS',
+      equipmentName: 'Wheel Chair -WCHS',
+      aircraftType: 'A320',
+      aircraftBody: 'NB',
+      billingCurrency: 'INR',
+      effectiveMonth: '2026-07',
+    });
+    expect(wchs.matched).toBe(true);
+    expect(wchs.freePerFlight).toBe(1);
+    expect(wchs.unitPrice).toBe(500);
+    expect(wchs.serviceCode).toBe(ADS_WCHR_S_PARTICULAR);
   });
 
   it('matches B737-800 contract rules to the same airframe on the flight', () => {
@@ -359,6 +383,33 @@ describe('ads-equipment-inclusion.util', () => {
     });
     expect(belt.matched).toBe(false);
     expect(belt.unitPrice).toBeNull();
+  });
+
+  it('prices FHR Wide Body GPU usage from a live 180KV contract rule', () => {
+    const contract = {
+      adsBillingEnabled: true,
+      aircraftTypes: ['B787-900'],
+      adsEquipmentRules: [
+        {
+          serviceCode: 'Ground Power Unit - 180KV',
+          includedForAds: true,
+          alwaysChargeable: true,
+          unitPriceINR: 3176,
+          uom: 'Per 15 Min',
+          aircraftTypes: ['B787-900'],
+        },
+      ],
+    };
+    const priced = resolveAdsPricingFromContractRule(contract, {
+      serviceCode: 'ADS - Equipment - Ground Power Unit - Wide Body',
+      particular: 'Ground Power Unit - Wide Body',
+      equipmentName: 'GPU-WB',
+      aircraftType: 'B787-900',
+      billingCurrency: 'INR',
+    });
+    expect(priced.matched).toBe(true);
+    expect(priced.unitPrice).toBe(3176);
+    expect(priced.serviceCode).toBe('Ground Power Unit - 180KV');
   });
 
   it('recognises BME equipment labels and keeps the toggle off unless explicitly true', () => {

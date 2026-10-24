@@ -1484,7 +1484,10 @@ export class BillingInvoiceDraftsService {
 
     const previousFactor = Number(header.currencyFactor) || null;
     const prepIds = (header.preparationRecordIds ?? []).map((prepId) => String(prepId));
-    const canRebuildFromPrep = prepIds.length > 0 && !header.adsSplitFamilyId;
+    const canRebuildFromPrep =
+      prepIds.length > 0 &&
+      !header.adsSplitFamilyId &&
+      String(header.invoiceCategory ?? '').trim().toUpperCase() !== 'RAF';
 
     const partRate = await this.fortnightExchangeRateForHeader(ctx, header);
     const invoiceCurrency = String(header.currencyCode ?? 'INR').trim().toUpperCase();
@@ -3690,7 +3693,8 @@ export class BillingInvoiceDraftsService {
     if (linkedContract?._id && !header.contractId) {
       header.contractId = linkedContract._id as Types.ObjectId;
     }
-    const adsInvoice = String(header.invoiceCategory ?? '').trim().toUpperCase() === 'ADS';
+    const invoiceCategory = String(header.invoiceCategory ?? '').trim().toUpperCase();
+    const adsInvoice = invoiceCategory === 'ADS';
     const contract = await this.contractWithStationFlightConcession(
       ctx,
       linkedContract,
@@ -3699,7 +3703,7 @@ export class BillingInvoiceDraftsService {
         start: header.billingPeriodStart,
         end: header.billingPeriodEnd,
       },
-      { documentDateFallback: adsInvoice },
+      { documentDateFallback: adsInvoice || invoiceCategory === 'RAF' },
     );
 
     const ceilingLineIds = lines
@@ -3717,6 +3721,7 @@ export class BillingInvoiceDraftsService {
     applyConcessionTotalsToHeader(header, lines, contract, {
       scheduledFlightCount,
       adsConcession: adsInvoice,
+      invoiceCategory: invoiceCategory || undefined,
       concessionPercentOverride:
         header.concessionPercentOverride == null || !Number.isFinite(typedConcession)
           ? undefined

@@ -62,8 +62,17 @@ import {
 } from '../utils/invoice-concession.util';
 import { billingSettingsForInvoicing } from '../shared/ignored-billing-masters';
 import { resolveBillingCustomerAddress } from '../utils/customer-address.util';
-import { publicCustomerAnnexures } from '../utils/customer-annexure.util';
 import { formatBillingPeriodLabel } from '../engines/invoice-pdf.mapper';
+import {
+  resolveAirportConfig,
+  resolveInvoiceCompanyDefaults,
+} from '../engines/invoice-pdf.defaults';
+import {
+  adsAnnexureFileName,
+  adsAnnexureMonthLabel,
+  adsAnnexureTitleLine,
+  buildAdsAnnexureTable,
+} from '../engines/ads-equipment-annexure.util';
 import {
   currentIndianFiscalYear,
   defaultInvoiceSequenceCode,
@@ -82,6 +91,26 @@ function parseEmailList(raw: string): string[] {
     .split(/[,;]+/)
     .map((part) => part.trim().toLowerCase())
     .filter((email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email));
+}
+
+function collectInvoicePreparationIds(
+  header: { preparationRecordIds?: unknown[] },
+  lines: Array<{ preparationRecordIds?: unknown[]; sourceRef?: Record<string, unknown> | null }>,
+): Types.ObjectId[] {
+  const ids = new Set<string>();
+  const push = (value: unknown) => {
+    const id = String(value ?? '').trim();
+    if (Types.ObjectId.isValid(id)) ids.add(id);
+  };
+  for (const value of header.preparationRecordIds ?? []) push(value);
+  for (const line of lines) {
+    for (const value of line.preparationRecordIds ?? []) push(value);
+    const nested = line.sourceRef?.preparationRecordIds;
+    if (Array.isArray(nested)) {
+      for (const value of nested) push(value);
+    }
+  }
+  return [...ids].map((id) => new Types.ObjectId(id));
 }
 
 function formatInvoiceDate(value?: Date | string): string {
@@ -189,7 +218,6 @@ export class BillingInvoicesService {
             name: customerMaster.name,
             address: resolveBillingCustomerAddress(customerMaster),
             gstRegistrationNo: customerMaster.gstRegistrationNo,
-            annexures: publicCustomerAnnexures(customerMaster.annexures),
           }
         : undefined,
     });
@@ -538,6 +566,71 @@ export class BillingInvoicesService {
       body: file.body,
       encoding: file.encoding,
       fileName: `${header.invoiceNumber ?? header.draftNumber}.${file.fileNameExt}`,
+    };
+  }
+
+  async getAnnexurePdf(ctx: StationScopeContext, id: string, actor: BillingActor) {
+    const header = await this.getHeader(ctx, id);
+    const category = String(header.invoiceCategory ?? '').trim().toUpperCase();
+    if (category !== 'ADS') {
+      throw new BadRequestException(
+        'Additional equipment annexure is available for ADS invoices only.',
+      );
+    }
+
+    const [lines, customer, settingsDoc, contract] = await Promise.all([
+      this.lineModel.find({ invoiceId: header._id }).sort({ lineNo: 1 }).lean(),
+      this.customerModel
+        .findOne({ stationCode: header.stationCode, customerCode: header.customerCode })
+        .lean(),
+      this.settingsModel
+        .findOne({ stationCode: header.stationCode })
+        .select('companyLegalEntity')
+        .lean(),
+      resolveActiveContractForInvoice(this.contractModel, ctx, header),
+    ]);
+
+    const prepIds = collectInvoicePreparationIds(header, lines);
+    const records =
+      prepIds.length > 0
+        ? await this.preparationModel.find({ _id: { $in: prepIds } }).lean()
+        : [];
+    const table = buildAdsAnnexureTable(records, contract?.adsEquipmentRules);
+    const company = resolveInvoiceCompanyDefaults(
+      header.stationCode,
+      settingsDoc?.companyLegalEntity,
+    );
+    const airport = resolveAirportConfig(header.stationCode);
+    const invoiceNumber = String(header.invoiceNumber ?? header.draftNumber ?? '').trim();
+    const snapshot = await this.pdfEngine.buildAdsAnnexureSnapshot({
+      companyName: company.name,
+      airlineName:
+        customer?.airlineInvoiceName?.trim() ||
+        customer?.name?.trim() ||
+        header.customerName?.trim() ||
+        header.customerCode,
+      serviceStation: airport.serviceStation || header.stationCode,
+      titleLine: adsAnnexureTitleLine({
+        monthLabel: adsAnnexureMonthLabel(header.billingPeriodStart),
+        invoiceNumber,
+      }),
+      table,
+    });
+
+    await this.exportEngine.track(ctx, {
+      exportType: 'invoice_pdf',
+      documentId: header._id as Types.ObjectId,
+      fileName: adsAnnexureFileName(invoiceNumber),
+      exportedBy: actor.userName,
+    });
+    const file = this.pdfEngine.toDownloadBody(
+      snapshot as { format?: string; pdfBase64?: string; plainText?: string },
+    );
+    return {
+      contentType: file.contentType,
+      body: file.body,
+      encoding: file.encoding,
+      fileName: adsAnnexureFileName(invoiceNumber),
     };
   }
 

@@ -1,14 +1,19 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { ChevronDown, Plus, Trash2 } from 'lucide-react';
+import { ChevronDown, Download, Plus, Trash2, Upload } from 'lucide-react';
+import {
+  ADS_EQUIPMENT_RULES_EMPTY_EXPORT_MESSAGE,
+  ADS_EQUIPMENT_RULES_INVALID_EXCEL_MESSAGE,
+  exportAdsEquipmentRulesExcel,
+  parseAdsEquipmentRulesWorkbook,
+} from './adsEquipmentRulesExcel';
 import type { EquipmentMasterRecord } from '@/lib/billing-api';
 import type {
   BillingContractAdsEquipmentRule,
   BillingServiceCatalogItem,
 } from '@/lib/billing-shared/types';
 import { formatBillingDateRange } from '@/lib/billing-shared/billing-date-format';
-import { buildAdsUomOptions } from '@/lib/billing-shared/ads-uom-options';
 import {
   adsCatalogServiceDisplayName,
   buildAdsContractCatalogOptions,
@@ -25,6 +30,7 @@ import {
 } from '@/lib/billing-shared/currency-convert';
 import {
   adsEquipmentIdentity,
+  canonicalizeWchrSServiceCode,
   collapseAdsEquipmentRules,
 } from '@/lib/billing-shared/ads-equipment-rules-validity';
 
@@ -39,6 +45,8 @@ type Props = {
   rateToInr?: number | null;
   roeHint?: string;
   disabled?: boolean;
+  airlineName?: string;
+  airlineCode?: string;
 };
 
 function emptyRule(aircraftTypes: string[] = []): BillingContractAdsEquipmentRule {
@@ -198,7 +206,7 @@ function CompactAircraftDropdown({
   };
 
   return (
-    <div ref={wrapperRef} className="relative min-w-[10rem]">
+    <div ref={wrapperRef} className="relative min-w-0 w-full">
       <button
         type="button"
         disabled={disabled || aircraftTypes.length === 0}
@@ -208,7 +216,7 @@ function CompactAircraftDropdown({
           setOpenUp(false); // reset before layout effect
           setOpen((v) => !v);
         }}
-        className="inline-flex h-9 w-full min-w-[10rem] max-w-[14rem] items-center justify-between gap-1 rounded-md border border-gray-300 bg-white px-2 text-left text-sm disabled:opacity-50"
+        className="inline-flex h-9 w-full min-w-0 items-center justify-between gap-1 rounded-md border border-gray-300 bg-white px-2 text-left text-sm disabled:opacity-50"
       >
         <span className="truncate">{aircraftSummary(selected, aircraftTypes)}</span>
         <ChevronDown className="h-3.5 w-3.5 shrink-0 text-gray-500" aria-hidden />
@@ -217,7 +225,7 @@ function CompactAircraftDropdown({
       {open ? (
         <div
           className={[
-            'absolute right-0 z-[200] max-h-56 min-w-[10rem] overflow-y-auto rounded-md border border-gray-200 bg-white p-2 shadow-lg',
+            'absolute left-0 right-0 z-[200] max-h-56 min-w-0 overflow-y-auto rounded-md border border-gray-200 bg-white p-2 shadow-lg',
             openUp ? 'bottom-full mb-1' : 'top-full mt-1',
           ].join(' ')}
         >
@@ -272,6 +280,8 @@ export function ContractAdsEquipmentRulesEditor({
   rateToInr = null,
   roeHint,
   disabled,
+  airlineName = '',
+  airlineCode = '',
 }: Props) {
   const displayRules = useMemo(() => collapseAdsEquipmentRules(rules), [rules]);
   const adsServices = useMemo(() => {
@@ -321,29 +331,25 @@ export function ContractAdsEquipmentRulesEditor({
     return buildAdsContractCatalogOptions(sources);
   }, [services, displayRules, equipmentMaster]);
 
-  const uomOptions = useMemo(
-    () =>
-      buildAdsUomOptions(
-        services.map((s) => s.uom),
-        adsServices.map((s) => s.uom),
-        displayRules.map((r) => r.uom),
-        equipmentMaster.flatMap((item) => (item.uoms ?? []).map((pair) => pair.uom)),
-      ),
-    [services, adsServices, displayRules, equipmentMaster],
-  );
-
   const uomsForEquipment = (serviceCode: string | undefined) => {
     const names = new Set(
       [serviceCode ?? '', adsCatalogServiceDisplayName(serviceCode ?? '')]
         .map((value) => value.trim().toLowerCase())
         .filter(Boolean),
     );
+    const identities = new Set(
+      [serviceCode ?? '', adsCatalogServiceDisplayName(serviceCode ?? '')]
+        .map((value) => adsEquipmentIdentity(value))
+        .filter(Boolean),
+    );
     const pairs = new Map<string, { uom: string; abbreviation: string }>();
     for (const item of equipmentMaster) {
-      const keys = [item.description, item.itemNo]
-        .map((value) => String(value ?? '').trim().toLowerCase())
-        .filter(Boolean);
-      if (!keys.some((key) => names.has(key))) continue;
+      const labels = [item.description, item.itemNo].map((value) => String(value ?? '').trim());
+      const keys = labels.map((value) => value.toLowerCase()).filter(Boolean);
+      const itemIdentities = labels.map((value) => adsEquipmentIdentity(value)).filter(Boolean);
+      if (!keys.some((key) => names.has(key)) && !itemIdentities.some((key) => identities.has(key))) {
+        continue;
+      }
       for (const pair of item.uoms ?? []) {
         const uom = String(pair.uom ?? '').trim();
         if (!uom || pairs.has(uom.toLowerCase())) continue;
@@ -356,7 +362,19 @@ export function ContractAdsEquipmentRulesEditor({
     return [...pairs.values()];
   };
 
+  const uomChoicesForRule = (rule: BillingContractAdsEquipmentRule) => {
+    const catalogUoms = uomsForEquipment(rule.serviceCode).map((pair) => pair.uom);
+    const current = String(rule.uom ?? '').trim();
+    if (current && !catalogUoms.some((uom) => uom.toLowerCase() === current.toLowerCase())) {
+      return [current, ...catalogUoms];
+    }
+    return catalogUoms;
+  };
+
   const [duplicateError, setDuplicateError] = useState('');
+  const [excelError, setExcelError] = useState('');
+  const [excelBusy, setExcelBusy] = useState<'export' | 'import' | ''>('');
+  const excelFileInputRef = useRef<HTMLInputElement>(null);
 
   const resolvedRate = resolveRateToInr(rateToInr);
 
@@ -412,12 +430,27 @@ export function ContractAdsEquipmentRulesEditor({
 
   const onServiceChange = (index: number, serviceCode: string) => {
     const identity = adsEquipmentIdentity(serviceCode);
+    const selected = adsServices.find((s) => s.value === serviceCode);
+    const catalogUoms = uomsForEquipment(serviceCode);
+    const current = displayRules[index];
+    const keptUom = current?.uom?.trim() && current.uom !== 'EA' ? current.uom.trim() : '';
+    const matchedKept = catalogUoms.find(
+      (pair) => pair.uom === keptUom || pair.uom.toLowerCase() === keptUom.toLowerCase(),
+    )?.uom;
+    const primaryUom =
+      matchedKept || catalogUoms[0]?.uom || selected?.uom?.trim() || keptUom || 'EA';
+    const extraUoms = catalogUoms
+      .map((pair) => pair.uom)
+      .filter((uom) => uom.toLowerCase() !== primaryUom.toLowerCase());
+    const nextUoms = [primaryUom, ...extraUoms];
     if (
       identity &&
-      displayRules.some(
-        (row, rowIndex) =>
-          rowIndex !== index && adsEquipmentIdentity(row.serviceCode) === identity,
-      )
+      displayRules.some((row, rowIndex) => {
+        if (rowIndex === index) return false;
+        if (adsEquipmentIdentity(row.serviceCode) !== identity) return false;
+        const rowUom = String(row.uom ?? '').trim().toUpperCase() || 'EA';
+        return nextUoms.some((uom) => (uom.toUpperCase() || 'EA') === rowUom);
+      })
     ) {
       const label =
         adsServices.find((service) => service.value === serviceCode)?.label ||
@@ -426,30 +459,87 @@ export function ContractAdsEquipmentRulesEditor({
       return;
     }
     setDuplicateError('');
-    const selected = adsServices.find((s) => s.value === serviceCode);
-    const equipmentUom = uomsForEquipment(serviceCode)[0]?.uom;
     const wheelchair = isWheelchairAdsService(serviceCode);
-    const current = displayRules[index];
-    const keptUom =
-      current?.uom && current.uom !== 'EA' ? current.uom : '';
-    updateRule(index, {
-      serviceCode,
-      uom: keptUom || equipmentUom || selected?.uom?.trim() || 'EA',
-      ...(wheelchair
-        ? {
-            freePerFlightNb: current?.freePerFlightNb ?? current?.freePerFlight ?? 0,
-            freePerFlightWb: current?.freePerFlightWb ?? current?.freePerFlight ?? 0,
-            freePerFlight: current?.freePerFlightNb ?? current?.freePerFlight ?? 0,
-          }
-        : {
-            freePerFlightNb: undefined,
-            freePerFlightWb: undefined,
-          }),
-    });
+    const wheelchairPatch = wheelchair
+      ? {
+          freePerFlightNb: current?.freePerFlightNb ?? current?.freePerFlight ?? 0,
+          freePerFlightWb: current?.freePerFlightWb ?? current?.freePerFlight ?? 0,
+          freePerFlight: current?.freePerFlightNb ?? current?.freePerFlight ?? 0,
+        }
+      : {
+          freePerFlightNb: undefined,
+          freePerFlightWb: undefined,
+        };
+    const primary = {
+      ...current,
+      serviceCode: canonicalizeWchrSServiceCode(serviceCode) || serviceCode,
+      uom: primaryUom,
+      ...wheelchairPatch,
+    };
+    const extras = extraUoms.map((uom) => ({
+      ...primary,
+      uom,
+      unitPriceINR: undefined,
+      unitPriceUSD: undefined,
+    }));
+    emitRules([...displayRules.slice(0, index), primary, ...extras, ...displayRules.slice(index + 1)]);
   };
 
   const addRule = () => {
     emitRules([emptyRule(aircraftTypes), ...displayRules]);
+  };
+
+  const filledRules = displayRules.filter((rule) => String(rule.serviceCode ?? '').trim());
+
+  const onExportExcel = async () => {
+    setDuplicateError('');
+    if (filledRules.length === 0) {
+      setExcelError(ADS_EQUIPMENT_RULES_EMPTY_EXPORT_MESSAGE);
+      return;
+    }
+    setExcelError('');
+    setExcelBusy('export');
+    try {
+      await exportAdsEquipmentRulesExcel({
+        rules: filledRules,
+        catalogOptions: adsServices.map((service) => ({
+          value: service.value,
+          label: service.label,
+        })),
+        airlineName,
+        airlineCode,
+      });
+    } catch (error) {
+      setExcelError(
+        error instanceof Error ? error.message : ADS_EQUIPMENT_RULES_EMPTY_EXPORT_MESSAGE,
+      );
+    } finally {
+      setExcelBusy('');
+    }
+  };
+
+  const onImportExcel = async (file: File | undefined) => {
+    if (!file) return;
+    setDuplicateError('');
+    setExcelError('');
+    setExcelBusy('import');
+    try {
+      const imported = await parseAdsEquipmentRulesWorkbook(
+        file,
+        adsServices.map((service) => ({
+          value: service.value,
+          label: service.label,
+        })),
+      );
+      emitRules(imported);
+    } catch (error) {
+      setExcelError(
+        error instanceof Error ? error.message : ADS_EQUIPMENT_RULES_INVALID_EXCEL_MESSAGE,
+      );
+    } finally {
+      setExcelBusy('');
+      if (excelFileInputRef.current) excelFileInputRef.current.value = '';
+    }
   };
 
   const validityLabel =
@@ -458,14 +548,14 @@ export function ContractAdsEquipmentRulesEditor({
       : 'Set price validity on General first';
 
   return (
-    <div className="space-y-3 rounded-xl border border-gray-200 bg-gray-50/80 p-4">
+    <div className="min-w-0 space-y-3">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="text-sm font-medium text-gray-900">ADS conditions &amp; clauses</p>
           <p className="mt-0.5 text-xs text-gray-600">
             Equipment lines apply for the whole contract window{' '}
             <strong>{validityLabel}</strong>. Charge uses the UOM saved on each line.
-            ADS invoices use Free / flight, Always bill, UOM, and price. Charge on ADS is ignored. Equipment with no priced row is left off the invoice.
+            ADS invoices use FOC, Always bill, UOM, and price. Equipment with no priced row is left off the invoice.
           </p>
           {roeHint ? (
             <p
@@ -494,51 +584,111 @@ export function ContractAdsEquipmentRulesEditor({
 
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm font-semibold text-gray-900">Equipment rules</p>
-            <button
-              type="button"
-              disabled={disabled || adsServices.length === 0}
-              onClick={addRule}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-            >
-              <Plus className="h-4 w-4" aria-hidden />
-              Add equipment
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                disabled={disabled || excelBusy !== ''}
+                onClick={() => void onExportExcel()}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              >
+                <Download className="h-4 w-4" aria-hidden />
+                {excelBusy === 'export' ? 'Exporting…' : 'Export Excel'}
+              </button>
+              <button
+                type="button"
+                disabled={disabled || excelBusy !== ''}
+                onClick={() => excelFileInputRef.current?.click()}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              >
+                <Upload className="h-4 w-4" aria-hidden />
+                {excelBusy === 'import' ? 'Uploading…' : 'Upload Excel'}
+              </button>
+              <input
+                ref={excelFileInputRef}
+                type="file"
+                accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+                className="sr-only"
+                aria-label="Upload ADS equipment rules Excel"
+                disabled={disabled}
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  void onImportExcel(file);
+                }}
+              />
+              <button
+                type="button"
+                disabled={disabled || adsServices.length === 0}
+                onClick={addRule}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              >
+                <Plus className="h-4 w-4" aria-hidden />
+                Add equipment
+              </button>
+            </div>
           </div>
           {duplicateError ? (
             <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
               {duplicateError}
             </p>
           ) : null}
+          {excelError ? (
+            <p
+              role="alert"
+              className="whitespace-pre-line rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800"
+            >
+              {excelError}
+            </p>
+          ) : null}
+          <p className="text-xs text-gray-500">
+            Export the rows to Excel, edit them there, then upload to replace this table. Save the
+            contract afterwards.
+          </p>
 
-          <div className="relative max-h-[22rem] overflow-x-auto overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-sm [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-            <table className="min-w-full divide-y divide-gray-200 text-sm">
-              <thead className="sticky top-0 z-30 bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-600 shadow-sm">
+          <div className="relative w-full max-h-[min(36rem,58vh)] overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-sm">
+            <table className="w-full table-fixed border-separate border-spacing-0 text-sm">
+              <colgroup>
+                <col className="w-[26%]" />
+                <col className="w-[8%]" />
+                <col className="w-[8%]" />
+                <col className="w-[14%]" />
+                <col className="w-[9%]" />
+                <col className="w-[9%]" />
+                <col className="w-[20%]" />
+                <col className="w-[6%]" />
+              </colgroup>
+              <thead className="sticky top-0 z-40 bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
                 <tr>
-                  <th className="sticky top-0 z-30 border-b border-gray-200 bg-gray-50 px-3 py-2">Equipment / service</th>
-                  <th className="sticky top-0 z-30 border-b border-gray-200 bg-gray-50 px-3 py-2">
-                    Free / flight
+                  <th className="sticky top-0 z-40 border-b border-gray-200 bg-gray-50 px-2 py-2 shadow-[inset_0_-1px_0_#e5e7eb]">
+                    Equipment / service
+                  </th>
+                  <th className="sticky top-0 z-40 border-b border-gray-200 bg-gray-50 px-2 py-2 shadow-[inset_0_-1px_0_#e5e7eb]">
+                    FOC
                     <span className="mt-0.5 block text-[10px] font-normal normal-case tracking-normal text-gray-500">
-                      Wheelchairs: NB + WB
+                      NB + WB
                     </span>
                   </th>
-                  <th className="sticky top-0 z-30 border-b border-gray-200 bg-gray-50 px-3 py-2">
-                    Charge on ADS
-                    <span className="mt-0.5 block text-[10px] font-normal normal-case tracking-normal text-gray-500">
-                      Ignored
-                    </span>
+                  <th className="sticky top-0 z-40 border-b border-gray-200 bg-gray-50 px-1 py-2 text-center shadow-[inset_0_-1px_0_#e5e7eb]">
+                    Always bill
                   </th>
-                  <th className="sticky top-0 z-30 border-b border-gray-200 bg-gray-50 px-3 py-2">Always bill</th>
-                  <th className="sticky top-0 z-30 border-b border-gray-200 bg-gray-50 px-3 py-2">UOM</th>
-                  <th className="sticky top-0 z-30 border-b border-gray-200 bg-gray-50 px-3 py-2">INR</th>
-                  <th className="sticky top-0 z-30 border-b border-gray-200 bg-gray-50 px-3 py-2">USD</th>
-                  <th className="sticky top-0 z-30 border-b border-gray-200 bg-gray-50 px-3 py-2">Aircraft</th>
-                  <th className="sticky top-0 z-30 border-b border-gray-200 bg-gray-50 px-3 py-2" />
+                  <th className="sticky top-0 z-40 border-b border-gray-200 bg-gray-50 px-2 py-2 shadow-[inset_0_-1px_0_#e5e7eb]">
+                    UOM
+                  </th>
+                  <th className="sticky top-0 z-40 border-b border-gray-200 bg-gray-50 px-2 py-2 shadow-[inset_0_-1px_0_#e5e7eb]">
+                    INR
+                  </th>
+                  <th className="sticky top-0 z-40 border-b border-gray-200 bg-gray-50 px-2 py-2 shadow-[inset_0_-1px_0_#e5e7eb]">
+                    USD
+                  </th>
+                  <th className="sticky top-0 z-40 border-b border-gray-200 bg-gray-50 px-2 py-2 shadow-[inset_0_-1px_0_#e5e7eb]">
+                    Aircraft
+                  </th>
+                  <th className="sticky top-0 z-40 w-10 border-b border-gray-200 bg-gray-50 px-1 py-2 shadow-[inset_0_-1px_0_#e5e7eb]" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="[&_td]:border-b [&_td]:border-gray-100 [&_td]:bg-white">
                 {displayRules.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="px-3 py-4 text-center text-xs text-gray-500">
+                    <td colSpan={8} className="px-2 py-4 text-center text-xs text-gray-500">
                       No equipment rules yet for this validity period.
                     </td>
                   </tr>
@@ -549,13 +699,13 @@ export function ContractAdsEquipmentRulesEditor({
                   const freeDisabled = disabled || rule.alwaysChargeable;
                   return (
                     <tr key={`ads-rule-${index}-${rule.serviceCode || 'new'}`}>
-                      <td className="px-3 py-2">
+                      <td className="px-2 py-2">
                         <select
                           value={adsRuleSelectValue(rule.serviceCode ?? '', adsServices)}
                           disabled={disabled}
                           onChange={(e) => onServiceChange(index, e.target.value)}
                           aria-label={`ADS service row ${index + 1}`}
-                          className="h-9 w-full min-w-[12rem] max-w-[16rem] rounded-md border border-gray-300 bg-white px-2 text-sm"
+                          className="h-9 w-full min-w-0 rounded-md border border-gray-300 bg-white px-2 text-sm"
                         >
                           <option value="">Select equipment</option>
                           {adsServices.map((service) => (
@@ -565,11 +715,11 @@ export function ContractAdsEquipmentRulesEditor({
                           ))}
                         </select>
                       </td>
-                      <td className="px-3 py-2">
+                      <td className="px-2 py-2">
                         {wheelchair ? (
-                          <div className="flex min-w-[11rem] flex-col gap-1.5 sm:flex-row sm:items-center">
+                          <div className="flex min-w-0 flex-col gap-1.5">
                             <label className="flex items-center gap-1 text-xs text-gray-600">
-                              <span className="w-7 font-semibold text-gray-700">NB</span>
+                              <span className="w-7 shrink-0 font-semibold text-gray-700">NB</span>
                               <input
                                 type="number"
                                 min={0}
@@ -585,12 +735,12 @@ export function ContractAdsEquipmentRulesEditor({
                                   });
                                 }}
                                 placeholder="0"
-                                aria-label={`NB free per flight row ${index + 1}`}
-                                className="w-16 rounded-md border border-gray-300 px-2 py-1.5 text-sm disabled:bg-gray-100"
+                                aria-label={`NB FOC row ${index + 1}`}
+                                className="w-full min-w-0 rounded-md border border-gray-300 px-2 py-1.5 text-sm disabled:bg-gray-100"
                               />
                             </label>
                             <label className="flex items-center gap-1 text-xs text-gray-600">
-                              <span className="w-7 font-semibold text-gray-700">WB</span>
+                              <span className="w-7 shrink-0 font-semibold text-gray-700">WB</span>
                               <input
                                 type="number"
                                 min={0}
@@ -606,8 +756,8 @@ export function ContractAdsEquipmentRulesEditor({
                                   });
                                 }}
                                 placeholder="0"
-                                aria-label={`WB free per flight row ${index + 1}`}
-                                className="w-16 rounded-md border border-gray-300 px-2 py-1.5 text-sm disabled:bg-gray-100"
+                                aria-label={`WB FOC row ${index + 1}`}
+                                className="w-full min-w-0 rounded-md border border-gray-300 px-2 py-1.5 text-sm disabled:bg-gray-100"
                               />
                             </label>
                           </div>
@@ -624,21 +774,12 @@ export function ContractAdsEquipmentRulesEditor({
                               });
                             }}
                             placeholder="0"
-                            className="w-20 rounded-md border border-gray-300 px-2 py-1.5 text-sm disabled:bg-gray-100"
+                            aria-label={`FOC row ${index + 1}`}
+                            className="w-full min-w-0 rounded-md border border-gray-300 px-2 py-1.5 text-sm disabled:bg-gray-100"
                           />
                         )}
                       </td>
-                      <td className="px-3 py-2">
-                        <input
-                          type="checkbox"
-                          checked={rule.includedForAds !== false}
-                          disabled
-                          aria-label={`Charge on ADS row ${index + 1} (ignored)`}
-                          title="Ignored. Always bill, UOM, and price decide the ADS line."
-                          className="h-4 w-4 rounded border-gray-300 text-gray-300"
-                        />
-                      </td>
-                      <td className="px-3 py-2">
+                      <td className="px-1 py-2 text-center">
                         <input
                           type="checkbox"
                           checked={Boolean(rule.alwaysChargeable)}
@@ -662,22 +803,22 @@ export function ContractAdsEquipmentRulesEditor({
                           className="h-4 w-4 rounded border-gray-300 text-[color:var(--billing-accent)] focus:ring-[color:var(--billing-accent)]"
                         />
                       </td>
-                      <td className="px-3 py-2">
+                      <td className="px-2 py-2">
                         <select
                           value={rule.uom ?? ''}
                           disabled={disabled}
                           onChange={(e) => updateRule(index, { uom: e.target.value || undefined })}
-                          className="min-w-[10rem] max-w-[16rem] rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+                          className="h-9 w-full min-w-0 rounded-md border border-gray-300 px-2 py-1.5 text-sm"
                         >
                           <option value="">Select UOM</option>
-                          {uomOptions.map((uom) => (
+                          {uomChoicesForRule(rule).map((uom) => (
                             <option key={uom} value={uom}>
                               {uom}
                             </option>
                           ))}
                         </select>
                       </td>
-                      <td className="px-3 py-2">
+                      <td className="px-2 py-2">
                         <input
                           type="number"
                           min={0}
@@ -686,10 +827,10 @@ export function ContractAdsEquipmentRulesEditor({
                           disabled={disabled}
                           onChange={(e) => onUnitPriceInrChange(index, e.target.value)}
                           placeholder={resolvedRate != null ? 'INR' : '—'}
-                          className="w-24 rounded-md border border-gray-300 px-2 py-1.5 text-sm disabled:bg-gray-100"
+                          className="w-full min-w-0 rounded-md border border-gray-300 px-2 py-1.5 text-sm disabled:bg-gray-100"
                         />
                       </td>
-                      <td className="px-3 py-2">
+                      <td className="px-2 py-2">
                         <input
                           type="number"
                           min={0}
@@ -698,12 +839,12 @@ export function ContractAdsEquipmentRulesEditor({
                           disabled={disabled}
                           onChange={(e) => onUnitPriceUsdChange(index, e.target.value)}
                           placeholder={resolvedRate != null ? 'auto' : '—'}
-                          className="w-24 rounded-md border border-gray-300 px-2 py-1.5 text-sm disabled:bg-gray-100"
+                          className="w-full min-w-0 rounded-md border border-gray-300 px-2 py-1.5 text-sm disabled:bg-gray-100"
                         />
                       </td>
-                      <td className="px-3 py-2">
+                      <td className="px-2 py-2">
                         {aircraftTypes.length === 0 ? (
-                          <p className="max-w-[11rem] text-xs text-amber-800">
+                          <p className="min-w-0 text-xs text-amber-800">
                             Pick aircraft types on the contract first.
                           </p>
                         ) : (
@@ -721,7 +862,7 @@ export function ContractAdsEquipmentRulesEditor({
                           />
                         )}
                       </td>
-                      <td className="px-3 py-2">
+                      <td className="px-1 py-2 text-center">
                         <button
                           type="button"
                           disabled={disabled}

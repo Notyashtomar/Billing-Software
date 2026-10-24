@@ -6,7 +6,6 @@ import { BillingPageHeader } from '../BillingLayout';
 import { BillingDataTable } from '../BillingDataTable';
 import { StatusBadge } from '../StatusBadge';
 import { CustomerFormDialog } from './CustomerFormDialog';
-import { CustomerAnnexureDialog } from './CustomerAnnexureDialog';
 import { CustomerDeleteDialog, type CustomerDeleteMode } from './CustomerDeleteDialog';
 import { TableEditButton } from '../TableEditButton';
 import type { BillingApi } from '@/lib/billing-api';
@@ -40,7 +39,6 @@ export function CustomersPage({ api }: Props) {
   const [success, setSuccess] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
   const [editRecord, setEditRecord] = useState<BillingCustomer | null>(null);
-  const [annexureRecord, setAnnexureRecord] = useState<BillingCustomer | null>(null);
   const [deleteRecord, setDeleteRecord] = useState<BillingCustomer | null>(null);
   const [deleteMode, setDeleteMode] = useState<CustomerDeleteMode>('single');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -439,20 +437,6 @@ export function CustomersPage({ api }: Props) {
             },
           },
           {
-            key: 'annexure',
-            header: 'Annexure',
-            render: (r) => {
-              const saved = [
-                r.annexures?.ads?.originalName ? 'ADS' : null,
-                r.annexures?.bhs?.originalName ? 'BHS' : null,
-              ].filter(Boolean);
-              if (saved.length === 0) {
-                return <span className="text-xs text-gray-400">—</span>;
-              }
-              return <span className="text-xs font-medium text-gray-700">{saved.join(' · ')}</span>;
-            },
-          },
-          {
             key: 'status',
             header: 'Status',
             render: (r) =>
@@ -477,13 +461,6 @@ export function CustomersPage({ api }: Props) {
                 />
                 <button
                   type="button"
-                  onClick={() => setAnnexureRecord(r)}
-                  className="text-sm font-medium text-[color:var(--billing-primary)] hover:underline"
-                >
-                  Annexure
-                </button>
-                <button
-                  type="button"
                   onClick={() => openDeleteDialog('single', r)}
                   className="text-sm font-medium text-red-600 hover:text-red-800"
                 >
@@ -502,19 +479,6 @@ export function CustomersPage({ api }: Props) {
         }}
         record={editRecord}
         onSaved={() => void load()}
-      />
-      <CustomerAnnexureDialog
-        api={api}
-        open={annexureRecord != null}
-        customer={annexureRecord}
-        onOpenChange={(open) => {
-          if (!open) setAnnexureRecord(null);
-        }}
-        onUpdated={(updated) => {
-          const next = { ...updated, annexures: updated.annexures || undefined };
-          setRows((prev) => prev.map((row) => (row._id === next._id ? { ...row, ...next } : row)));
-          setAnnexureRecord(next);
-        }}
       />
       <CustomerDeleteDialog
         mode={deleteMode}
