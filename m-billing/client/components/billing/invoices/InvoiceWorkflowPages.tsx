@@ -2621,7 +2621,7 @@ export function InvoiceDetailPage({ api, id }: Props & { id: string }) {
       setMsg(
         canRecomputeFromPrep
           ? `Invoice regenerated for ${header.customerCode} from the latest customers, contracts, concessions, rate cards, service catalog, taxes, and conversion rates. ADS drafts also include flights still unsent on the billed-services ADS page, so wheelchair counts match that page.${roeNote}`
-          : `Invoice regenerated with the latest customers, contracts, concession pricing, taxes, and conversion rates. Royalty Setup, Airport Setup configure rules, Aircraft Master, and Equipment Master were not used.${roeNote}`,
+          : `Invoice regenerated with the latest customers, contracts, Royalty Setup, and uploaded MAG rates, plus taxes and conversion rates.${roeNote}`,
       );
     } catch (e) {
       setMsg(e instanceof Error ? e.message : 'Invoice regeneration failed');

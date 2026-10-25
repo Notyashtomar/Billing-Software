@@ -892,7 +892,149 @@ function renderHeaderGrid(doc: PDFKit.PDFDocument, input: InvoicePdfInput, start
   return rightY;
 }
 
+const INR_USD_COL_WEIGHTS = [22, 108, 28, 32, 44, 34, 46, 50, 40, 56] as const;
+
+function renderInrUsdLineItemsTable(
+  doc: PDFKit.PDFDocument,
+  input: InvoicePdfInput,
+  startY: number,
+): number {
+  const x = MARGIN;
+  const w = CONTENT_W;
+  const roe = input.exchangeRate ?? 0;
+  const scale = w / INR_USD_COL_WEIGHTS.reduce((sum, n) => sum + n, 0);
+  const widths = INR_USD_COL_WEIGHTS.map((n) => Math.round(n * scale));
+  widths[widths.length - 1] += w - widths.reduce((sum, n) => sum + n, 0);
+  const headers = [
+    'Sr. No.',
+    'Particular',
+    'Used',
+    'Charged',
+    'Aircraft Type',
+    'Unit',
+    'Rate/Unit (USD)',
+    'Amount (USD)',
+    'ROE',
+    'Amount (INR)',
+  ];
+  const aligns: Array<'left' | 'right' | 'center'> = [
+    'center',
+    'left',
+    'center',
+    'center',
+    'center',
+    'center',
+    'center',
+    'right',
+    'center',
+    'right',
+  ];
+  let y = startY;
+  const minHeadH = invDim(28);
+  let headH = minHeadH;
+  headers.forEach((header, index) => {
+    headH = Math.max(headH, measureCellHeight(doc, header, widths[index], { bold: true, size: 6 }));
+  });
+  const drawHeader = (headerY: number): number => {
+    let cx = x;
+    headers.forEach((header, index) => {
+      strokeBox(doc, cx, headerY, widths[index], headH);
+      putCellText(doc, cx, headerY, widths[index], headH, header, {
+        bold: true,
+        align: 'center',
+        size: 6,
+        valign: 'middle',
+      });
+      cx += widths[index];
+    });
+    return headerY + headH;
+  };
+  y = ensureFlowSpace(doc, y, headH);
+  y = drawHeader(y);
+  const rows = input.lines.map((line) => [
+    String(line.lineNo),
+    line.description,
+    line.used != null ? String(line.used) : '',
+    String(line.charged),
+    line.aircraftType ?? '',
+    line.uom,
+    fmtUsd(line.unitPrice),
+    fmtUsd(line.amount),
+    fmtRoe(roe),
+    fmtInr(line.amountInr ?? line.amount * roe),
+  ]);
+  if (input.hasAnnexures) {
+    rows.push(headers.map((_, index) => (index === 1 ? '[Refer attached annexure for details]' : '')));
+  }
+  const minRowH = invDim(15);
+  for (const cells of rows) {
+    let rowH = minRowH;
+    cells.forEach((cell, index) => {
+      if (!cell) return;
+      rowH = Math.max(rowH, measureCellHeight(doc, cell, widths[index], { size: 6, align: aligns[index] }));
+    });
+    y = ensureFlowSpace(doc, y, rowH, drawHeader);
+    let cellX = x;
+    cells.forEach((cell, index) => {
+      strokeBox(doc, cellX, y, widths[index], rowH);
+      if (cell) {
+        putCellText(doc, cellX, y, widths[index], rowH, cell, { size: 6, align: aligns[index] });
+      }
+      cellX += widths[index];
+    });
+    y += rowH;
+  }
+
+  const usdW = widths[7];
+  const roeW = widths[8];
+  const inrW = widths[9];
+  const labelW = widths.slice(0, 7).reduce((sum, n) => sum + n, 0);
+  const addRow = (label: string, usd: string, inr: string, bold = false) => {
+    const rowH = Math.max(
+      minRowH,
+      measureCellHeight(doc, label, labelW, { bold, size: 6.5 }),
+    );
+    y = ensureFlowSpace(doc, y, rowH);
+    strokeBox(doc, x, y, labelW, rowH);
+    putCellText(doc, x, y, labelW, rowH, label, { bold, size: 6.5, align: 'right' });
+    strokeBox(doc, x + labelW, y, usdW, rowH);
+    putCellText(doc, x + labelW, y, usdW, rowH, usd, { bold, size: 6.5, align: 'right' });
+    strokeBox(doc, x + labelW + usdW, y, roeW, rowH);
+    strokeBox(doc, x + labelW + usdW + roeW, y, inrW, rowH);
+    putCellText(doc, x + labelW + usdW + roeW, y, inrW, rowH, inr, { bold, size: 6.5, align: 'right' });
+    y += rowH;
+  };
+  addRow('Total Amount', fmtUsd(input.subtotalUsd ?? input.subtotalExclTax), fmtInr(input.subtotalInr ?? 0), true);
+  const concession = concessionAmountRows(
+    input.subtotalExclTax,
+    input.concessionFeePercent,
+    input.concessionFeeUsd ?? input.concessionFeeAmount,
+  );
+  for (const row of concession) {
+    const label =
+      input.concessionFeePercent && input.concessionFeePercent > 0
+        ? `Concession Fee @ ${fmtPct(input.concessionFeePercent)}% of "Total Gross Revenue"`
+        : row.label;
+    addRow(label, fmtUsd(input.concessionFeeUsd ?? row.amount), fmtInr(input.concessionFeeInr ?? 0));
+  }
+  addRow('Gross Amount in', fmtUsd(input.grossAmountUsd ?? input.grossAmount), fmtInr(input.grossAmountInr ?? 0), true);
+  if ((input.cgstUsd ?? 0) > 0 || (input.cgstInr ?? 0) > 0) {
+    addRow(`CGST @ ${fmtPct(input.cgstPercent ?? 9)}%`, fmtUsd(input.cgstUsd ?? 0), fmtInr(input.cgstInr ?? 0));
+  }
+  if ((input.sgstUsd ?? 0) > 0 || (input.sgstInr ?? 0) > 0) {
+    addRow(`SGST @ ${fmtPct(input.sgstPercent ?? 9)}%`, fmtUsd(input.sgstUsd ?? 0), fmtInr(input.sgstInr ?? 0));
+  }
+  const inrWords = `Total Amount Receivable In Words- ${input.amountInWordsInr ?? ''} (In INR) (Rounded Off)`;
+  const usdWords = `Total Amount Receivable In Words USD- ${input.amountInWordsUsd ?? ''} ONLY`;
+  addRow(inrWords, fmtRoundedUsd(input.totalReceivableUsd ?? 0), fmtRoundedInr(input.totalReceivableInr ?? 0), true);
+  addRow(usdWords, '', '', true);
+  return y + 4;
+}
+
 function renderLineItemsTable(doc: PDFKit.PDFDocument, input: InvoicePdfInput, startY: number): number {
+  if (input.dualCurrencyLayout && input.exchangeRate) {
+    return renderInrUsdLineItemsTable(doc, input, startY);
+  }
   const x = MARGIN;
   const w = CONTENT_W;
   const isUsd = input.currencyCode === 'USD';

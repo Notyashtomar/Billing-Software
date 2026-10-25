@@ -68,6 +68,8 @@ export interface InvoicePdfInput {
   serviceCode?: string;
   currencyCode: string;
   exchangeRate?: number;
+  /** USD invoice with an INR column. Existing one-currency layouts stay unchanged. */
+  dualCurrencyLayout?: boolean;
   lines: InvoicePdfLineInput[];
   subtotalExclTax: number;
   subtotalUsd?: number;

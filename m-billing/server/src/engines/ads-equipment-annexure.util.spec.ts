@@ -20,6 +20,8 @@ describe('ads equipment annexure', () => {
   it('shortens contract service codes to annexure headers', () => {
     expect(adsAnnexureColumnLabel('Scheduled - Equipment - GPU-NB')).toBe('GPU-NB');
     expect(adsAnnexureColumnLabel('GPU 140 KV')).toBe('GPU-140KV');
+    expect(adsAnnexureColumnLabel('Ground Power Unit - 180KV')).toBe('GPU-180KV');
+    expect(adsAnnexureColumnLabel('Ground Power Unit - 140KV')).toBe('GPU-140KV');
     expect(adsAnnexureColumnLabel('Scheduled - Equipment - ASU-WB')).toBe('ASU-WB');
     expect(adsAnnexureColumnLabel('Motorized Passenger Step Ladder')).toBe('PSL-WB');
     expect(adsAnnexureColumnLabel('Crew Coach')).toBe('CREW-COACH');
@@ -37,7 +39,7 @@ describe('ads equipment annexure', () => {
     expect(rules.map((rule) => rule.serviceCode)).toEqual(['GPU-NB']);
   });
 
-  it('counts billed uses per flight and omits flights still inside FOC', () => {
+  it('lists used flights and splits WCHR/S into Total then CHARGEABLE when FOC applies', () => {
     const rules = [
       {
         serviceCode: 'Scheduled - Equipment - WCHR',
@@ -91,10 +93,15 @@ describe('ads equipment annexure', () => {
       rules,
     );
 
-    expect(table.columns.map((column) => column.label)).toEqual(['ACU-NB', 'WCHR/S']);
-    expect(table.rows).toHaveLength(2);
+    expect(table.columns.map((column) => column.label)).toEqual([
+      'ACU-NB',
+      'Total WCHR/S',
+      'CHARGEABLE WCHR/S',
+    ]);
+    expect(table.rows).toHaveLength(3);
     const acuKey = table.columns.find((column) => column.label === 'ACU-NB')!.key;
-    const wchrKey = table.columns.find((column) => column.label === 'WCHR/S')!.key;
+    const usedKey = table.columns.find((column) => column.label === 'Total WCHR/S')!.key;
+    const chargedKey = table.columns.find((column) => column.label === 'CHARGEABLE WCHR/S')!.key;
     expect(table.rows[0]).toMatchObject({
       serialNo: '214149',
       flightNo: 'LX146/147',
@@ -102,11 +109,15 @@ describe('ads equipment annexure', () => {
       atdDate: '02/09/26',
       counts: { [acuKey]: 1 },
     });
-    expect(table.rows[1].serialNo).toBe('214151');
-    expect(table.rows[1].counts[wchrKey]).toBe(2);
-    expect(table.rows.some((row) => row.serialNo === '214150')).toBe(false);
+    expect(table.rows[1].serialNo).toBe('214150');
+    expect(table.rows[1].counts[usedKey]).toBe(4);
+    expect(table.rows[1].counts[chargedKey]).toBeUndefined();
+    expect(table.rows[2].serialNo).toBe('214151');
+    expect(table.rows[2].counts[usedKey]).toBe(12);
+    expect(table.rows[2].counts[chargedKey]).toBe(2);
     expect(table.totals[acuKey]).toBe(1);
-    expect(table.totals[wchrKey]).toBe(2);
+    expect(table.totals[usedKey]).toBe(16);
+    expect(table.totals[chargedKey]).toBe(2);
   });
 
   it('combines WCHR and WCHS on one flight before applying FOC', () => {
@@ -144,10 +155,205 @@ describe('ads equipment annexure', () => {
         },
       ],
     );
-    expect(table.columns.map((column) => column.label)).toEqual(['WCHR/S']);
+    expect(table.columns.map((column) => column.label)).toEqual([
+      'Total WCHR/S',
+      'CHARGEABLE WCHR/S',
+    ]);
     expect(table.rows).toHaveLength(1);
-    const key = table.columns[0]!.key;
-    expect(table.rows[0]!.counts[key]).toBe(31);
-    expect(table.totals[key]).toBe(31);
+    const usedKey = table.columns[0]!.key;
+    const chargedKey = table.columns[1]!.key;
+    expect(table.rows[0]!.counts[usedKey]).toBe(41);
+    expect(table.rows[0]!.counts[chargedKey]).toBe(31);
+    expect(table.totals[usedKey]).toBe(41);
+    expect(table.totals[chargedKey]).toBe(31);
+  });
+
+  it('keeps a single column when invoice Used and Charged are the same', () => {
+    const table = buildAdsAnnexureTable(
+      [
+        {
+          sourceRef: { serialNo: '216111', flightNo: 'VS300' },
+          operationalSnapshot: {
+            equipment_name: 'GPU-WB',
+            particular: 'Ground Power Unit - Wide Body',
+            aircraftType: 'B787-900',
+            atdDate: '2026-09-29',
+            qty: 9,
+          },
+          rateMatch: {
+            particular: 'Ground Power Unit - 180KV',
+            usedUnits: 9,
+            serviceCode: 'Ground Power Unit - 180KV',
+          },
+        },
+      ],
+      [
+        {
+          serviceCode: 'Ground Power Unit - 180KV',
+          unitPriceINR: 3176,
+          alwaysChargeable: true,
+          uom: 'Per 15 Min',
+        },
+        {
+          serviceCode: 'Toilet Service',
+          unitPriceINR: 1000,
+          alwaysChargeable: true,
+        },
+      ],
+      [
+        {
+          description: 'Ground Power Unit - 180KV',
+          quantity: 9,
+          sourceType: 'ads',
+          serviceCode: 'ADS',
+          sourceRef: {
+            particular: 'Ground Power Unit - 180KV',
+            equipmentServiceCode: 'Ground Power Unit - 180KV',
+            usedQuantity: 9,
+            chargedQuantity: 9,
+          },
+        },
+      ],
+    );
+    expect(table.columns.map((column) => column.label)).toEqual(['GPU-180KV']);
+    expect(table.rows).toHaveLength(1);
+    expect(table.rows[0]!.counts[table.columns[0]!.key]).toBe(9);
+    expect(table.totals[table.columns[0]!.key]).toBe(9);
+  });
+
+  it('prints invoice particulars as headers and splits Used vs Charged when they differ', () => {
+    const table = buildAdsAnnexureTable(
+      [
+        {
+          sourceRef: { serialNo: '1', flightNo: 'VS300' },
+          operationalSnapshot: {
+            equipment_name: 'WCHR',
+            particular: 'Wheel Chair -WCHR',
+            aircraftType: 'B787-900',
+            atdDate: '2026-09-01',
+            qty: 20,
+          },
+          rateMatch: { particular: 'Wheel Chair -WCHR', usedUnits: 20, serviceCode: 'WCHR' },
+        },
+        {
+          sourceRef: { serialNo: '1', flightNo: 'VS300' },
+          operationalSnapshot: {
+            equipment_name: 'GPU-140KV',
+            particular: 'Ground Power Unit - 140KV',
+            aircraftType: 'B787-900',
+            atdDate: '2026-09-01',
+            qty: 9,
+          },
+          rateMatch: {
+            particular: 'Ground Power Unit - 140KV',
+            usedUnits: 9,
+            serviceCode: 'Ground Power Unit - 140KV',
+          },
+        },
+      ],
+      [
+        {
+          serviceCode: 'WCHR',
+          unitPriceINR: 1091,
+          alwaysChargeable: false,
+          freePerFlight: 10,
+        },
+        {
+          serviceCode: 'Ground Power Unit - 140KV',
+          unitPriceINR: 3176,
+          alwaysChargeable: true,
+        },
+        {
+          serviceCode: 'Toilet Service',
+          unitPriceINR: 500,
+          alwaysChargeable: true,
+        },
+      ],
+      [
+        {
+          description: 'Wheel Chair - WCHR/S',
+          quantity: 10,
+          sourceType: 'ads',
+          serviceCode: 'ADS',
+          sourceRef: {
+            particular: 'Wheel Chair - WCHR/S',
+            usedQuantity: 20,
+            chargedQuantity: 10,
+          },
+        },
+        {
+          description: 'Ground Power Unit - 140KV',
+          quantity: 9,
+          sourceType: 'ads',
+          serviceCode: 'ADS',
+          sourceRef: {
+            particular: 'Ground Power Unit - 140KV',
+            usedQuantity: 9,
+            chargedQuantity: 9,
+          },
+        },
+      ],
+    );
+    expect(table.columns.map((column) => column.label)).toEqual([
+      'Total WCHR/S',
+      'CHARGEABLE WCHR/S',
+      'GPU-140KV',
+    ]);
+    const usedKey = table.columns[0]!.key;
+    const chargedKey = table.columns[1]!.key;
+    const gpuKey = table.columns[2]!.key;
+    expect(table.rows[0]!.counts[usedKey]).toBe(20);
+    expect(table.rows[0]!.counts[chargedKey]).toBe(10);
+    expect(table.rows[0]!.counts[gpuKey]).toBe(9);
+  });
+
+  it('keeps one Crew Coach pair when the invoice has a line per aircraft', () => {
+    const table = buildAdsAnnexureTable(
+      [
+        {
+          sourceRef: { serialNo: '1', flightNo: 'QY548' },
+          operationalSnapshot: {
+            equipment_name: 'Crew Coach',
+            particular: 'Crew Coach',
+            aircraftType: 'A330-200F',
+            atdDate: '2026-09-19',
+            qty: 2,
+          },
+          rateMatch: { particular: 'Crew Coach', usedUnits: 2, serviceCode: 'Crew Coach', unitPrice: 54 },
+        },
+        {
+          sourceRef: { serialNo: '2', flightNo: 'QY667' },
+          operationalSnapshot: {
+            equipment_name: 'Crew Coach',
+            particular: 'Crew Coach',
+            aircraftType: 'A330-300F',
+            atdDate: '2026-09-20',
+            qty: 2,
+          },
+          rateMatch: { particular: 'Crew Coach', usedUnits: 2, serviceCode: 'Crew Coach', unitPrice: 54 },
+        },
+      ],
+      [{ serviceCode: 'Crew Coach', unitPriceINR: 54, freePerFlight: 1, alwaysChargeable: false }],
+      [
+        {
+          description: 'Crew Coach',
+          quantity: 1,
+          sourceType: 'ads',
+          serviceCode: 'ADS',
+          sourceRef: { particular: 'Crew Coach', aircraftType: 'A330-200F', usedQuantity: 2, chargedQuantity: 1 },
+        },
+        {
+          description: 'Crew Coach',
+          quantity: 1,
+          sourceType: 'ads',
+          serviceCode: 'ADS',
+          sourceRef: { particular: 'Crew Coach', aircraftType: 'A330-300F', usedQuantity: 1, chargedQuantity: 1 },
+        },
+      ],
+    );
+    expect(table.columns.map((column) => column.label)).toEqual([
+      'Total CREW-COACH',
+      'CHARGEABLE CREW-COACH',
+    ]);
   });
 });

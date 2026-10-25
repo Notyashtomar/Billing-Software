@@ -85,7 +85,9 @@ import {
   preparationInvoiceGroupKey,
   preparationListPeriodFilter,
 } from '../common/billing-invoice-period.util';
-import { stationFlightConcessionPercents } from '../utils/station-flight-concession.util';
+import { stationFlightConcessionPercents, stationRoyaltyOnGross } from '../utils/station-flight-concession.util';
+import { magFloorForFlights, type MagFlightInput } from '../utils/mag-concession.util';
+import { BillingAircraftMasterService } from './billing-aircraft-master.service';
 import { isAdsFamilySourceType } from '../shared/ads-adhoc-tariff';
 import {
   ataCalendarDay,
@@ -305,6 +307,7 @@ export class BillingInvoiceDraftsService {
     private readonly taxEngine: TaxEngineService,
     private readonly approvalWorkflow: ApprovalWorkflowService,
     private readonly auditEngine: AuditEngineService,
+    private readonly aircraftMaster: BillingAircraftMasterService,
     @Inject(
       forwardRef(
         lazyService(
@@ -3079,21 +3082,35 @@ export class BillingInvoiceDraftsService {
       .findOne(stationCode ? { stationCode } : StationScope.filter({}, ctx))
       .select('airportCommercial royaltyMaster')
       .lean();
+    const ownership = String(settings?.airportCommercial?.ownership ?? '').toLowerCase();
+    const airportKnown = ownership === 'private' || ownership === 'aai';
+    const royaltyOnGross = stationRoyaltyOnGross(settings, documentDate, billingPeriod);
     const stationFlightConcession = stationFlightConcessionPercents(
       settings,
       documentDate,
       billingPeriod,
     );
     if (stationFlightConcession) {
-      return { ...(contract ?? {}), stationFlightConcession } as T;
+      return {
+        ...(contract ?? {}),
+        stationFlightConcession,
+        extendedRoyaltyEnabled: royaltyOnGross,
+      } as T;
     }
-    if (!options?.documentDateFallback) return contract;
+    if (!options?.documentDateFallback) {
+      if (!airportKnown) return contract;
+      return { ...(contract ?? {}), extendedRoyaltyEnabled: royaltyOnGross } as T;
+    }
     const stationFlightConcessionFallback = stationFlightConcessionPercents(settings, documentDate, {
       start: documentDate,
       end: documentDate,
     });
-    if (!stationFlightConcessionFallback) return contract;
-    return { ...(contract ?? {}), stationFlightConcessionFallback } as T;
+    if (!stationFlightConcessionFallback && !airportKnown) return contract;
+    return {
+      ...(contract ?? {}),
+      ...(stationFlightConcessionFallback ? { stationFlightConcessionFallback } : {}),
+      extendedRoyaltyEnabled: royaltyOnGross,
+    } as T;
   }
 
   private async bhsVolumeComposeOptions(
@@ -3656,6 +3673,87 @@ export class BillingInvoiceDraftsService {
     };
   }
 
+  /**
+   * MAG total for this airline's scheduled flights in the invoice month.
+   * Each flight uses its aircraft band (B–F) and handling service. Full handling is the default.
+   * Returns 0 when the station has no uploaded MAG rates.
+   */
+  private async magFloorForAirlineMonth(
+    ctx: StationScopeContext,
+    header: BillingInvoiceHeaderDocument,
+  ): Promise<number> {
+    const stationCode = String(header.stationCode ?? ctx.stationCode ?? '').trim();
+    const customerCode = String(header.customerCode ?? '').trim();
+    if (!stationCode || !customerCode || !header.billingPeriodStart || !header.billingPeriodEnd) {
+      return 0;
+    }
+    const settings = await this.settingsModel
+      .findOne({ stationCode })
+      .select('airportCommercial')
+      .lean();
+    const commercial = settings?.airportCommercial;
+    const rates = commercial?.minRevenueShareApplicable ? commercial.ceilingRates ?? [] : [];
+    if (rates.length === 0) return 0;
+
+    const flights = await this.preparationModel
+      .find({
+        stationCode,
+        customerCode,
+        sourceType: 'scheduled_flight',
+        billingPeriodStart: header.billingPeriodStart,
+        billingPeriodEnd: header.billingPeriodEnd,
+        status: { $ne: 'rejected' },
+      })
+      .select('operationalSnapshot sourceRef')
+      .lean();
+    const seen = new Set<string>();
+    const inputs: MagFlightInput[] = [];
+    for (const flight of flights) {
+      const snap = (flight.operationalSnapshot ?? {}) as Record<string, unknown>;
+      const ref = (flight.sourceRef ?? {}) as Record<string, unknown>;
+      const serial = String(ref.serialNo ?? snap.serialNo ?? snap.SerialNo ?? '').trim();
+      const key = serial || String((flight as { _id?: unknown })._id ?? '');
+      if (key && seen.has(key)) continue;
+      if (key) seen.add(key);
+      const aircraftType = String(
+        snap.aircraftType ?? snap.TypeCraft ?? snap.ACType ?? snap.aircraft ?? '',
+      ).trim();
+      const handling = String(snap.TypeofHandling ?? snap.typeOfHandling ?? '').trim();
+      const kind = String(snap.Typeofflight ?? snap.typeOfFlight ?? snap.categoryOfFlight ?? '');
+      const cargo = snap.freighter === true || /cargo|freighter/i.test(kind);
+      inputs.push({ aircraftType, handling, cargo });
+    }
+    if (inputs.length === 0) return 0;
+
+    const master = await this.aircraftMaster.list();
+    const categoryByType = new Map<string, string>();
+    for (const row of master.data ?? []) {
+      const band = String(row.categoryCode || row.category || '').trim();
+      for (const name of [row.aircraftType, row.icaoCode]) {
+        const key = String(name ?? '').trim().toUpperCase();
+        if (key && band) categoryByType.set(key, band);
+      }
+    }
+    const raw = magFloorForFlights(rates, inputs, categoryByType);
+    return this.magAmountInInvoiceCurrency(raw, commercial?.magCurrency, header);
+  }
+
+  private magAmountInInvoiceCurrency(
+    amount: number,
+    magCurrency: string | undefined,
+    header: BillingInvoiceHeaderDocument,
+  ): number {
+    if (!(amount > 0)) return 0;
+    const mag = String(magCurrency ?? 'INR').trim().toUpperCase();
+    const invoice = String(header.currencyCode ?? 'INR').trim().toUpperCase();
+    if (mag === invoice) return Math.round(amount * 100) / 100;
+    const factor = Number(header.currencyFactor);
+    if (!(factor > 0)) return 0;
+    if (mag === 'USD' && invoice === 'INR') return Math.round(amount * factor * 100) / 100;
+    if (mag === 'INR' && invoice === 'USD') return Math.round((amount / factor) * 100) / 100;
+    return 0;
+  }
+
   private async recalculateHeader(
     header: BillingInvoiceHeaderDocument,
     ctx: StationScopeContext,
@@ -3718,10 +3816,12 @@ export class BillingInvoiceDraftsService {
 
     const scheduledFlightCount = await this.countInvoiceScheduledFlights(header, lines, options);
     const typedConcession = Number(header.concessionPercentOverride);
+    const magFloorAmount = await this.magFloorForAirlineMonth(ctx, header);
     applyConcessionTotalsToHeader(header, lines, contract, {
       scheduledFlightCount,
       adsConcession: adsInvoice,
       invoiceCategory: invoiceCategory || undefined,
+      magFloorAmount,
       concessionPercentOverride:
         header.concessionPercentOverride == null || !Number.isFinite(typedConcession)
           ? undefined

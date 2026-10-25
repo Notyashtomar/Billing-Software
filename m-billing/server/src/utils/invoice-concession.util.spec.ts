@@ -147,6 +147,21 @@ describe('exclusive BHS invoice concession', () => {
     expect(totals.grossAmount).toBe(23_600);
   });
 
+  it('uses the higher of ADS royalty and the MAG floor on an exclusive invoice', () => {
+    const totals = calculateInvoiceConcessionFromLines(
+      1000,
+      [{ lineAmountExclTax: 1000, sourceType: 'ads', sourceRef: { concessionFeePercent: 18 } }],
+      {
+        bhsConcessionCoverage: 'non_comprehensive',
+        extendedRoyaltyEnabled: false,
+        concessionRates: { int: 18 },
+      },
+      { adsConcession: true, magFloorAmount: 5000 },
+    );
+    expect(totals.concessionFeeAmount).toBe(5000);
+    expect(totals.concessionFeePercent).toBe(0);
+  });
+
   it('applies exclusive extended royalty on ADS invoices for the same airline', () => {
     const totals = calculateInvoiceConcessionFromLines(
       1000,

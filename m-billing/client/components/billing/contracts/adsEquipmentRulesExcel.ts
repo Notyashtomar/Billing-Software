@@ -167,7 +167,15 @@ export async function exportAdsEquipmentRulesExcel(opts: {
   airlineName: string;
   airlineCode: string;
 }): Promise<void> {
-  const rows = opts.rules.filter((rule) => String(rule.serviceCode ?? '').trim());
+  const rows = opts.rules
+    .filter((rule) => String(rule.serviceCode ?? '').trim())
+    .sort((a, b) =>
+      equipmentLabel(String(a.serviceCode ?? ''), opts.catalogOptions).localeCompare(
+        equipmentLabel(String(b.serviceCode ?? ''), opts.catalogOptions),
+        undefined,
+        { sensitivity: 'base', numeric: true },
+      ),
+    );
   if (rows.length === 0) {
     throw new Error(ADS_EQUIPMENT_RULES_EMPTY_EXPORT_MESSAGE);
   }

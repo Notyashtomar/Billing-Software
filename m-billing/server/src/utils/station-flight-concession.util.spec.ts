@@ -5,6 +5,7 @@ import {
 import {
   preparationFlightConcessionSector,
   stationFlightConcessionPercents,
+  stationRoyaltyOnGross,
 } from './station-flight-concession.util';
 import { preparationInvoiceGroupKey } from '../common/billing-invoice-period.util';
 
@@ -19,6 +20,25 @@ describe('station flight concession', () => {
       },
     },
   };
+
+  it('keeps Royalty on Gross for a private airport when the fee card misses the invoice month', () => {
+    expect(
+      stationRoyaltyOnGross(
+        {
+          airportCommercial: { ownership: 'private', revenueShareMechanism: 'gross' },
+          royaltyMaster: {
+            gross: {
+              effectiveFrom: '2026-10-16',
+              effectiveTo: '2027-03-31',
+              scheduledInternational: { percent: 18 },
+            },
+          },
+        },
+        new Date('2026-10-01'),
+        { start: '2026-09-01', end: '2026-09-30' },
+      ),
+    ).toBe(true);
+  });
 
   it('reads the private-airport side saved on Royalty Setup', () => {
     expect(stationFlightConcessionPercents(settings, new Date('2026-09-15'))).toEqual({

@@ -73,7 +73,7 @@ export function buildAdsAnnexurePdfBuffer(input: AdsAnnexurePdfInput): Promise<B
     const colHeaders = ['S No', 'FHR No', 'Flight No', 'Aircraft Type', 'ATD Date', ...columns.map((c) => c.label)];
     const widths = identityWidths(columns.length);
     const rowH = 16;
-    const headerH = 28;
+    const headerH = 34;
     const tableBottom = PAGE_H - MARGIN - 8;
 
     const drawHeader = (): number => {
@@ -138,7 +138,7 @@ export function buildAdsAnnexurePdfBuffer(input: AdsAnnexurePdfInput): Promise<B
     if (input.table.rows.length === 0) {
       doc.font('Helvetica').fontSize(9).fillColor('#000');
       doc.text(
-        'No additional billed equipment for this invoice. Columns follow priced equipment rules on the contract Clauses tab.',
+        'No additional billed equipment for this invoice. Columns follow the particulars on the ADS invoice.',
         MARGIN,
         y + 12,
         { width: CONTENT_W, align: 'center' },

@@ -1736,19 +1736,79 @@ export function parseAdsRemarksQuantity(raw: unknown): number | null {
   return null;
 }
 
+function isAdsFifteenMinuteUom(uom: unknown): boolean {
+  return /per\s*15\s*min(?:ute)?s?|\b15\s*min(?:ute)?s?\b/i.test(String(uom ?? '').trim());
+}
+
+function isAdsHalfHourUom(uom: unknown): boolean {
+  return /half\s*(?:an?\s*)?hour|half\s*hr|per\s*30\s*min(?:ute)?s?|\b30\s*min(?:ute)?s?\b/i.test(
+    String(uom ?? '').trim(),
+  );
+}
+
+function isAdsHourlyUom(uom: unknown): boolean {
+  const raw = String(uom ?? '').trim();
+  if (!raw || isAdsHalfHourUom(raw) || isAdsFifteenMinuteUom(raw)) return false;
+  if (/^hr$/i.test(raw) || /per\s*hour/i.test(raw)) return true;
+  return /\bhour\b/i.test(raw);
+}
+
 function isTimeBasedAdsUom(uom: unknown): boolean {
-  const raw = String(uom ?? '').trim().toLowerCase();
-  if (!raw) return false;
-  if (/per\s*hour|per\s*half\s*hour|per\s*15\s*min/.test(raw)) return true;
-  if (/^hr$/i.test(raw) || /^min$/i.test(raw)) return true;
-  return false;
+  return isAdsFifteenMinuteUom(uom) || isAdsHalfHourUom(uom) || isAdsHourlyUom(uom);
+}
+
+/** Same block rules as invoice ADS: 15 minutes, half hour, hour with a 5-minute grace. */
+function adsTimeBasedUnitsFromMinutes(uom: unknown, engagementMinutes: number | null): number | null {
+  const minutes =
+    engagementMinutes != null && Number.isFinite(engagementMinutes) && engagementMinutes > 0
+      ? Math.round(engagementMinutes)
+      : null;
+  if (isAdsFifteenMinuteUom(uom)) {
+    if (minutes == null) return null;
+    return Math.max(1, Math.ceil(minutes / 15));
+  }
+  if (isAdsHalfHourUom(uom)) {
+    if (minutes == null) return null;
+    return Math.max(1, Math.ceil(minutes / 30));
+  }
+  if (isAdsHourlyUom(uom)) {
+    if (minutes == null) return null;
+    const fullHours = Math.floor(minutes / 60);
+    const remainder = minutes - fullHours * 60;
+    const blocks = fullHours + (remainder > 5 ? 1 : 0);
+    return Math.max(1, blocks);
+  }
+  return null;
+}
+
+function adsRowEngagementMinutes(row: BillingSourceRow): number | null {
+  const op = (row.operationalData ?? {}) as Record<string, unknown>;
+  const hours = Number(op.usageHours);
+  if (Number.isFinite(hours) && hours > 0) return Math.round(hours * 60);
+  const usageTime = String(op.usage_time ?? op.usageTime ?? '').trim();
+  const hm = usageTime.match(/^(\d{1,3}):(\d{2})$/);
+  if (hm) {
+    const minutes = Number(hm[1]) * 60 + Number(hm[2]);
+    return minutes > 0 ? minutes : null;
+  }
+  return null;
+}
+
+export function formatAdsEngagementMinutes(totalMinutes: number): string {
+  if (!Number.isFinite(totalMinutes) || totalMinutes <= 0) return '—';
+  const minutes = Math.round(totalMinutes);
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  if (hours > 0 && rest > 0) return `${hours}h ${rest}m`;
+  if (hours > 0) return `${hours}h`;
+  return `${rest}m`;
 }
 
 /**
  * Used units for a usage line — same preference order as invoice enrichment.
  * For non-time UOMs, FHR remarks count (e.g. `06TRIP`) is source of truth.
  */
-export function adsRowUsedUnits(row: BillingSourceRow): number {
+export function adsRowUsedUnits(row: BillingSourceRow, uomOverride?: string): number {
   const op = (row.operationalData ?? {}) as Record<string, unknown>;
   const rate = (row.rateMatch ?? {}) as Record<string, unknown>;
   const particular = String(
@@ -1759,7 +1819,9 @@ export function adsRowUsedUnits(row: BillingSourceRow): number {
       op.equipmentName ??
       '',
   ).trim();
+  const override = String(uomOverride ?? '').trim();
   const uom =
+    override ||
     String(rate.uom ?? op.adsUom ?? op.uom ?? '').trim() ||
     guessAdsEquipmentUom(particular);
   const qtyRaw = Number(op.qty ?? op.equipment_quantity ?? op.quantity ?? 1);
@@ -1770,6 +1832,11 @@ export function adsRowUsedUnits(row: BillingSourceRow): number {
       ? remarksFromField
       : parseAdsRemarksQuantity(op.remarks ?? op.Remarks ?? op.remark);
 
+  if (override && isTimeBasedAdsUom(uom)) {
+    const units = adsTimeBasedUnitsFromMinutes(uom, adsRowEngagementMinutes(row));
+    return capTurnaroundCrewCoachUsedClient(toWholeAdsUnits(units ?? 0), row, particular);
+  }
+
   // Non-time UOMs: remarks count drives invoice used units.
   if (!isTimeBasedAdsUom(uom) && remarksQuantity != null && remarksQuantity > 0) {
     return capTurnaroundCrewCoachUsedClient(
@@ -1779,9 +1846,11 @@ export function adsRowUsedUnits(row: BillingSourceRow): number {
     );
   }
 
-  const used = Number(rate.usedUnits ?? op.adsUsedUnits);
-  if (Number.isFinite(used) && used > 0) {
-    return capTurnaroundCrewCoachUsedClient(toWholeAdsUnits(used), row, particular);
+  if (!override) {
+    const used = Number(rate.usedUnits ?? op.adsUsedUnits);
+    if (Number.isFinite(used) && used > 0) {
+      return capTurnaroundCrewCoachUsedClient(toWholeAdsUnits(used), row, particular);
+    }
   }
 
   if (!isTimeBasedAdsUom(uom)) {
@@ -1864,24 +1933,29 @@ function adsRowPricingBasis(row: BillingSourceRow): string {
  * Charged quantity for palette — matches invoice ADS compose:
  * Charged = max(0, Used − freeAllowance). Non-billable pricing bases contribute 0.
  */
-export function adsRowChargedQuantity(row: BillingSourceRow): number {
+export function adsRowChargedQuantity(row: BillingSourceRow, uomOverride?: string): number {
+  const override = String(uomOverride ?? '').trim();
   const pricingBasis = adsRowPricingBasis(row);
   if (
-    pricingBasis === 'ads_excluded' ||
-    pricingBasis === 'not_on_contract' ||
-    pricingBasis === 'package_inclusive'
+    !override &&
+    (pricingBasis === 'ads_excluded' ||
+      pricingBasis === 'not_on_contract' ||
+      pricingBasis === 'package_inclusive')
   ) {
     return 0;
   }
 
   const unitPrice = Number(row.rateMatch?.unitPrice ?? 0);
   // Invoice skips zero-price lines; keep palette aligned once enrichment priced the row.
-  if (Number.isFinite(unitPrice) && unitPrice <= 0 && pricingBasis) {
+  if (!override && Number.isFinite(unitPrice) && unitPrice <= 0 && pricingBasis) {
     return 0;
   }
 
-  const used = adsRowUsedUnits(row);
-  const free = adsRowFreeAllowance(row);
+  const used = adsRowUsedUnits(row, override || undefined);
+  const free = isTimeBasedAdsUom(override || adsRowDisplayUom(row))
+    ? 0
+    : adsRowFreeAllowance(row);
+  if (free >= Number.MAX_SAFE_INTEGER / 4) return 0;
   return Math.max(0, used - free);
 }
 
@@ -2035,12 +2109,68 @@ export function filterBillingRowsByAdsBriefs(
 }
 
 export type AdsBriefSelectionTotals = {
+  key?: BillingAdsBriefKey;
   label: string;
   engagements: number;
   uom: string;
+  uomOptions: string[];
   usedUnits: number;
   chargedUnits: number;
+  /** Sum of FHR usage time for the selected lines. */
+  engagementTime: string;
 };
+
+export type AdsBriefUomCatalogRow = {
+  itemNo?: string;
+  description?: string;
+  uoms?: ReadonlyArray<{ uom?: string | null }>;
+};
+
+function compactAdsName(value: string): string {
+  return value.toUpperCase().replace(/[^A-Z0-9]+/g, '');
+}
+
+export function adsBriefItemMatchesQuery(
+  item: { label: string; fullName?: string; aliases: readonly string[] },
+  query: string,
+): boolean {
+  const needle = query.trim().toLowerCase();
+  if (!needle) return true;
+  const haystack = [item.label, item.fullName ?? '', ...item.aliases];
+  return haystack.some((value) => value.toLowerCase().includes(needle));
+}
+
+/** Equipment Master UOMs for one palette item, plus UOMs already on the loaded flights. */
+export function uomsForAdsBrief(
+  key: BillingAdsBriefKey,
+  master: readonly AdsBriefUomCatalogRow[],
+  rows: BillingSourceRow[],
+): string[] {
+  const item = BILLING_ADS_BRIEF_ITEMS.find((entry) => entry.key === key);
+  const aliases = [item?.label, item?.fullName, ...(item?.aliases ?? [])]
+    .map((value) => compactAdsName(String(value ?? '')))
+    .filter((value) => value.length >= 2);
+  const found = new Set<string>();
+  for (const record of master) {
+    const names = [compactAdsName(String(record.description ?? '')), compactAdsName(String(record.itemNo ?? ''))];
+    const hit = aliases.some((alias) =>
+      names.some(
+        (name) =>
+          name === alias || (alias.length >= 4 && name.length >= 4 && (name.includes(alias) || alias.includes(name))),
+      ),
+    );
+    if (!hit) continue;
+    for (const pair of record.uoms ?? []) {
+      const uom = String(pair.uom ?? '').trim();
+      if (uom) found.add(uom);
+    }
+  }
+  for (const row of filterBillingRowsByAdsBriefs(rows, new Set([key]))) {
+    const uom = adsRowDisplayUom(row);
+    if (uom && uom !== '—') found.add(uom);
+  }
+  return [...found].sort((a, b) => a.localeCompare(b));
+}
 
 function adsRowDisplayUom(row: BillingSourceRow): string {
   const op = (row.operationalData ?? {}) as Record<string, unknown>;
@@ -2067,30 +2197,43 @@ function adsRowDisplayUom(row: BillingSourceRow): string {
 export function computeAdsBriefSelectionTotals(
   rows: BillingSourceRow[],
   selected: ReadonlySet<BillingAdsBriefKey>,
+  options?: { uomOverride?: string | null; uomOptions?: readonly string[] },
 ): AdsBriefSelectionTotals | null {
   if (selected.size === 0) return null;
+  const uomOverride = String(options?.uomOverride ?? '').trim();
   const filtered = filterBillingRowsByAdsBriefs(rows, selected);
+  const singleKey = selected.size === 1 ? [...selected][0] : undefined;
   if (filtered.length === 0) {
     return {
+      key: singleKey,
       label: formatSelectedAdsBriefLabels(selected),
       engagements: 0,
-      uom: '—',
+      uom: uomOverride || '—',
+      uomOptions: [...(options?.uomOptions ?? [])],
       usedUnits: 0,
       chargedUnits: 0,
+      engagementTime: '—',
     };
   }
 
   let usedUnits = 0;
   let chargedUnits = 0;
   let engagements = 0;
+  let engagementMinutes = 0;
+  let timedRows = 0;
   const uomCounts = new Map<string, number>();
   /** Per-flight Crew Coach charged on turnaround — max 1. */
   const turnaroundCrewChargedByFlight = new Map<string, number>();
 
   for (const row of filtered) {
     engagements += adsRowOperationalQuantity(row);
-    usedUnits += adsRowUsedUnits(row);
-    let charged = adsRowChargedQuantity(row);
+    const minutes = adsRowEngagementMinutes(row);
+    if (minutes != null) {
+      engagementMinutes += minutes;
+      timedRows += 1;
+    }
+    usedUnits += adsRowUsedUnits(row, uomOverride || undefined);
+    let charged = adsRowChargedQuantity(row, uomOverride || undefined);
     const briefKey = primaryBriefKey(row);
     if (
       charged > 0 &&
@@ -2106,7 +2249,7 @@ export function computeAdsBriefSelectionTotals(
       turnaroundCrewChargedByFlight.set(flightKey, already + charged);
     }
     chargedUnits += charged;
-    const uom = adsRowDisplayUom(row);
+    const uom = uomOverride || adsRowDisplayUom(row);
     uomCounts.set(uom, (uomCounts.get(uom) ?? 0) + 1);
   }
 
@@ -2121,11 +2264,37 @@ export function computeAdsBriefSelectionTotals(
 
   const labels = formatSelectedAdsBriefLabels(selected);
 
+  const uomOptions = [
+    ...new Set([...(options?.uomOptions ?? []), ...uomCounts.keys()].map((value) => value.trim()).filter(Boolean)),
+  ].sort((a, b) => a.localeCompare(b));
+
   return {
+    key: singleKey,
     label: labels,
     engagements: toWholeAdsUnits(engagements),
     uom,
+    uomOptions,
     usedUnits: toWholeAdsUnits(usedUnits),
     chargedUnits: Math.max(0, Math.round(chargedUnits)),
+    engagementTime: timedRows > 0 ? formatAdsEngagementMinutes(engagementMinutes) : '—',
   };
+}
+
+/** Palette items whose name matches the typed text, with invoice counts for the loaded airline rows. */
+export function searchAdsBriefDetails(
+  rows: BillingSourceRow[],
+  query: string,
+  uomsByKey?: ReadonlyMap<BillingAdsBriefKey, readonly string[]>,
+): AdsBriefSelectionTotals[] {
+  const needle = query.trim();
+  if (!needle) return [];
+  const hits: AdsBriefSelectionTotals[] = [];
+  for (const item of BILLING_ADS_BRIEF_ITEMS) {
+    if (!adsBriefItemMatchesQuery(item, needle)) continue;
+    const totals = computeAdsBriefSelectionTotals(rows, new Set([item.key]), {
+      uomOptions: uomsByKey?.get(item.key),
+    });
+    if (totals) hits.push({ ...totals, key: item.key, label: item.label });
+  }
+  return hits.sort((a, b) => a.label.localeCompare(b.label));
 }

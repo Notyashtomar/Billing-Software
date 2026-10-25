@@ -165,9 +165,15 @@ function dedupeAdsEquipmentRules(
       effectiveMonth: normalizeAdsEffectiveMonth(rule.effectiveMonth),
     });
   }
-  return [...seen.values()].sort((a, b) =>
-    String(a.serviceCode ?? '').localeCompare(String(b.serviceCode ?? '')),
-  );
+  return [...seen.values()].sort((a, b) => {
+    const aLabel =
+      adsCatalogServiceDisplayName(String(a.serviceCode ?? '').trim()) ||
+      String(a.serviceCode ?? '').trim();
+    const bLabel =
+      adsCatalogServiceDisplayName(String(b.serviceCode ?? '').trim()) ||
+      String(b.serviceCode ?? '').trim();
+    return aLabel.localeCompare(bLabel, undefined, { sensitivity: 'base', numeric: true });
+  });
 }
 
 function BoolMark({ value, label }: { value: boolean; label: string }) {

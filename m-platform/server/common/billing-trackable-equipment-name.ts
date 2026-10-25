@@ -23,7 +23,7 @@ type NameEntry = {
 const EQUIPMENT_ENTRIES: readonly NameEntry[] = [
   { full: 'Cones', kind: 'equipment', aliases: ['C', 'Cones', 'Cone'] },
   { full: 'Chocks', kind: 'equipment', aliases: ['CK', 'Chocks', 'Chock', 'Chokes'] },
-  { full: 'Diesel Tractor', kind: 'equipment', aliases: ['DT', 'Diesel Tractor'] },
+  { full: 'Diesel Tractor', kind: 'equipment', aliases: ['DT', 'DBT', 'Diesel Tractor'] },
   {
     full: 'Passenger Step Ladder Towable',
     kind: 'equipment',
@@ -42,7 +42,7 @@ const EQUIPMENT_ENTRIES: readonly NameEntry[] = [
   {
     full: 'Toilet Service',
     kind: 'equipment',
-    aliases: ['TS', 'Toilet Service', 'Toilet service', 'Toilet Cart'],
+    aliases: ['TS', 'TC', 'Toilet Service', 'Toilet service', 'Toilet Cart'],
   },
   {
     full: 'Water Cart',
@@ -137,6 +137,8 @@ const EQUIPMENT_ENTRIES: readonly NameEntry[] = [
       'Motorized Passenger Step Ladder',
       'Motorised Passenger Step Ladder',
       'Motorised Pax Step Ladder',
+      'PSL',
+      'Pax Step',
     ],
   },
   {
@@ -219,6 +221,8 @@ const EQUIPMENT_ENTRIES: readonly NameEntry[] = [
       'CREW COACH',
       'CREW-COACH-1',
       'CREW-COACH',
+      'C COH',
+      'CCOH',
     ],
   },
   { full: 'Lower Deck Loader', kind: 'equipment', aliases: ['LDL', 'Lower Deck Loader'] },
@@ -304,6 +308,11 @@ const EQUIPMENT_ENTRIES: readonly NameEntry[] = [
     ],
   },
   {
+    full: 'Air Start Unit',
+    kind: 'equipment',
+    aliases: ['ASU', 'Air Start Unit', 'Air Start'],
+  },
+  {
     full: 'Air Start Unit - Wide Body',
     kind: 'equipment',
     aliases: [
@@ -323,7 +332,7 @@ const EQUIPMENT_ENTRIES: readonly NameEntry[] = [
   {
     full: 'Towbar',
     kind: 'equipment',
-    aliases: ['Tow', 'TOW', 'Towbar', 'Tow Bar'],
+    aliases: ['Tow', 'TOW', 'TB', 'Towbar', 'Tow Bar'],
   },
   {
     full: 'Long Towbar',
@@ -408,7 +417,16 @@ const EQUIPMENT_ENTRIES: readonly NameEntry[] = [
   {
     full: 'Pallet Dollies',
     kind: 'equipment',
-    aliases: ['PD', 'Pallet Dollies', 'Pallet Dolly'],
+    aliases: [
+      'PD',
+      'Pallet Dollies',
+      'Pallet Dolly',
+      'PD 20 FT',
+      'PD-20F',
+      'PD-20"',
+      'Pallet Dolly-20 Feet',
+      '20"-Pallet Dolly',
+    ],
   },
   { full: 'Baggage Cart', kind: 'equipment', aliases: ['BC', 'Baggage Cart'] },
   {
@@ -424,6 +442,21 @@ const EQUIPMENT_ENTRIES: readonly NameEntry[] = [
     aliases: ['WBC', 'Wheel Chair Battery'],
   },
   { full: 'Water Service', kind: 'equipment', aliases: ['WS', 'Water Service'] },
+  {
+    full: 'Maintenance Step',
+    kind: 'equipment',
+    aliases: ['MS', 'Maintenance Step'],
+  },
+  {
+    full: 'Crockery Cleaning',
+    kind: 'equipment',
+    aliases: ['CC', 'Crockery Cleaning', 'Crockery cleaning'],
+  },
+  {
+    full: 'Windshield Cleaning',
+    kind: 'equipment',
+    aliases: ['WSC', 'Windshield Cleaning', 'Windshield cleaning'],
+  },
   { full: 'Vehicle - BMW', kind: 'equipment', aliases: ['BMW', 'Vehicle - BMW'] },
   { full: 'Vehicle - MG', kind: 'equipment', aliases: ['MG', 'Vehicle - MG'] },
   {
@@ -527,6 +560,8 @@ const MANPOWER_ENTRIES: readonly NameEntry[] = [
       'Additional Utility Helper',
       'Additional UH',
       'Add. UH',
+      'Utility Hand',
+      'UA',
     ],
   },
   {
@@ -585,6 +620,11 @@ function lookup(map: Map<string, string>, raw: string): string | undefined {
   return map.get(n) ?? map.get(compactKey(raw));
 }
 
+/** `BT-120` / `DBT-01` are the same equipment as `BT` / `DBT`. `GPU-140KV` is not. */
+function stripAssetIndex(name: string): string {
+  return name.replace(/\s*[-/]\s*\d+\s*$/u, '').trim();
+}
+
 export function isBillingUntrackableEquipmentCode(raw: string): boolean {
   return BILLING_UNTRACKABLE_CODES.has(normKey(raw)) || BILLING_UNTRACKABLE_CODES.has(compactKey(raw));
 }
@@ -606,16 +646,24 @@ export function toBillingTrackableFullName(
   if (!cleaned) return '';
   if (isBillingUntrackableEquipmentCode(cleaned)) return cleaned;
 
+  const resolve = (map: Map<string, string>): string | undefined => {
+    const direct = lookup(map, cleaned);
+    if (direct) return direct;
+    const base = stripAssetIndex(cleaned);
+    if (!base || base === cleaned) return undefined;
+    return lookup(map, base);
+  };
+
   if (kind === 'manpower') {
-    return lookup(manpowerByKey, cleaned) ?? lookup(equipmentByKey, cleaned) ?? cleaned;
+    return resolve(manpowerByKey) ?? resolve(equipmentByKey) ?? cleaned;
   }
   if (kind === 'equipment') {
-    return lookup(equipmentByKey, cleaned) ?? cleaned;
+    return resolve(equipmentByKey) ?? cleaned;
   }
 
-  const asEquipment = lookup(equipmentByKey, cleaned);
+  const asEquipment = resolve(equipmentByKey);
   if (asEquipment) return asEquipment;
-  return lookup(manpowerByKey, cleaned) ?? cleaned;
+  return resolve(manpowerByKey) ?? cleaned;
 }
 
 /** Normalize `fhr_collection.equipmentDetails[]` names to billing full forms. */

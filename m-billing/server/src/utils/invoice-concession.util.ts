@@ -1115,9 +1115,14 @@ export type InvoiceCurrencyTaxOptions = {
   invoiceCategory?: string | null;
   /**
    * Typed on the invoice edit screen. Replaces the contract percent.
-   * Exclusive + extended royalty uses percent / (100 − percent) on every service type.
+   * Exclusive + royalty on gross uses percent / (100 − percent) on every service type.
    */
   concessionPercentOverride?: number | null;
+  /**
+   * Uploaded MAG total for this airline's flights in the invoice month.
+   * When set, it replaces the contract ceiling on every exclusive invoice.
+   */
+  magFloorAmount?: number | null;
 };
 
 function invoiceCategoryCode(options?: InvoiceCurrencyTaxOptions): string {
@@ -1530,6 +1535,21 @@ function exclusivePercentConcession(
   return { amount: roundBillingMoney(amount), labelPercent };
 }
 
+function exclusiveWithMagFloor(
+  percentAmount: number,
+  labelPercent: number,
+  magFloor: number,
+): { concessionFeePercent: number; concessionFeeAmount: number } {
+  const concessionFeeAmount = roundBillingMoney(Math.max(percentAmount, magFloor));
+  if (concessionFeeAmount <= 0) {
+    return { concessionFeePercent: 0, concessionFeeAmount: 0 };
+  }
+  if (magFloor > percentAmount + 0.004) {
+    return { concessionFeePercent: 0, concessionFeeAmount };
+  }
+  return { concessionFeePercent: labelPercent, concessionFeeAmount: percentAmount };
+}
+
 function exclusiveBhsInvoiceConcession(opts: {
   particulars: InvoiceLineConcessionInput[];
   subtotal: number;
@@ -1637,6 +1657,8 @@ export function calculateInvoiceConcessionFromLines(
   let concessionFeePercentFinal: number;
   const typedConcession = Number(options?.concessionPercentOverride);
   const nonBhs = isNonBhsInvoiceConcession(options);
+  const magFloorRaw = Number(options?.magFloorAmount);
+  const magFloor = Number.isFinite(magFloorRaw) && magFloorRaw >= 0 ? magFloorRaw : null;
   if (options?.concessionPercentOverride != null && Number.isFinite(typedConcession)) {
     const pct = Math.min(100, Math.max(0, typedConcession));
     concessionFeePercentFinal = pct;
@@ -1652,8 +1674,27 @@ export function calculateInvoiceConcessionFromLines(
       contract,
       usesExtendedRoyalty(contract),
     );
-    concessionFeeAmount = exclusiveNonBhs.amount;
-    concessionFeePercentFinal = exclusiveNonBhs.labelPercent;
+    if (magFloor != null) {
+      const floored = exclusiveWithMagFloor(
+        exclusiveNonBhs.amount,
+        exclusiveNonBhs.labelPercent,
+        magFloor,
+      );
+      concessionFeeAmount = floored.concessionFeeAmount;
+      concessionFeePercentFinal = floored.concessionFeePercent;
+    } else {
+      concessionFeeAmount = exclusiveNonBhs.amount;
+      concessionFeePercentFinal = exclusiveNonBhs.labelPercent;
+    }
+  } else if (isExclusiveBhsConcessionContract(contract) && magFloor != null) {
+    const fromSaved = exclusivePercentConcession(
+      particulars,
+      contract,
+      usesExtendedRoyalty(contract),
+    );
+    const floored = exclusiveWithMagFloor(fromSaved.amount, fromSaved.labelPercent, magFloor);
+    concessionFeeAmount = floored.concessionFeeAmount;
+    concessionFeePercentFinal = floored.concessionFeePercent;
   } else if (isExclusiveBhsConcessionContract(contract)) {
     const exclusive = exclusiveBhsInvoiceConcession({
       particulars,

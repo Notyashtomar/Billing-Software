@@ -116,8 +116,9 @@ type EditableSnapshotInput = {
   additionalCustomerCodes: string[];
   additionalCustomerInherit: AdditionalCustomerInheritChoice[];
   contractCategories: ContractSector[];
-  extendedRoyaltyEnabled: boolean;
   billBmeEquipment: boolean;
+  inrUsdInvoiceEnabled: boolean;
+  inrUsdInvoiceCategories: string[];
   fortnightBillingPartCount: string;
   fortnightBillingRanges: Array<{ startDay: string; endDay: string; exchangeRatePerUsd: string }>;
   fortnightMonthRates: FortnightMonthRateForm[];
@@ -342,8 +343,9 @@ export function ContractFormDialog({
   } | null>(null);
   const [additionalCustomerQuery, setAdditionalCustomerQuery] = useState('');
   const [contractCategories, setContractCategories] = useState<ContractSector[]>(['Int']);
-  const [extendedRoyaltyEnabled, setExtendedRoyaltyEnabled] = useState(false);
   const [billBmeEquipment, setBillBmeEquipment] = useState(false);
+  const [inrUsdInvoiceEnabled, setInrUsdInvoiceEnabled] = useState(false);
+  const [inrUsdInvoiceCategories, setInrUsdInvoiceCategories] = useState<string[]>([]);
   const [fortnightBillingPartCount, setFortnightBillingPartCount] = useState('2');
   const [fortnightBillingRanges, setFortnightBillingRanges] = useState<
     Array<{ startDay: string; endDay: string; exchangeRatePerUsd: string }>
@@ -393,8 +395,9 @@ export function ContractFormDialog({
         additionalCustomerCodes,
         additionalCustomerInherit,
         contractCategories,
-        extendedRoyaltyEnabled,
         billBmeEquipment,
+        inrUsdInvoiceEnabled,
+        inrUsdInvoiceCategories,
         fortnightBillingPartCount,
         fortnightBillingRanges,
         fortnightMonthRates,
@@ -423,8 +426,9 @@ export function ContractFormDialog({
       additionalCustomerCodes,
       additionalCustomerInherit,
       contractCategories,
-      extendedRoyaltyEnabled,
       billBmeEquipment,
+      inrUsdInvoiceEnabled,
+      inrUsdInvoiceCategories,
       fortnightBillingPartCount,
       fortnightBillingRanges,
       fortnightMonthRates,
@@ -811,8 +815,9 @@ export function ContractFormDialog({
       );
       setInheritEditor(null);
       setContractCategories(contractSectorsFromRecord(record));
-      setExtendedRoyaltyEnabled(Boolean(record.extendedRoyaltyEnabled));
       setBillBmeEquipment(record.billBmeEquipment === true);
+      setInrUsdInvoiceEnabled(record.inrUsdInvoiceEnabled === true);
+      setInrUsdInvoiceCategories(record.inrUsdInvoiceCategories ?? []);
       setFortnightBillingPartCount(nextFortnightPartCount);
       setFortnightBillingRanges(nextFortnightRanges);
       const nextMonthRates = seedFortnightMonthRates(
@@ -861,8 +866,9 @@ export function ContractFormDialog({
             customer: Boolean(row.customer),
           })),
           contractCategories: contractSectorsFromRecord(record),
-          extendedRoyaltyEnabled: Boolean(record.extendedRoyaltyEnabled),
           billBmeEquipment: record.billBmeEquipment === true,
+          inrUsdInvoiceEnabled: record.inrUsdInvoiceEnabled === true,
+          inrUsdInvoiceCategories: record.inrUsdInvoiceCategories ?? [],
           fortnightBillingPartCount: nextFortnightPartCount,
           fortnightBillingRanges: nextFortnightRanges,
           fortnightMonthRates: nextMonthRates,
@@ -885,8 +891,9 @@ export function ContractFormDialog({
       setAdditionalCustomerInherit([]);
       setInheritEditor(null);
       setContractCategories(['Int']);
-      setExtendedRoyaltyEnabled(false);
       setBillBmeEquipment(false);
+      setInrUsdInvoiceEnabled(false);
+      setInrUsdInvoiceCategories([]);
       setFortnightBillingPartCount('2');
       setFortnightBillingRanges(defaultFortnightRanges(2));
       setFortnightMonthRates([]);
@@ -918,8 +925,9 @@ export function ContractFormDialog({
           additionalCustomerCodes: [],
           additionalCustomerInherit: [],
           contractCategories: ['Int'],
-          extendedRoyaltyEnabled: false,
           billBmeEquipment: false,
+          inrUsdInvoiceEnabled: false,
+          inrUsdInvoiceCategories: [],
           fortnightBillingPartCount: '2',
           fortnightBillingRanges: defaultFortnightRanges(2),
           fortnightMonthRates: [],
@@ -1211,11 +1219,12 @@ export function ContractFormDialog({
           clauses: clausePayload,
           adsBillingEnabled: adsRulesPayload.length > 0,
           billBmeEquipment,
+          inrUsdInvoiceEnabled,
+          inrUsdInvoiceCategories: inrUsdInvoiceEnabled ? inrUsdInvoiceCategories : [],
           adsEquipmentRules: adsRulesPayload,
           bhsVolumeSchedules: volumePayload,
           bhsConcessionCoverage,
-          extendedRoyaltyEnabled:
-            bhsConcessionCoverage === 'non_comprehensive' && extendedRoyaltyEnabled,
+          extendedRoyaltyEnabled: false,
           fortnightBillingEnabled,
           fortnightEdgeDayCap,
           additionalCustomerCodes: additionalCustomerCodes.filter(
@@ -1257,11 +1266,12 @@ export function ContractFormDialog({
           clauses: clausePayload,
           adsBillingEnabled: adsRulesPayload.length > 0,
           billBmeEquipment,
+          inrUsdInvoiceEnabled,
+          inrUsdInvoiceCategories: inrUsdInvoiceEnabled ? inrUsdInvoiceCategories : [],
           adsEquipmentRules: adsRulesPayload,
           bhsVolumeSchedules: volumePayload,
           bhsConcessionCoverage,
-          extendedRoyaltyEnabled:
-            bhsConcessionCoverage === 'non_comprehensive' && extendedRoyaltyEnabled,
+          extendedRoyaltyEnabled: false,
           fortnightBillingEnabled,
           fortnightEdgeDayCap,
           additionalCustomerCodes: additionalCustomerCodes.filter(
@@ -1519,6 +1529,64 @@ export function ContractFormDialog({
                       </ContractField>
                     </div>
                   )}
+
+                  <fieldset className="min-w-0 rounded-xl border border-[color:var(--billing-border)] bg-[color:var(--billing-surface-muted)]/60 p-4">
+                    <legend className="px-1 text-sm font-semibold text-[color:var(--billing-heading)]">
+                      INR + USD invoice
+                    </legend>
+                    <label className="mt-2 flex cursor-pointer items-start gap-3">
+                      <input
+                        type="checkbox"
+                        className="mt-1 h-4 w-4 shrink-0 accent-[color:var(--billing-primary)]"
+                        checked={inrUsdInvoiceEnabled}
+                        onChange={(event) => {
+                          const checked = event.target.checked;
+                          setInrUsdInvoiceEnabled(checked);
+                          if (!checked) setInrUsdInvoiceCategories([]);
+                        }}
+                      />
+                      <span>
+                        <span className="block text-sm font-semibold text-[color:var(--billing-heading)]">
+                          Generate the invoice in INR + USD
+                        </span>
+                        <span className="mt-0.5 block text-xs text-[color:var(--billing-text-muted)]">
+                          USD invoices keep the same totals. Each line also shows the ROE and the INR amount. Royalty, gross, GST, and the amount in words are printed in both currencies.
+                        </span>
+                      </span>
+                    </label>
+                    {inrUsdInvoiceEnabled ? (
+                      <div className="mt-3">
+                        <p className="text-xs font-semibold text-[color:var(--billing-heading)]">
+                          Apply this format to
+                        </p>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {['BHS', 'ADS', 'RAF', 'MAAS', 'CUSTOM'].map((category) => {
+                            const selected = inrUsdInvoiceCategories.includes(category);
+                            return (
+                              <label
+                                key={category}
+                                className="inline-flex items-center gap-2 rounded-lg border border-[color:var(--billing-border)] bg-white px-3 py-1.5 text-sm"
+                              >
+                                <input
+                                  type="checkbox"
+                                  className="h-4 w-4 accent-[color:var(--billing-primary)]"
+                                  checked={selected}
+                                  onChange={() => {
+                                    setInrUsdInvoiceCategories((current) =>
+                                      selected
+                                        ? current.filter((item) => item !== category)
+                                        : [...current, category],
+                                    );
+                                  }}
+                                />
+                                {category === 'CUSTOM' ? 'Custom' : category}
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ) : null}
+                  </fieldset>
 
                   <fieldset className="min-w-0 rounded-xl border border-[color:var(--billing-border)] bg-[color:var(--billing-surface-muted)]/60 p-4">
                     <legend className="px-1 text-sm font-semibold text-[color:var(--billing-heading)]">
@@ -1816,26 +1884,14 @@ export function ContractFormDialog({
                             Exclusive
                           </span>
                           <span className="mt-0.5 block text-xs text-[color:var(--billing-text-muted)]">
-                            Concession is billed separately on BHS, ADS, and RAF invoices. BHS uses
-                            the higher of the percent saved on this station&apos;s Concessions page
-                            or the ceiling rate × flight count. ADS and RAF use that same percent of
-                            the invoice total (extended royalty when checked).
+                            Concession is billed separately on BHS, ADS, and RAF invoices. The percent
+                            comes from Royalty Setup for international, domestic, and general aviation
+                            flights. Royalty on Gross uses percent / (100 − percent). Royalty on Net
+                            uses percent / 100. When MAG rates are uploaded, the invoice uses the
+                            higher of that royalty and the MAG for the airline&apos;s flights that month.
                           </span>
                         </span>
                       </label>
-                    </div>
-                    <div className="mt-3">
-                      <ContractToggleCard
-                        checked={extendedRoyaltyEnabled}
-                        disabled={bhsConcessionCoverage !== 'non_comprehensive' || saving}
-                        onChange={(checked) => setExtendedRoyaltyEnabled(checked)}
-                        title="Extended royalty"
-                        description={
-                          bhsConcessionCoverage === 'non_comprehensive'
-                            ? 'Exclusive pricing only. Royalty is total × saved % / (100 − saved %) instead of total × saved % / 100, using the percent on this station’s contract. Applies to BHS, ADS, and RAF invoices. The invoice layout stays the same.'
-                            : 'Turn on Exclusive pricing to use extended royalty. Inclusive contracts keep royalty inside the package and off BHS, ADS, and RAF invoices.'
-                        }
-                      />
                     </div>
                   </fieldset>
 

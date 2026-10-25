@@ -443,6 +443,8 @@ export type BuildInvoicePdfInputParams = {
   serviceTableTitle?: string;
   /** Fortnight contract — "For the Period" prints the billed day range. */
   fortnightBilling?: boolean;
+  /** Contract categories that print USD and INR together. */
+  inrUsdInvoiceCategories?: string[];
 };
 
 export function buildInvoicePdfInput(params: BuildInvoicePdfInputParams): InvoicePdfInput {
@@ -570,13 +572,60 @@ export function buildInvoicePdfInput(params: BuildInvoicePdfInputParams): Invoic
   const serviceStationResolved =
     overrides?.serviceStation?.trim() || airport.serviceStation;
 
+  let dual: Partial<InvoicePdfInput> = {};
+  const invoiceCategory = String(header.invoiceCategory ?? '').trim().toUpperCase();
+  const dualCurrencyLayout =
+    isUsd &&
+    Boolean(roe) &&
+    (params.inrUsdInvoiceCategories ?? [])
+      .map((category) => category.trim().toUpperCase())
+      .includes(invoiceCategory);
+
+  if (dualCurrencyLayout && roe) {
+    let subtotalInr = 0;
+    for (const line of mappedLines) {
+      const inr = round2(line.amount * roe);
+      line.amountInr = inr;
+      subtotalInr = round2(subtotalInr + inr);
+    }
+    const ratio = subtotalExclTax > 0 ? concessionFeeAmount / subtotalExclTax : 0;
+    const concessionInr = round2(subtotalInr * ratio);
+    const grossUsd = round2(subtotalExclTax + concessionFeeAmount);
+    const grossInrSide = round2(subtotalInr + concessionInr);
+    const cgstPct = cgstPercent > 0 ? cgstPercent : cgstAmount > 0 ? 9 : 0;
+    const sgstPct = sgstPercent > 0 ? sgstPercent : sgstAmount > 0 ? 9 : 0;
+    const cgstUsdSide = round2(grossUsd * (cgstPct / 100));
+    const sgstUsdSide = round2(grossUsd * (sgstPct / 100));
+    const cgstInrSide = round2(grossInrSide * (cgstPct / 100));
+    const sgstInrSide = round2(grossInrSide * (sgstPct / 100));
+    const totalUsdSide = round2(grossUsd + cgstUsdSide + sgstUsdSide);
+    const totalInrSide = round2(grossInrSide + cgstInrSide + sgstInrSide);
+    dual = {
+      dualCurrencyLayout: true,
+      exchangeRate: roe,
+      subtotalUsd: round2(subtotalExclTax),
+      subtotalInr,
+      concessionFeeUsd: round2(concessionFeeAmount),
+      concessionFeeInr: concessionInr,
+      grossAmountUsd: grossUsd,
+      grossAmountInr: grossInrSide,
+      cgstUsd: cgstUsdSide,
+      sgstUsd: sgstUsdSide,
+      cgstInr: cgstInrSide,
+      sgstInr: sgstInrSide,
+      totalReceivableUsd: totalUsdSide,
+      totalReceivableInr: totalInrSide,
+      amountInWordsUsd: totalUsdSide > 0 ? amountInWordsUsd(totalUsdSide) : '',
+      amountInWordsInr: totalInrSide > 0 ? amountWordsInr(totalInrSide) : '',
+    };
+  }
+
   /**
    * Fields 1–5 stay in billing currency.
    * Default USD path: FX to INR for tax base; receivable in INR.
    * USD receivable path: CGST/SGST + receivable in USD (no INR conversion row).
    */
-  let dual: Partial<InvoicePdfInput> = {};
-  if (isUsd && subtotalExclTax > 0) {
+  if (!dualCurrencyLayout && isUsd && subtotalExclTax > 0) {
     const subtotalUsd = round2(subtotalExclTax);
     const concessionFeeUsd = round2(concessionFeeAmount);
     const grossUsd = round2(grossAmount);
@@ -656,7 +705,13 @@ export function buildInvoicePdfInput(params: BuildInvoicePdfInputParams): Invoic
         : undefined,
     concessionFeeAmount,
     grossAmount,
-    grossAmountInr: usdReceivable ? undefined : isUsd ? dual.grossAmountInr : grossAmountInr,
+    grossAmountInr: dualCurrencyLayout
+      ? dual.grossAmountInr
+      : usdReceivable
+        ? undefined
+        : isUsd
+          ? dual.grossAmountInr
+          : grossAmountInr,
     cgstPercent: cgstAmount > 0 || isUsd ? cgstPercent : undefined,
     cgstAmount,
     sgstPercent: sgstAmount > 0 || isUsd ? sgstPercent : undefined,
@@ -664,13 +719,27 @@ export function buildInvoicePdfInput(params: BuildInvoicePdfInputParams): Invoic
     igstPercent: undefined,
     igstAmount,
     totalInclTax,
-    totalReceivableUsd: usdReceivable ? dual.totalReceivableUsd : undefined,
-    totalReceivableInr: isUsd && !usdReceivable ? dual.totalReceivableInr : !isUsd ? totalInclTax : undefined,
-    amountInWords: usdReceivable
-      ? dual.amountInWordsUsd ?? ''
-      : amountWordsInr(totalInclTax),
-    amountInWordsUsd: usdReceivable ? dual.amountInWordsUsd : undefined,
-    amountInWordsInr: isUsd && !usdReceivable ? dual.amountInWordsInr : !isUsd ? amountWordsInr(totalInclTax) : undefined,
+    totalReceivableUsd: dualCurrencyLayout || usdReceivable ? dual.totalReceivableUsd : undefined,
+    totalReceivableInr: dualCurrencyLayout
+      ? dual.totalReceivableInr
+      : isUsd && !usdReceivable
+        ? dual.totalReceivableInr
+        : !isUsd
+          ? totalInclTax
+          : undefined,
+    amountInWords: dualCurrencyLayout
+      ? dual.amountInWordsInr ?? ''
+      : usdReceivable
+        ? dual.amountInWordsUsd ?? ''
+        : amountWordsInr(totalInclTax),
+    amountInWordsUsd: dualCurrencyLayout || usdReceivable ? dual.amountInWordsUsd : undefined,
+    amountInWordsInr: dualCurrencyLayout
+      ? dual.amountInWordsInr
+      : isUsd && !usdReceivable
+        ? dual.amountInWordsInr
+        : !isUsd
+          ? amountWordsInr(totalInclTax)
+          : undefined,
     bankDetails,
     hasAnnexures: params.hasAnnexures ?? mappedLines.some((l) => l.amount > 0),
   };
