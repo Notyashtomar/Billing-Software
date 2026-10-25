@@ -566,6 +566,15 @@ export class CreateBillingContractDto {
   billBmeEquipment?: boolean;
 
   @IsOptional()
+  @IsBoolean()
+  inrUsdInvoiceEnabled?: boolean;
+
+  @IsOptional()
+  @IsArray()
+  @IsIn(['BHS', 'ADS', 'RAF', 'MAAS', 'CUSTOM'], { each: true })
+  inrUsdInvoiceCategories?: string[];
+
+  @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => ContractAdsEquipmentRuleDto)
@@ -720,6 +729,15 @@ export class UpdateBillingContractDto {
   @IsOptional()
   @IsBoolean()
   billBmeEquipment?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  inrUsdInvoiceEnabled?: boolean;
+
+  @IsOptional()
+  @IsArray()
+  @IsIn(['BHS', 'ADS', 'RAF', 'MAAS', 'CUSTOM'], { each: true })
+  inrUsdInvoiceCategories?: string[];
 
   @IsOptional()
   @IsArray()

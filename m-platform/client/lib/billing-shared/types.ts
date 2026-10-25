@@ -331,6 +331,9 @@ export interface BillingContract {
   adsBillingEnabled?: boolean;
   /** When true, BME equipment is included on ADS invoices. Off leaves it unbilled. */
   billBmeEquipment?: boolean;
+  /** USD invoices for the selected categories print an INR column beside USD. */
+  inrUsdInvoiceEnabled?: boolean;
+  inrUsdInvoiceCategories?: string[];
   /** Per-equipment ADS free allowance and unit rates (synced to rate cards). */
   adsEquipmentRules?: BillingContractAdsEquipmentRule[];
   /** Uploaded signed contract PDF (base64) for preview/download. */

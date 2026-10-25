@@ -581,9 +581,15 @@ export async function exportFilledContractPdf(
   if (!contract.adsBillingEnabled) {
     layout.emptyNote('ADS billing rules are disabled on this contract.');
   } else {
-    const rules = collapseAdsEquipmentRules(contract.adsEquipmentRules ?? []).filter((r) =>
-      String(r.serviceCode ?? '').trim(),
-    );
+    const rules = collapseAdsEquipmentRules(contract.adsEquipmentRules ?? [])
+      .filter((r) => String(r.serviceCode ?? '').trim())
+      .sort((a, b) =>
+        adsEquipmentName(String(a.serviceCode ?? '')).localeCompare(
+          adsEquipmentName(String(b.serviceCode ?? '')),
+          undefined,
+          { sensitivity: 'base', numeric: true },
+        ),
+      );
     if (rules.length === 0) {
       layout.emptyNote('No ADS equipment rules configured.');
     } else {

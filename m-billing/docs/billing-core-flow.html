@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Bird billing core — how a flight becomes an invoice</title>
+  <style>
+    :root {
+      --ink: #1c2434;
+      --muted: #5c677a;
+      --line: #d5dbe6;
+      --paper: #f4f6fa;
+      --card: #ffffff;
+      --navy: #1e3a6e;
+      --navy-soft: #e8eef8;
+      --gold: #b8860b;
+      --gold-soft: #fbf6e8;
+      --teal: #0f6e6a;
+      --teal-soft: #e7f5f4;
+      --rose: #8d3a4a;
+      --rose-soft: #f8ecee;
+      --green: #1f6b3a;
+      --green-soft: #e8f5ec;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Calibri, sans-serif;
+      color: var(--ink);
+      background: var(--paper);
+      line-height: 1.45;
+    }
+    header {
+      background: var(--navy);
+      color: white;
+      padding: 28px 32px 24px;
+    }
+    header h1 { margin: 0 0 6px; font-size: 28px; font-weight: 650; }
+    header p { margin: 0; max-width: 820px; color: #d7e2f5; }
+    main { max-width: 1100px; margin: 0 auto; padding: 28px 20px 64px; }
+    h2 { margin: 36px 0 12px; font-size: 20px; }
+    .lead { color: var(--muted); margin: 0 0 16px; max-width: 760px; }
+    .parties {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+    .party, .box, .choice, .mode {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 14px 16px;
+    }
+    .party strong, .box strong { display: block; margin-bottom: 4px; }
+    .party span, .box span, .choice span, .mode span { color: var(--muted); font-size: 14px; }
+    .party.airline { border-top: 4px solid var(--navy); }
+    .party.bird { border-top: 4px solid var(--gold); }
+    .party.airport { border-top: 4px solid var(--teal); }
+    .flow { display: flex; flex-direction: column; align-items: center; }
+    .arrow {
+      width: 2px;
+      height: 22px;
+      background: #9aa6ba;
+      position: relative;
+    }
+    .arrow::after {
+      content: "";
+      position: absolute;
+      left: -4px;
+      bottom: -1px;
+      border-left: 5px solid transparent;
+      border-right: 5px solid transparent;
+      border-top: 7px solid #9aa6ba;
+    }
+    .box { width: min(640px, 100%); }
+    .box.navy { background: var(--navy-soft); border-color: #c5d3ea; }
+    .box.gold { background: var(--gold-soft); border-color: #ead9a8; }
+    .box.teal { background: var(--teal-soft); border-color: #b7ddd9; }
+    .box.green { background: var(--green-soft); border-color: #b7dfc4; }
+    .split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      width: 100%;
+    }
+    .choice h3 { margin: 0 0 8px; font-size: 16px; }
+    .choice.private { border-top: 4px solid var(--teal); }
+    .choice.aai { border-top: 4px solid var(--rose); }
+    .choice ol, .mode ol, .box ol { margin: 8px 0 0; padding-left: 18px; }
+    .choice li, .mode li, .box li { margin: 4px 0; }
+    .modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .mode.inc { border-top: 4px solid var(--green); }
+    .mode.exc { border-top: 4px solid var(--gold); }
+    .mode.ext { border-top: 4px solid var(--navy); }
+    table { width: 100%; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden; }
+    th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; font-size: 14px; }
+    th { background: var(--navy); color: white; font-weight: 600; }
+    code { font-family: Consolas, monospace; font-size: 12px; background: #eef2f7; padding: 1px 4px; border-radius: 4px; }
+    .note { margin-top: 14px; color: var(--muted); font-size: 13px; }
+    @media (max-width: 800px) {
+      .parties, .split, .modes { grid-template-columns: 1fr; }
+      header { padding: 22px 16px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>How Bird billing fits together</h1>
+    <p>One flight, one airline contract, two kinds of airport. This is the core path from handling the aircraft to the invoice, and from that invoice to what Bird owes the airport.</p>
+  </header>
+  <main>
+    <h2>The three parties</h2>
+    <p class="lead">Money moves in one direction on the invoice, and in another direction behind it.</p>
+    <div class="parties">
+      <div class="party airline">
+        <strong>Airline</strong>
+        <span>The customer. Pays Bird for the turnaround and for anything extra the contract prices separately.</span>
+      </div>
+      <div class="party bird">
+        <strong>Bird</strong>
+        <span>The ground handler. Does the work, raises the invoice, and owes the airport a concession on that work.</span>
+      </div>
+      <div class="party airport">
+        <strong>Airport</strong>
+        <span>Either a private operator (Delhi is DIAL) or AAI. Allows Bird to handle flights and takes a cut. Not the customer on Bird’s invoice.</span>
+      </div>
+    </div>
+
+    <h2>From the flight to the invoice</h2>
+    <p class="lead">Read this top to bottom. The airport type is chosen first because it decides the royalty rule. The flight itself is priced from the contract.</p>
+    <div class="flow">
+      <div class="box navy">
+        <strong>1. Station</strong>
+        <span>Delhi, Mumbai, Hyderabad, Chennai, and the others. Each station is one airport regime.</span>
+        <ol>
+          <li>Private airport — percentage royalty, plus a minimum (MAG) by aircraft size and by service.</li>
+          <li>AAI airport — percentage only. Royalty on gross, or royalty on net. No per-aircraft floor.</li>
+        </ol>
+      </div>
+      <div class="arrow"></div>
+      <div class="box">
+        <strong>2. Contract for that airline at that station</strong>
+        <span>The SGHA. Example: Virgin Atlantic at Delhi, <code>VS-DEL-SGHA</code>.</span>
+        <ol>
+          <li>BHS — the turnaround rate. One charge for arrival and the following departure. Cabin clean and ordinary ramp work sit inside it.</li>
+          <li>ADS — extra equipment, services, and manpower. Each row has a price, a unit, a free count, and the aircraft it covers.</li>
+          <li>Concession mode — Inclusive, Exclusive, or Extended. This decides whether the airport’s share is already inside the rate or added on the invoice.</li>
+          <li>BME switch — bridge equipment owned by a private airport stays off Bird’s ADS invoice unless this is turned on.</li>
+        </ol>
+      </div>
+      <div class="arrow"></div>
+      <div class="box gold">
+        <strong>3. Flight report</strong>
+        <span>Operations record the flight and every equipment, service, and manpower line. Spellings vary. Billing maps them to one name (GPU-180KV, Toilet Service, Wheel Chair - WCHR/S, and so on) before pricing.</span>
+      </div>
+      <div class="arrow"></div>
+      <div class="box">
+        <strong>4. Split the work</strong>
+        <span>The same flight feeds more than one invoice type. A line goes to the type that the contract prices.</span>
+      </div>
+      <div class="arrow"></div>
+      <div class="split">
+        <div class="box green">
+          <strong>BHS — basic handling</strong>
+          <span>One turnaround line when the flight is handled under the package. The rate depends on the aircraft. Services named in the package, including the first pushback, the first toilet, and the first 15 wheelchairs on Virgin Delhi, are not repeated as ADS lines.</span>
+        </div>
+        <div class="box teal">
+          <strong>ADS — additional services</strong>
+          <span>For each equipment line: match the contract row, count what was used, subtract the free allowance for that flight, and bill only the remainder. No match, or a remainder of zero, means no ADS line. Per-hour and per-15-minute units use the engagement time from the flight report.</span>
+        </div>
+      </div>
+      <div class="arrow"></div>
+      <div class="box">
+        <strong>5. Airline invoice</strong>
+        <span>BHS invoice for the turnaround. ADS invoice for the chargeable extras (on Virgin Delhi in September that was GPU and wheelchairs above the free count). Tax is added after the concession step below.</span>
+      </div>
+      <div class="arrow"></div>
+      <div class="box gold">
+        <strong>6. What Bird owes the airport</strong>
+        <span>Calculated from the invoice and the station regime. This amount is Bird’s cost. It appears on the airline invoice only when the contract mode is Exclusive or Extended.</span>
+      </div>
+    </div>
+
+    <h2>Private airport and AAI, side by side</h2>
+    <div class="split">
+      <div class="choice private">
+        <h3>Private airport — DIAL and the others</h3>
+        <span>Two numbers are compared. Bird owes the higher one.</span>
+        <ol>
+          <li>Percentage royalty on the handling amount.</li>
+          <li>MAG, the floor. Look up the aircraft band (B, C, D, E, F — a larger letter is a larger aircraft) and the service that was sold.</li>
+        </ol>
+        <ol>
+          <li>Passenger terminal only</li>
+          <li>Ramp only</li>
+          <li>Full handling, passenger plus ramp — the normal turnaround</li>
+          <li>Cargo ramp</li>
+        </ol>
+        <span>The AFKL sheet effective 1 April 2026 is this floor. A category E full turnaround cannot go below 38,130, even when the percentage works out lower.</span>
+        <span>Bridge-mounted GPU and air-conditioning belong to the airport. They are recorded on the flight and charged by the airport, not by Bird. Bird bills its own unit when the aircraft is on a remote bay, the bridge unit has failed, or the APU is inoperative.</span>
+      </div>
+      <div class="choice aai">
+        <h3>AAI airport</h3>
+        <span>No aircraft-wise floor and no service-wise floor. Only a percentage.</span>
+        <ol>
+          <li>Royalty on gross — percentage times the invoice amount. 100,000 at 10% is 10,000.</li>
+          <li>Royalty on net — the percentage is worked so Bird still keeps the agreed handling rate. The invoice gross-up is percent ÷ (100 − percent).</li>
+        </ol>
+        <span>There is no MAG table to consult. Aircraft size still changes the airline’s handling rate. It does not set a minimum owed to AAI.</span>
+      </div>
+    </div>
+
+    <h2>How the airport’s share shows on the airline bill</h2>
+    <div class="modes">
+      <div class="mode inc">
+        <strong>Inclusive</strong>
+        <span>The contract rate already contains the concession. The invoice has no extra concession line. Virgin Delhi is this case: the SGHA rates include the DIAL fee.</span>
+      </div>
+      <div class="mode exc">
+        <strong>Exclusive</strong>
+        <span>Bill the handling amount, then add the royalty as its own amount. On BHS the result is also held against the ceiling for that many flights. ADS and RAF use the percentage without that ceiling.</span>
+      </div>
+      <div class="mode ext">
+        <strong>Extended</strong>
+        <span>Exclusive, with royalty on net. The percentage is grossed up so the royalty is calculated on the amount Bird keeps, not only on the face of the bill.</span>
+      </div>
+    </div>
+
+    <h2>ADS decision, one equipment line</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>What the flight shows</th>
+          <th>What billing does</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Name matches an ADS row, used quantity is above the free count</td>
+          <td>Invoice line for the excess. Wheelchairs on Virgin: 15 free per flight, then INR 850 in the SGHA (the live contract rate may differ).</td>
+        </tr>
+        <tr>
+          <td>Name matches, used quantity is inside the free count</td>
+          <td>No ADS line. Pushback once, with 2 free, stays inside the allowance.</td>
+        </tr>
+        <tr>
+          <td>Ordinary ramp gear, cabin clean, or a name that is not an ADS row</td>
+          <td>Stays in the BHS turnaround. Price on the ADS preparation is zero.</td>
+        </tr>
+        <tr>
+          <td>Name is bridge equipment (BME)</td>
+          <td>Kept on the flight. Left off Bird’s ADS invoice unless the contract says to bill BME. At a private airport the airport charges it.</td>
+        </tr>
+        <tr>
+          <td>Unit is per hour or per 15 minutes</td>
+          <td>Used units come from the engagement time on the flight report, not from a headcount.</td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="note">Open this file in a browser. It is the picture of the core only: station, contract, flight report, BHS, ADS, concession mode, and the airport’s share. RAF and the other service types follow the same contract and the same concession mode on their own invoices.</p>
+  </main>
+</body>
+</html>

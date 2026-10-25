@@ -107,6 +107,32 @@ export function stationFlightConcessionPercents(
   return hasPercent(net) ? net : null;
 }
 
+/**
+ * True when Exclusive invoices gross up the station percent: amount × p / (100 − p).
+ * A private airport follows Configure rules even when the royalty card dates miss the invoice month.
+ * An Airport Authority follows whichever royalty card covers the invoice.
+ */
+export function stationRoyaltyOnGross(
+  settings: StationConcessionSettings | null | undefined,
+  documentDate: Date,
+  billingPeriod?: { start?: Date | string | null; end?: Date | string | null },
+): boolean {
+  const ownership = String(settings?.airportCommercial?.ownership ?? '').toLowerCase();
+  const mechanism = String(settings?.airportCommercial?.revenueShareMechanism ?? '').toLowerCase();
+  if (ownership === 'private') return mechanism === 'gross';
+
+  const master = settings?.royaltyMaster;
+  if (!master) return false;
+  const documentYmd = ymd(documentDate);
+  const periodFrom = ymd(billingPeriod?.start ?? undefined) || documentYmd;
+  const periodTo = ymd(billingPeriod?.end ?? undefined) || documentYmd;
+  const gross = rangesOverlap(master.gross, periodFrom, periodTo) ? sidePercents(master.gross) : {};
+  const net = rangesOverlap(master.net, periodFrom, periodTo) ? sidePercents(master.net) : {};
+  if (hasPercent(gross)) return true;
+  if (hasPercent(net)) return false;
+  return false;
+}
+
 /** Scheduled domestic, scheduled international, or general aviation. */
 export function flightConcessionSectorFromText(...values: unknown[]): FlightConcessionSector {
   const raw = values

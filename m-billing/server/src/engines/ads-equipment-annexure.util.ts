@@ -1,4 +1,5 @@
 import {
+  adsEquipmentLabelsMatch,
   isWchrSCombinedAdsService,
   resolveAdsPricingFromContractRule,
 } from '../shared/ads-equipment-inclusion.util';
@@ -28,6 +29,14 @@ export type AdsAnnexurePrepRecord = {
   sourceRef?: Record<string, unknown> | null;
   operationalSnapshot?: Record<string, unknown> | null;
   rateMatch?: Record<string, unknown> | null;
+};
+
+export type AdsAnnexureInvoiceLine = {
+  description?: string | null;
+  quantity?: number | null;
+  sourceType?: string | null;
+  serviceCode?: string | null;
+  sourceRef?: Record<string, unknown> | null;
 };
 
 export type AdsAnnexureColumn = {
@@ -91,12 +100,12 @@ export function adsAnnexureColumnLabel(serviceCode: string): string {
   const aliases: Array<[RegExp, string]> = [
     [/\bWCHC\b|WHEEL\s*CHAIR\s*C/, 'WCHC'],
     [/\bWCHR\s*\/\s*S\b|\bWCHRS\b|\bWCHR\b|\bWCHS\b|WHEEL\s*CHAIR\s*[RS]/, 'WCHR/S'],
-    [/\bGPU\b.*140/, 'GPU-140KV'],
-    [/\bGPU\b.*180/, 'GPU-180KV'],
-    [/\bGPU\b.*90/, 'GPU-90KV'],
-    [/\bGPU\b.*WB|GPUWB/, 'GPU-WB'],
-    [/\bGPU\b.*NB|GPUNB/, 'GPU-NB'],
-    [/\bGPU\b/, 'GPU'],
+    [/140\s*KV|\bGPU\b.*140/, 'GPU-140KV'],
+    [/180\s*KV|\bGPU\b.*180/, 'GPU-180KV'],
+    [/90\s*KV|\bGPU\b.*90/, 'GPU-90KV'],
+    [/\bGPU\b.*WB|GPUWB|GROUND\s*POWER.*WIDE/, 'GPU-WB'],
+    [/\bGPU\b.*NB|GPUNB|GROUND\s*POWER.*NARROW/, 'GPU-NB'],
+    [/\bGPU\b|GROUND\s*POWER/, 'GPU'],
     [/\bACU\b.*WB|ACUWB/, 'ACU-WB'],
     [/\bACU\b.*NB|ACUNB/, 'ACU-NB'],
     [/\bACU\b|AIR\s*CONDITION/, 'ACU'],
@@ -190,7 +199,10 @@ function usedUnits(rec: AdsAnnexurePrepRecord, uom: string, particular: string):
         : null;
   const usedRaw = Number(rate.usedUnits ?? snap.adsUsedUnits ?? 0);
   const qtyRaw = Number(
-    snap.qty ?? (emptyClock ? usedRaw : snap.chargeableUnits ?? usedRaw),
+    snap.qty ??
+      snap.equipment_quantity ??
+      snap.equipmentQuantity ??
+      (emptyClock ? usedRaw : snap.chargeableUnits ?? usedRaw),
   );
   const remarksQty =
     Number(snap.remarksQuantity) > 0
@@ -277,6 +289,115 @@ function chargedUnits(used: number, alwaysChargeable: boolean, freePerFlight: nu
   return toWholeAdsUnits(Math.max(0, used - allowance));
 }
 
+function kvTag(value: unknown): string | null {
+  const match = compactLabel(value).replace(/\s+/g, '').match(/(90|140|180|280)KV/);
+  return match?.[1] ?? null;
+}
+
+function isAdsParticularLine(line: AdsAnnexureInvoiceLine): boolean {
+  const description = String(line.description ?? '').trim();
+  if (/^ceiling rate$/i.test(description)) return false;
+  const sourceType = String(line.sourceType ?? '').trim().toLowerCase();
+  const serviceCode = String(line.serviceCode ?? '').trim().toUpperCase();
+  return (
+    sourceType === 'ads' ||
+    sourceType === 'equipment' ||
+    sourceType === 'manpower' ||
+    serviceCode === 'ADS'
+  );
+}
+
+type AnnexureEquipment = {
+  key: string;
+  label: string;
+  texts: string[];
+  invoiceUsed: number | null;
+  invoiceCharged: number | null;
+};
+
+function equipmentTexts(line: AdsAnnexureInvoiceLine): string[] {
+  const ref = line.sourceRef ?? {};
+  return [
+    String(ref.equipmentServiceCode ?? '').trim(),
+    String(ref.particular ?? '').trim(),
+    String(line.description ?? '').trim(),
+    String(ref.serviceCode ?? '').trim(),
+  ].filter(Boolean);
+}
+
+function annexureEquipmentFromLine(line: AdsAnnexureInvoiceLine): AnnexureEquipment | null {
+  const texts = equipmentTexts(line);
+  if (texts.length === 0) return null;
+  const wheelchair = isWchrSCombinedAdsService(...texts);
+  const displayName = texts[0] ?? '';
+  const ref = line.sourceRef ?? {};
+  const usedRaw = Number(ref.usedQuantity);
+  const chargedRaw = Number(ref.chargedQuantity ?? line.quantity);
+  const label = adsAnnexureColumnLabel(displayName);
+  return {
+    key: wheelchair ? 'WCHR/S' : label,
+    label,
+    texts,
+    invoiceUsed: Number.isFinite(usedRaw) && usedRaw >= 0 ? toWholeAdsUnits(usedRaw) : null,
+    invoiceCharged: Number.isFinite(chargedRaw) && chargedRaw >= 0 ? toWholeAdsUnits(chargedRaw) : null,
+  };
+}
+
+function annexureEquipmentFromUsage(key: string, serviceCode: string): AnnexureEquipment {
+  return {
+    key,
+    label: adsAnnexureColumnLabel(serviceCode),
+    texts: [serviceCode],
+    invoiceUsed: null,
+    invoiceCharged: null,
+  };
+}
+
+function usageIdentityKey(serviceCode: string, particular: string, equipmentName: string): string {
+  if (isWchrSCombinedAdsService(serviceCode, particular, equipmentName)) return 'WCHR/S';
+  return compactLabel(serviceCode || particular || equipmentName) || 'EQ';
+}
+
+function textsMatchEquipment(equipment: AnnexureEquipment, texts: string[]): boolean {
+  if (equipment.key === 'WCHR/S') return isWchrSCombinedAdsService(...texts);
+  return equipment.texts.some((left) => texts.some((right) => adsEquipmentLabelsMatch(left, right)));
+}
+
+function pickEquipmentForUsage(
+  equipments: AnnexureEquipment[],
+  texts: string[],
+): AnnexureEquipment | null {
+  const matches = equipments.filter((equipment) => textsMatchEquipment(equipment, texts));
+  if (matches.length === 0) return null;
+  if (matches.length === 1) return matches[0]!;
+  const wantedKv = texts.map((value) => kvTag(value)).find(Boolean) ?? null;
+  if (wantedKv) {
+    const kvHit = matches.find((equipment) => equipment.texts.some((text) => kvTag(text) === wantedKv));
+    if (kvHit) return kvHit;
+  }
+  const wantedCompact = texts.map((value) => compactLabel(value)).find(Boolean) ?? '';
+  const exact = matches.find((equipment) =>
+    equipment.texts.some((text) => compactLabel(text) === wantedCompact),
+  );
+  return exact ?? matches[0]!;
+}
+
+function displayColumnsForEquipment(
+  equipment: AnnexureEquipment,
+  usedTotal: number,
+  chargedTotal: number,
+): AdsAnnexureColumn[] {
+  const used = equipment.invoiceUsed != null ? equipment.invoiceUsed : usedTotal;
+  const charged = equipment.invoiceCharged != null ? equipment.invoiceCharged : chargedTotal;
+  if (used === charged) {
+    return [{ key: equipment.key, label: equipment.label }];
+  }
+  return [
+    { key: `${equipment.key}::used`, label: `Total ${equipment.label}` },
+    { key: `${equipment.key}::charged`, label: `CHARGEABLE ${equipment.label}` },
+  ];
+}
+
 function pricingForRecord(
   rec: AdsAnnexurePrepRecord,
   rules: AdsAnnexureContractRule[],
@@ -284,10 +405,20 @@ function pricingForRecord(
   const snap = rec.operationalSnapshot ?? {};
   const rate = rec.rateMatch ?? {};
   const particular = String(
-    rate.particular ?? snap.adsParticular ?? snap.particular ?? snap.equipment ?? '',
+    rate.particular ??
+      snap.adsParticular ??
+      snap.particular ??
+      snap.equipment ??
+      rate.serviceCode ??
+      '',
   ).trim();
   const equipmentName = String(
-    snap.equipment_name ?? snap.equipmentName ?? snap.equipment ?? '',
+    snap.equipment_name ??
+      snap.equipmentName ??
+      snap.equipmentCode ??
+      snap.abbr ??
+      snap.equipment ??
+      '',
   ).trim();
   const serviceCode = String(rate.serviceCode ?? snap.adsServiceCode ?? '').trim();
   const aircraftType = aircraftTypeOf(rec);
@@ -298,23 +429,48 @@ function pricingForRecord(
       particular,
       equipmentName,
       aircraftType,
-      aircraftBody: String(snap.aircraftBody ?? snap.bodyType ?? snap.aircraftBodyType ?? ''),
-      flightCategory: String(snap.flightCategory ?? snap.categoryOfFlight ?? ''),
+      aircraftBody: String(
+        snap.aircraftBody ?? snap.AircraftBody ?? snap.bodyType ?? snap.aircraftBodyType ?? '',
+      ),
+      flightCategory: String(
+        snap.categoryOfFlight ?? snap.Cate_of_Flight ?? snap.flightCategory ?? '',
+      ),
       billingCurrency: 'INR',
     },
   );
 }
 
 /**
- * Flights that used equipment outside the free allowance, or always-billed
- * equipment (GPU / ACU / ASU). Columns come only from contract clauses.
+ * One annexure column per ADS invoice particular. If Used and Charged differ,
+ * Total (used, flight-wise) is followed by CHARGEABLE (charged, flight-wise).
  */
 export function buildAdsAnnexureTable(
   records: AdsAnnexurePrepRecord[],
   rules: AdsAnnexureContractRule[] | null | undefined,
+  invoiceLines?: AdsAnnexureInvoiceLine[] | null,
 ): AdsAnnexureTable {
-  const billable = adsAnnexureBillableRules(rules);
-  const columns = adsAnnexureColumnsFromRules(billable);
+  const contractRules = rules ?? [];
+  const fromInvoice = (invoiceLines ?? [])
+    .filter(isAdsParticularLine)
+    .map((line) => annexureEquipmentFromLine(line))
+    .filter((equipment): equipment is AnnexureEquipment => Boolean(equipment));
+  const invoiceEquipments: AnnexureEquipment[] = [];
+  for (const equipment of fromInvoice) {
+    const existing = invoiceEquipments.find((item) => item.key === equipment.key);
+    if (!existing) {
+      invoiceEquipments.push(equipment);
+      continue;
+    }
+    existing.texts.push(...equipment.texts);
+    if (equipment.invoiceUsed != null) {
+      existing.invoiceUsed = (existing.invoiceUsed ?? 0) + equipment.invoiceUsed;
+    }
+    if (equipment.invoiceCharged != null) {
+      existing.invoiceCharged = (existing.invoiceCharged ?? 0) + equipment.invoiceCharged;
+    }
+  }
+  const lockToInvoice = invoiceEquipments.length > 0;
+  const discovered = new Map<string, AnnexureEquipment>();
   const flights = new Map<
     string,
     AdsAnnexureFlightRow & {
@@ -326,9 +482,25 @@ export function buildAdsAnnexureTable(
   >();
 
   for (const rec of records) {
-    const pricing = pricingForRecord(rec, billable);
-    if (!pricing.matched || pricing.excluded || !(pricing.unitPrice != null && pricing.unitPrice > 0)) {
-      continue;
+    let pricing = pricingForRecord(rec, contractRules);
+    const storedPrice = Number(rec.rateMatch?.unitPrice ?? 0);
+    const livePriced =
+      pricing.matched && !pricing.excluded && pricing.unitPrice != null && pricing.unitPrice > 0;
+    if (!livePriced) {
+      if (!(storedPrice > 0)) continue;
+      const storedFree = Number(rec.rateMatch?.freeAllowance ?? 0);
+      pricing = {
+        ...pricing,
+        matched: true,
+        excluded: false,
+        alwaysChargeable: false,
+        freePerFlight: Number.isFinite(storedFree) && storedFree > 0 ? storedFree : 0,
+        unitPrice: storedPrice,
+        uom: String(rec.rateMatch?.uom ?? pricing.uom ?? 'Per Service'),
+        serviceCode: String(
+          rec.rateMatch?.serviceCode ?? rec.rateMatch?.particular ?? pricing.serviceCode ?? '',
+        ),
+      };
     }
     const particular = String(
       rec.rateMatch?.particular ??
@@ -336,14 +508,32 @@ export function buildAdsAnnexureTable(
         rec.operationalSnapshot?.particular ??
         pricing.serviceCode,
     ).trim();
-    const used = usedUnits(rec, pricing.uom, particular);
+    const equipmentName = String(
+      rec.operationalSnapshot?.equipment_name ??
+        rec.operationalSnapshot?.equipmentName ??
+        rec.operationalSnapshot?.equipment ??
+        '',
+    ).trim();
+    const texts = [pricing.serviceCode, particular, equipmentName].filter(Boolean);
+    const equipment = lockToInvoice
+      ? pickEquipmentForUsage(invoiceEquipments, texts)
+      : annexureEquipmentFromUsage(
+          usageIdentityKey(pricing.serviceCode, particular, equipmentName),
+          pricing.serviceCode || particular,
+        );
+    if (!equipment) continue;
+    if (!lockToInvoice && !discovered.has(equipment.key)) {
+      discovered.set(equipment.key, equipment);
+    }
+    const recomputed = toWholeAdsUnits(usedUnits(rec, pricing.uom, particular));
+    const storedUsed = toWholeAdsUnits(
+      Number(rec.rateMatch?.usedUnits ?? rec.operationalSnapshot?.adsUsedUnits ?? 0),
+    );
+    const used = recomputed > 0 ? recomputed : storedUsed;
     if (!(used > 0)) continue;
     const serial = serialNoOf(rec);
     const flightKey = serial || `${flightNoOf(rec)}|${atdDateOf(rec)}`;
     if (!flightKey) continue;
-    const columnKey = isWchrSCombinedAdsService(pricing.serviceCode, particular)
-      ? 'WCHR/S'
-      : compactLabel(pricing.serviceCode);
     let row = flights.get(flightKey);
     if (!row) {
       row = {
@@ -359,13 +549,42 @@ export function buildAdsAnnexureTable(
       };
       flights.set(flightKey, row);
     }
-    row.usedByKey[columnKey] = (row.usedByKey[columnKey] ?? 0) + used;
-    row.freeByKey[columnKey] = Math.max(row.freeByKey[columnKey] ?? 0, pricing.freePerFlight);
-    row.alwaysByKey[columnKey] = row.alwaysByKey[columnKey] === true || pricing.alwaysChargeable;
+    row.usedByKey[equipment.key] = (row.usedByKey[equipment.key] ?? 0) + used;
+    row.freeByKey[equipment.key] = Math.max(row.freeByKey[equipment.key] ?? 0, pricing.freePerFlight);
+    row.alwaysByKey[equipment.key] =
+      row.alwaysByKey[equipment.key] === true || pricing.alwaysChargeable;
     if (!row.serialNo && serial) row.serialNo = serial;
     if (!row.flightNo) row.flightNo = flightNoOf(rec);
     if (!row.aircraftType) row.aircraftType = aircraftTypeOf(rec);
     if (!row.atdDate) row.atdDate = atdDateOf(rec);
+  }
+
+  const equipments = lockToInvoice
+    ? invoiceEquipments
+    : [...discovered.values()].sort(
+        (a, b) => a.label.localeCompare(b.label) || a.key.localeCompare(b.key),
+      );
+  const usedTotals: Record<string, number> = {};
+  const chargedTotals: Record<string, number> = {};
+  const chargedByFlight = new Map<string, Record<string, number>>();
+  for (const row of flights.values()) {
+    const charged: Record<string, number> = {};
+    for (const key of Object.keys(row.usedByKey)) {
+      const used = row.usedByKey[key] ?? 0;
+      const billed = chargedUnits(used, row.alwaysByKey[key] === true, row.freeByKey[key] ?? 0);
+      charged[key] = billed;
+      usedTotals[key] = (usedTotals[key] ?? 0) + used;
+      chargedTotals[key] = (chargedTotals[key] ?? 0) + billed;
+    }
+    chargedByFlight.set(`${row.serialNo}|${row.flightNo}|${row.atdDate}|${row.sortKey}`, charged);
+  }
+
+  const columns: AdsAnnexureColumn[] = [];
+  for (const equipment of equipments) {
+    const usedTotal = toWholeAdsUnits(usedTotals[equipment.key] ?? 0);
+    const chargedTotal = toWholeAdsUnits(chargedTotals[equipment.key] ?? 0);
+    if (!lockToInvoice && usedTotal <= 0) continue;
+    columns.push(...displayColumnsForEquipment(equipment, usedTotal, chargedTotal));
   }
 
   const rows: AdsAnnexureFlightRow[] = [];
@@ -373,20 +592,27 @@ export function buildAdsAnnexureTable(
     if (a.sortKey !== b.sortKey) return a.sortKey.localeCompare(b.sortKey);
     return a.serialNo.localeCompare(b.serialNo, undefined, { numeric: true });
   })) {
+    const charged = chargedByFlight.get(`${row.serialNo}|${row.flightNo}|${row.atdDate}|${row.sortKey}`) ?? {};
     const counts: Record<string, number> = {};
-    let billedOnFlight = false;
-    for (const key of Object.keys(row.usedByKey)) {
-      const charged = chargedUnits(
-        row.usedByKey[key] ?? 0,
-        row.alwaysByKey[key] === true,
-        row.freeByKey[key] ?? 0,
+    let usedOnFlight = false;
+    for (const equipment of equipments) {
+      const used = toWholeAdsUnits(row.usedByKey[equipment.key] ?? 0);
+      const billed = toWholeAdsUnits(charged[equipment.key] ?? 0);
+      if (used > 0) usedOnFlight = true;
+      const display = displayColumnsForEquipment(
+        equipment,
+        toWholeAdsUnits(usedTotals[equipment.key] ?? 0),
+        toWholeAdsUnits(chargedTotals[equipment.key] ?? 0),
       );
-      if (charged > 0) {
-        counts[key] = charged;
-        billedOnFlight = true;
+      if (display.length === 1) {
+        const key = display[0]!.key;
+        if (used > 0) counts[key] = used;
+      } else {
+        if (used > 0) counts[`${equipment.key}::used`] = used;
+        if (billed > 0) counts[`${equipment.key}::charged`] = billed;
       }
     }
-    if (!billedOnFlight) continue;
+    if (!usedOnFlight) continue;
     rows.push({
       serialNo: row.serialNo,
       flightNo: row.flightNo,
@@ -396,13 +622,16 @@ export function buildAdsAnnexureTable(
     });
   }
 
-  const usedKeys = new Set(rows.flatMap((row) => Object.keys(row.counts)));
-  const visibleColumns = columns.filter((column) => usedKeys.has(column.key));
+  const visibleKeys = new Set(columns.map((column) => column.key));
   const totals: Record<string, number> = {};
-  for (const column of visibleColumns) {
+  for (const column of columns) {
     totals[column.key] = rows.reduce((sum, row) => sum + (row.counts[column.key] ?? 0), 0);
   }
-  return { columns: visibleColumns, rows, totals };
+  return {
+    columns: columns.filter((column) => visibleKeys.has(column.key)),
+    rows,
+    totals,
+  };
 }
 
 export function adsAnnexureMonthLabel(start?: Date | string | null): string {

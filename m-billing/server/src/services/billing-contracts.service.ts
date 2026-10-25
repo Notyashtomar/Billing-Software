@@ -176,6 +176,10 @@ export class BillingContractsService {
             Boolean(dto.adsBillingEnabled) ||
             (dto.adsEquipmentRules?.length ?? 0) > 0,
           billBmeEquipment: dto.billBmeEquipment === true,
+          inrUsdInvoiceEnabled: dto.inrUsdInvoiceEnabled === true,
+          inrUsdInvoiceCategories: dto.inrUsdInvoiceEnabled
+            ? (dto.inrUsdInvoiceCategories ?? [])
+            : [],
           adsEquipmentRules: sanitizeContractAdsRules(dto.adsEquipmentRules),
           bhsVolumeSchedules: sanitizeBhsVolumeSchedules(dto.bhsVolumeSchedules),
           fortnightBillingEnabled: fortnightBilling.enabled,
@@ -325,6 +329,13 @@ export class BillingContractsService {
     if (dto.adsBillingEnabled !== undefined) doc.adsBillingEnabled = dto.adsBillingEnabled;
     if (dto.billBmeEquipment !== undefined) {
       doc.billBmeEquipment = dto.billBmeEquipment === true;
+    }
+    if (dto.inrUsdInvoiceEnabled !== undefined) {
+      doc.inrUsdInvoiceEnabled = dto.inrUsdInvoiceEnabled === true;
+      if (!doc.inrUsdInvoiceEnabled) doc.inrUsdInvoiceCategories = [];
+    }
+    if (dto.inrUsdInvoiceCategories !== undefined && doc.inrUsdInvoiceEnabled) {
+      doc.inrUsdInvoiceCategories = dto.inrUsdInvoiceCategories;
     }
     if (dto.adsEquipmentRules !== undefined) {
       doc.adsEquipmentRules = sanitizeContractAdsRules(dto.adsEquipmentRules);

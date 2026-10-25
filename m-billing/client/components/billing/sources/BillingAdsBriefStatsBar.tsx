@@ -2,18 +2,22 @@
 
 import { CountUpNumber } from '@/components/ui/CountUpNumber';
 import type { ActiveFlightStatTheme } from '@/components/fris/flights/scheduledairlines/scheduledAirlinesActiveFlightStats';
+import { useEffect, useMemo, useState } from 'react';
+import type { BillingSourceRow } from '@/lib/billing-shared/billing-sources';
 import {
   BILLING_ADS_BRIEF_ITEMS,
+  adsBriefItemMatchesQuery,
   buildAdsPaletteSections,
   billingAdsBriefHoverTitle,
+  computeAdsBriefSelectionTotals,
   isMotorisedNbWbGroupPartial,
   isMotorisedNbWbGroupSelected,
   motorisedNbWbGroupCounts,
   motorisedNbWbGroupHoverTitle,
+  searchAdsBriefDetails,
   WCH_SUBTYPE_LABELS,
   wchPaletteGroupCounts,
   wchPaletteGroupHoverTitle,
-  type AdsBriefSelectionTotals,
   type BillingAdsBriefKey,
   type BillingAdsBriefStats,
   type BillingAdsWchBreakdown,
@@ -33,8 +37,11 @@ type Props = {
   /** When set, only these palette chips render (ADS rate-card gate). */
   visibleKeys?: ReadonlySet<BillingAdsBriefKey> | null;
   emptyMessage?: string | null;
-  /** Invoice used/charged detail for currently checked chip(s). */
-  selectionTotals?: AdsBriefSelectionTotals | null;
+  /** Loaded airline rows. Customer dropdown already limits this set. */
+  rows?: readonly BillingSourceRow[];
+  /** Equipment Master UOMs keyed by palette item. */
+  uomsByKey?: ReadonlyMap<BillingAdsBriefKey, readonly string[]>;
+  onSelectOnly?: (key: BillingAdsBriefKey) => void;
 };
 
 function cardBoxShadow(theme: ActiveFlightStatTheme, selected: boolean): string {
@@ -297,14 +304,38 @@ export function BillingAdsBriefStatsBar({
   loading = false,
   visibleKeys = null,
   emptyMessage = null,
-  selectionTotals = null,
+  rows = [],
+  uomsByKey,
+  onSelectOnly,
 }: Props) {
-  const items =
+  const [equipmentQuery, setEquipmentQuery] = useState('');
+  const [uomChoice, setUomChoice] = useState('');
+  const selectionKey = [...selectedFilters].sort().join('|');
+  useEffect(() => {
+    setUomChoice('');
+  }, [selectionKey]);
+
+  const baseItems =
     visibleKeys == null
       ? BILLING_ADS_BRIEF_ITEMS
       : BILLING_ADS_BRIEF_ITEMS.filter((item) => visibleKeys.has(item.key));
+  const items = equipmentQuery.trim()
+    ? baseItems.filter((item) => adsBriefItemMatchesQuery(item, equipmentQuery))
+    : baseItems;
 
   const sections = buildAdsPaletteSections(items);
+  const searchHits = useMemo(
+    () => searchAdsBriefDetails(rows, equipmentQuery, uomsByKey),
+    [rows, equipmentQuery, uomsByKey],
+  );
+  const selectionTotals = useMemo(() => {
+    if (selectedFilters.size === 0) return null;
+    const onlyKey = selectedFilters.size === 1 ? [...selectedFilters][0] : undefined;
+    return computeAdsBriefSelectionTotals(rows, selectedFilters, {
+      uomOverride: uomChoice,
+      uomOptions: onlyKey ? uomsByKey?.get(onlyKey) : undefined,
+    });
+  }, [rows, selectedFilters, uomChoice, uomsByKey]);
 
   return (
     <section
@@ -312,6 +343,56 @@ export function BillingAdsBriefStatsBar({
       className="mb-4 rounded-xl border border-gray-100 bg-white p-2 shadow-sm"
       aria-label="ADS brief counts and filters"
     >
+      <label className="mb-2 block px-0.5">
+        <span className="mb-1 block text-[11px] font-medium text-gray-600">
+          Search equipment, service, or manpower
+        </span>
+        <input
+          value={equipmentQuery}
+          onChange={(event) => setEquipmentQuery(event.target.value)}
+          placeholder="Type a name — results follow the selected airline"
+          aria-label="Search equipment for the selected airline"
+          className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none ring-[color:var(--billing-primary)] focus:ring-2"
+        />
+      </label>
+      {equipmentQuery.trim() ? (
+        <div className="mb-2 overflow-x-auto rounded-lg border border-gray-200">
+          {searchHits.length === 0 ? (
+            <p className="px-3 py-2 text-xs text-gray-500">No equipment matches that name.</p>
+          ) : (
+            <table className="min-w-full text-left text-xs">
+              <thead className="bg-gray-50 text-[10px] uppercase tracking-wide text-gray-500">
+                <tr>
+                  <th className="px-3 py-2 font-semibold">Equipment</th>
+                  <th className="px-3 py-2 font-semibold">UOM</th>
+                  <th className="px-3 py-2 font-semibold">Used units</th>
+                  <th className="px-3 py-2 font-semibold">Chargeable units</th>
+                  <th className="px-3 py-2 font-semibold">Engagement time</th>
+                </tr>
+              </thead>
+              <tbody>
+                {searchHits.map((hit) => (
+                  <tr key={hit.key ?? hit.label} className="border-t border-gray-100">
+                    <td className="px-3 py-2">
+                      <button
+                        type="button"
+                        className="font-semibold text-[color:var(--billing-primary)] hover:underline"
+                        onClick={() => hit.key && onSelectOnly?.(hit.key)}
+                      >
+                        {hit.label}
+                      </button>
+                    </td>
+                    <td className="px-3 py-2">{hit.uom}</td>
+                    <td className="px-3 py-2 tabular-nums">{hit.usedUnits.toLocaleString()}</td>
+                    <td className="px-3 py-2 tabular-nums">{hit.chargedUnits.toLocaleString()}</td>
+                    <td className="px-3 py-2 tabular-nums">{hit.engagementTime}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      ) : null}
       <div className="mb-1.5 flex items-center justify-between gap-2 px-0.5 text-[11px] text-gray-600">
         <span>
           {selectedFilters.size > 0
@@ -433,13 +514,34 @@ export function BillingAdsBriefStatsBar({
               Palette count stays engagements; used/charged drive invoicing
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
             <div className="rounded-lg border border-gray-200 bg-[color:var(--billing-accent-soft)] px-3 py-2">
               <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">
                 Unit of measurement
               </div>
+              {selectedFilters.size === 1 && selectionTotals.uomOptions.length > 1 ? (
+                <select
+                  aria-label={`Unit of measurement for ${selectionTotals.label}`}
+                  value={uomChoice || selectionTotals.uom}
+                  onChange={(event) => setUomChoice(event.target.value)}
+                  className="mt-1 w-full rounded-md border border-gray-300 bg-white px-2 py-1 text-sm font-semibold text-gray-900"
+                >
+                  {selectionTotals.uomOptions.map((uom) => (
+                    <option key={uom} value={uom}>
+                      {uom}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <div className="mt-0.5 text-base font-bold text-gray-900">{selectionTotals.uom}</div>
+              )}
+            </div>
+            <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+              <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+                Engagement time
+              </div>
               <div className="mt-0.5 text-base font-bold tabular-nums text-gray-900">
-                {selectionTotals.uom}
+                {selectionTotals.engagementTime}
               </div>
             </div>
             <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
@@ -470,9 +572,9 @@ export function BillingAdsBriefStatsBar({
         </div>
       ) : (
         <p className="mt-2 px-0.5 text-[11px] text-gray-500">
-          Check palette equipment to filter the flight table and show engagement
-          times. Select a chip to see Unit of measurement, Used units, and
-          Charged units for invoicing.
+          Check a palette item to see its unit of measurement, engagement time,
+          used units, and charged units. Change the unit to recalculate the
+          charged count. Search matches the airline chosen above.
         </p>
       )}
     </section>

@@ -44,8 +44,9 @@ import {
   type BillingScheduledFlightStatKey,
 } from './billingScheduledFlightStats';
 import {
-  computeAdsBriefSelectionTotals,
   computeBillingAdsBriefStats,
+  BILLING_ADS_BRIEF_KEYS,
+  uomsForAdsBrief,
   computeBillingAdsWchBreakdown,
   EMPTY_BILLING_ADS_WCH_BREAKDOWN,
   countUniqueAdsFlights,
@@ -75,7 +76,7 @@ import {
   scheduledFlightPaxFreight,
   scheduledFlightTypeOfHandling,
 } from './billingScheduledFlightDisplay';
-import type { BillingApi } from '@/lib/billing-api';
+import type { BillingApi, EquipmentMasterRecord } from '@/lib/billing-api';
 import { useSourcePageWorkspace } from '@/lib/billing-workspace/use-source-page-workspace';
 import {
   getBillingWorkspacePageSlice,
@@ -745,6 +746,7 @@ export function OperationalSourcePage({ api, config }: Props) {
   const [adsErrorsOnly, setAdsErrorsOnly] = useState(false);
   const [statFilters, setStatFilters] = useState<Set<BillingScheduledFlightStatKey>>(new Set());
   const [adsBriefFilters, setAdsBriefFilters] = useState<Set<BillingAdsBriefKey>>(new Set());
+  const [adsEquipmentMaster, setAdsEquipmentMaster] = useState<EquipmentMasterRecord[]>([]);
   const [maasFilters, setMaasFilters] = useState<MaasBillingFilters>(EMPTY_MAAS_BILLING_FILTERS);
   const [customers, setCustomers] = useState<Array<{ customerCode: string; name: string }>>([]);
   const [data, setData] = useState<BillingSourcesResponse | null>(null);
@@ -1279,12 +1281,31 @@ export function OperationalSourcePage({ api, config }: Props) {
     return computeBillingAdsWchBreakdown(sourceRows);
   }, [config.fetchMethod, sourceRows]);
 
-  const adsBriefSelectionTotals = useMemo(() => {
-    if (!usesAdsEquipmentPalette(config.fetchMethod) || adsBriefFilters.size === 0) {
-      return null;
+  useEffect(() => {
+    if (!usesAdsEquipmentPalette(config.fetchMethod)) return;
+    let cancelled = false;
+    void api
+      .listEquipmentMaster()
+      .then((res) => {
+        if (!cancelled) setAdsEquipmentMaster(res.data ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setAdsEquipmentMaster([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [api, config.fetchMethod]);
+
+  const adsUomsByKey = useMemo(() => {
+    const map = new Map<BillingAdsBriefKey, readonly string[]>();
+    if (!usesAdsEquipmentPalette(config.fetchMethod)) return map;
+    for (const key of BILLING_ADS_BRIEF_KEYS) {
+      const uoms = uomsForAdsBrief(key, adsEquipmentMaster, sourceRows);
+      if (uoms.length > 0) map.set(key, uoms);
     }
-    return computeAdsBriefSelectionTotals(sourceRows, adsBriefFilters);
-  }, [adsBriefFilters, config.fetchMethod, sourceRows]);
+    return map;
+  }, [adsEquipmentMaster, config.fetchMethod, sourceRows]);
 
   const adsTotalFlights = useMemo(() => {
     if (!usesAdsEquipmentPalette(config.fetchMethod)) return 0;
@@ -1349,6 +1370,11 @@ export function OperationalSourcePage({ api, config }: Props) {
 
   const clearAdsBriefFilters = () => {
     setAdsBriefFilters(new Set());
+    setSelected(new Set());
+  };
+
+  const selectAdsBriefOnly = (key: BillingAdsBriefKey) => {
+    setAdsBriefFilters(new Set([key]));
     setSelected(new Set());
   };
 
@@ -2282,7 +2308,9 @@ export function OperationalSourcePage({ api, config }: Props) {
           onToggleFilterGroup={toggleAdsBriefFilterGroup}
           onClearFilters={clearAdsBriefFilters}
           loading={loading}
-          selectionTotals={adsBriefSelectionTotals}
+          rows={sourceRows}
+          uomsByKey={adsUomsByKey}
+          onSelectOnly={selectAdsBriefOnly}
         />
       ) : null}
 

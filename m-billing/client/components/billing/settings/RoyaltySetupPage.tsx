@@ -64,7 +64,7 @@ function guideFor(
     return 'This station is a private airport. Choose Royalty on Net or Royalty on Gross in Configure rules on Airport Setup. Only that card appears here.';
   }
   if (mag) {
-    return `This station is a private airport with ${chosen} and MAG rates applicable. Only that card is shown. ${fees} The MAG table is the workbook uploaded on Airport Setup. For a flight, the concession to use is the higher of the matching fee and the MAG rate for that aircraft type and service.`;
+    return `This station is a private airport with ${chosen} and MAG rates applicable. Only that card is shown. ${fees} An Exclusive invoice uses the higher of the royalty and the MAG for each flight’s aircraft band and handling (full handling unless the flight is cargo, ramp only, or passenger only).`;
   }
   return `This station is a private airport with ${chosen}. Only that card is shown. ${fees}`;
 }

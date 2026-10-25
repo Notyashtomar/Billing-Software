@@ -123,6 +123,27 @@ function adsRuleSelectValue(
   return options.some((option) => option.value === resolved) ? resolved : '';
 }
 
+function adsRuleSortLabel(rule: BillingContractAdsEquipmentRule): string {
+  const code = String(rule.serviceCode ?? '').trim();
+  if (!code) return '';
+  return adsCatalogServiceDisplayName(code) || code;
+}
+
+/** Named equipment, manpower, and services A–Z. Blank rows stay at the top until a name is chosen. */
+export function sortAdsEquipmentRules(
+  rules: BillingContractAdsEquipmentRule[],
+): BillingContractAdsEquipmentRule[] {
+  return [...rules].sort((a, b) => {
+    const aBlank = !String(a.serviceCode ?? '').trim();
+    const bBlank = !String(b.serviceCode ?? '').trim();
+    if (aBlank !== bBlank) return aBlank ? -1 : 1;
+    return adsRuleSortLabel(a).localeCompare(adsRuleSortLabel(b), undefined, {
+      sensitivity: 'base',
+      numeric: true,
+    });
+  });
+}
+
 function aircraftSummary(selected: string[], all: string[]): string {
   if (all.length === 0) return 'Select aircraft';
   if (selected.length === 0) return 'Select aircraft';
@@ -283,7 +304,10 @@ export function ContractAdsEquipmentRulesEditor({
   airlineName = '',
   airlineCode = '',
 }: Props) {
-  const displayRules = useMemo(() => collapseAdsEquipmentRules(rules), [rules]);
+  const displayRules = useMemo(
+    () => sortAdsEquipmentRules(collapseAdsEquipmentRules(rules)),
+    [rules],
+  );
   const adsServices = useMemo(() => {
     const sources: Array<{ serviceCode: string; uom?: string; category?: string }> = [];
 
@@ -379,7 +403,7 @@ export function ContractAdsEquipmentRulesEditor({
   const resolvedRate = resolveRateToInr(rateToInr);
 
   const emitRules = (next: BillingContractAdsEquipmentRule[]) => {
-    onChange(collapseAdsEquipmentRules(next));
+    onChange(sortAdsEquipmentRules(collapseAdsEquipmentRules(next)));
   };
 
   const updateRule = (index: number, patch: Partial<BillingContractAdsEquipmentRule>) => {

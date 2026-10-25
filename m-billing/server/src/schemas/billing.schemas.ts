@@ -288,6 +288,14 @@ export class BillingContract {
   @Prop({ default: false })
   extendedRoyaltyEnabled?: boolean;
 
+  /** Print USD invoices with an INR column. Off leaves the existing one-currency invoice. */
+  @Prop({ default: false })
+  inrUsdInvoiceEnabled?: boolean;
+
+  /** Invoice categories that use the INR + USD layout. Empty while the option is off. */
+  @Prop({ type: [String], default: [] })
+  inrUsdInvoiceCategories?: string[];
+
   @Prop()
   bhsConcessionNote?: string;
 
@@ -985,7 +993,7 @@ export class BillingSettings {
 
   /**
    * Royalty Master concessions (net and gross). Each side stores three flight concessions.
-   * Invoice generation does not read this field.
+   * Exclusive invoices read the card selected for this station.
    */
   @Prop({ type: Object })
   royaltyMaster?: {

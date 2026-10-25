@@ -21,6 +21,14 @@ describe('toBillingTrackableFullName', () => {
     );
     expect(toBillingTrackableFullName('Tresel')).toBe('Trestle');
     expect(toBillingTrackableFullName('Tow Bar')).toBe('Towbar');
+    expect(toBillingTrackableFullName('DBT')).toBe('Diesel Tractor');
+    expect(toBillingTrackableFullName('BT-120')).toBe('Baggage Trolly');
+    expect(toBillingTrackableFullName('C COH')).toBe('Crew Coach');
+    expect(toBillingTrackableFullName('TC')).toBe('Toilet Service');
+    expect(toBillingTrackableFullName('PSL')).toBe('Motorized Passenger Step Ladder');
+    expect(toBillingTrackableFullName('ASU')).toBe('Air Start Unit');
+    expect(toBillingTrackableFullName('TB')).toBe('Towbar');
+    expect(toBillingTrackableFullName('gpu 90 kv')).toBe('Ground Power Unit - Narrow Body');
   });
 
   it('expands manpower codes used on scheduled equipment lines', () => {

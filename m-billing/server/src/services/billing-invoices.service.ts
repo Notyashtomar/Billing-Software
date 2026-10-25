@@ -595,7 +595,7 @@ export class BillingInvoicesService {
       prepIds.length > 0
         ? await this.preparationModel.find({ _id: { $in: prepIds } }).lean()
         : [];
-    const table = buildAdsAnnexureTable(records, contract?.adsEquipmentRules);
+    const table = buildAdsAnnexureTable(records, contract?.adsEquipmentRules, lines);
     const company = resolveInvoiceCompanyDefaults(
       header.stationCode,
       settingsDoc?.companyLegalEntity,
@@ -975,6 +975,8 @@ export class BillingInvoicesService {
       serviceCatalog,
       contractCategory: contract?.category,
       fortnightBilling: contract?.fortnightBillingEnabled === true,
+      inrUsdInvoiceCategories:
+        contract?.inrUsdInvoiceEnabled === true ? contract.inrUsdInvoiceCategories ?? [] : [],
       hasAnnexures: lines.length > 0,
       concessionTotals,
     });
