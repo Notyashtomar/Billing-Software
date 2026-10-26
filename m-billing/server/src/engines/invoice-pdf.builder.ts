@@ -1,10 +1,6 @@
 import PDFDocument from 'pdfkit';
 import type { InvoicePdfInput } from './invoice-pdf.types';
-import {
-  chandigarhBhsTerms,
-  isChandigarhBhsLayout,
-  isChandigarhCompactFlow,
-} from './invoice-pdf-chandigarh-bhs.util';
+import { chandigarhBhsTerms, isChandigarhBhsLayout } from './invoice-pdf-chandigarh-bhs.util';
 import { CHENNAI_INVOICE_FOOTER, resolveInvoiceContacts } from './invoice-pdf.defaults';
 import {
   getInvoiceLogoBuffer,
@@ -20,7 +16,7 @@ const LINE_W = 0.75;
 /** Invoice body text is 20% larger than the legacy PDF sizes. */
 const FONT_SCALE = 1.2;
 const CELL_PAD = 4;
-const FOOTER_RESERVED_H = invDim(54);
+const FOOTER_RESERVED_H = invDim(58);
 const FLOW_TOP_Y = MARGIN + 8;
 const FLOW_BOTTOM_Y = PAGE_H - MARGIN - FOOTER_RESERVED_H;
 
@@ -42,7 +38,7 @@ function invDim(base: number): number {
 
 function setCellFont(doc: PDFKit.PDFDocument, opts: CellOpts): number {
   const size = invFs(opts.size ?? 7);
-  doc.font(opts.bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(size).fillColor('#000');
+  doc.font(opts.bold ? 'Times-Bold' : 'Times-Roman').fontSize(size).fillColor('#000');
   return size;
 }
 
@@ -130,7 +126,7 @@ function concessionAmountRows(
   const raw = percent != null && percent > 0 ? percent : 0;
   const pct = raw > MAX_CONCESSION_DISPLAY_PERCENT ? MAX_CONCESSION_DISPLAY_PERCENT : raw;
   if (pct > 0 && amount > 0.004) {
-    return [{ label: `Concession Fee @ ${fmtPct(pct)}%`, amount }];
+    return [{ label: `Concession Fee @ ${fmtPct(pct)}% of "Total Gross Revenue"`, amount }];
   }
   if (amount > 0.004) return [{ label: 'Concession', amount }];
   return [];
@@ -138,6 +134,15 @@ function concessionAmountRows(
 
 function fmtPlainInr(n: number): string {
   return n.toFixed(2);
+}
+
+/** Reference words row ends "… RUPEES AND ZERO PAISA ONLY" (rounded amount → paisa is always zero). */
+function wordsWithPaisa(words: string): string {
+  const w = (words ?? '').trim();
+  if (!w) return w;
+  if (/PAISA/i.test(w)) return w;
+  const stripped = w.replace(/\s+ONLY\.?$/i, '');
+  return `${stripped} AND ZERO PAISA ONLY`;
 }
 
 function fmtRoe(n: number): string {
@@ -180,7 +185,7 @@ function renderBrandHeader(doc: PDFKit.PDFDocument, input: InvoicePdfInput): num
   if (logoBuffer.length > 0) {
     doc.image(logoBuffer, MARGIN, y, { height: logoH });
   }
-  doc.font('Helvetica-Bold').fontSize(invFs(15)).fillColor('#000');
+  doc.font('Times-Bold').fontSize(invFs(15)).fillColor('#000');
   doc.text(input.title || 'TAX INVOICE', MARGIN, y + 8, { width: CONTENT_W, align: 'center' });
 
   return y + logoH + 6;
@@ -333,16 +338,17 @@ function drawPageFooter(
   invoiceNumber: string,
   continued?: boolean,
 ) {
-  const disclaimerY = PAGE_H - MARGIN - invDim(36);
-  doc.font('Helvetica-Bold').fontSize(invFs(7)).fillColor('#000');
-  doc.text(EINVOICE_FOOTER, MARGIN, disclaimerY, { width: CONTENT_W, align: 'center' });
+  // Reference prints the disclaimer larger (wraps to two centred lines) directly above the footer line.
+  const disclaimerY = PAGE_H - MARGIN - invDim(40);
+  doc.font('Times-Bold').fontSize(invFs(8.5)).fillColor('#000');
+  doc.text(EINVOICE_FOOTER, MARGIN + 20, disclaimerY, { width: CONTENT_W - 40, align: 'center' });
   const y = PAGE_H - MARGIN - invDim(14);
-  doc.font('Helvetica-Bold').fontSize(invFs(7));
-  doc.text(`Invoice No. : ${invoiceNumber}`, MARGIN, y, { width: 160, align: 'left' });
+  doc.font('Times-Bold').fontSize(invFs(7));
+  doc.text(`Invoice No. : ${invoiceNumber}`, MARGIN, y, { width: CONTENT_W, align: 'left', lineBreak: false });
   if (continued) {
-    doc.font('Helvetica').text('Continued on next page...', MARGIN, y, { width: CONTENT_W, align: 'center' });
+    doc.font('Times-Roman').text('Continued on next page...', MARGIN, y, { width: CONTENT_W, align: 'center' });
   }
-  doc.font('Helvetica-Bold').text(`Page No. : ${page} of ${total}`, MARGIN, y, { width: CONTENT_W, align: 'right' });
+  doc.font('Times-Bold').text(`Page No. : ${page} of ${total}`, MARGIN, y, { width: CONTENT_W, align: 'right' });
 }
 
 function addFlowPage(doc: PDFKit.PDFDocument): number {
@@ -421,6 +427,22 @@ export function compactStationAddressRows(
   return [...deduped.slice(0, maxRows - 1), deduped.slice(maxRows - 1).join(', ')];
 }
 
+/** "DELHI" → "Delhi" for the Service Station row (display only). */
+function titleCaseStation(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/(^|[\s\-/(])([a-z])/g, (_m, pre: string, ch: string) => pre + ch.toUpperCase());
+}
+
+/** Secondary address prints as comma-joined wrapped text (reference style). */
+function joinAddressForWrap(lines: string[]): string {
+  return lines
+    .map((line) => line.trim().replace(/,+$/, ''))
+    .filter(Boolean)
+    .join(', ');
+}
+
 function buildCompanyHeaderLines(company: InvoicePdfInput['company']): string[] {
   const phone =
     company.phone?.trim() || extractPhoneFromAddressLines(company.addressLines) || '';
@@ -435,10 +457,9 @@ function buildCompanyHeaderLines(company: InvoicePdfInput['company']): string[] 
       return true;
     });
 
-  const phoneLine = phone ? `Phone No.: ${phone}` : '';
-  const addressBudget = phoneLine
-    ? MAX_STATION_ADDRESS_ROWS - 1
-    : MAX_STATION_ADDRESS_ROWS;
+  // Phone row always prints (label only when the station has no number) so every header lines up.
+  const phoneLine = phone ? `Phone No.: ${phone}` : 'Phone No.:';
+  const addressBudget = MAX_STATION_ADDRESS_ROWS - 1;
   const compacted = compactStationAddressRows(addressLines, Math.max(0, addressBudget));
   return [company.name, ...compacted, phoneLine].filter(Boolean);
 }
@@ -455,9 +476,8 @@ function putStateCodeCell(
   const value = stateCode?.trim() ?? '';
   strokeBox(doc, x, y, w, h);
   const ty = headerFieldTextY(doc, y, h, `${label}${value}`, w - CELL_PAD * 2, { size: 7 });
-  doc.font('Helvetica').fontSize(invFs(7)).fillColor('#000');
-  doc.text(label, x + CELL_PAD, ty, { continued: true, lineBreak: false });
-  doc.font('Helvetica-Bold').text(value, { lineBreak: false });
+  doc.font('Times-Roman').fontSize(invFs(7)).fillColor('#000');
+  doc.text(`${label} ${value}`, x + CELL_PAD, ty, { lineBreak: false });
   return h;
 }
 
@@ -471,11 +491,11 @@ function measureCompanyBlockHeight(
   width: number,
 ): number {
   let h = CELL_PAD;
-  doc.font('Helvetica-Bold').fontSize(invFs(8));
+  doc.font('Times-Bold').fontSize(invFs(8));
   if (lines[0]) {
     h += doc.heightOfString(lines[0], { width, lineGap: 1 }) + 1;
   }
-  doc.font('Helvetica').fontSize(invFs(7));
+  doc.font('Times-Roman').fontSize(invFs(7));
   for (const line of lines.slice(1)) {
     const trimmed = line.trim();
     if (!trimmed) continue;
@@ -491,14 +511,18 @@ function measureSecondaryAddressHeight(
   width: number,
 ): number {
   const clean = lines.map((line) => line.trim()).filter(Boolean);
-  if (clean.length === 0) return 0;
+  doc.font('Times-Roman').fontSize(invFs(7));
+  const lineH = doc.heightOfString('X', { lineGap: 0 });
+  // The box always prints (reference layout) — at least two text lines tall, even with no data.
+  const minH = CELL_PAD * 2 + lineH * 2;
+  if (clean.length === 0) return minH;
   let h = CELL_PAD;
-  doc.font('Helvetica').fontSize(invFs(7));
-  for (const line of clean) {
-    h += doc.heightOfString(line, { width, lineGap: 0 });
-  }
+  // First line (company name) stays on its own row; the rest wraps as one comma-joined block.
+  h += doc.heightOfString(clean[0], { width, lineGap: 0 });
+  const rest = joinAddressForWrap(clean.slice(1));
+  if (rest) h += doc.heightOfString(rest, { width, lineGap: 0 });
   h += CELL_PAD;
-  return h;
+  return Math.max(h, minH);
 }
 
 function measureBillToBodyHeight(
@@ -507,12 +531,12 @@ function measureBillToBodyHeight(
   addressWidth: number,
 ): number {
   let h = CELL_PAD;
-  doc.font('Helvetica-Bold').fontSize(invFs(7));
+  doc.font('Times-Bold').fontSize(invFs(7));
   h += doc.heightOfString('Bill To:', { width: addressWidth, lineGap: 0 });
   if (billTo.name) {
-    h += doc.heightOfString(billTo.name, { width: addressWidth, lineGap: 0 });
+    h += doc.heightOfString(billTo.name.toUpperCase(), { width: addressWidth, lineGap: 0 });
   }
-  doc.font('Helvetica').fontSize(invFs(7));
+  doc.font('Times-Roman').fontSize(invFs(7));
   for (const line of billTo.addressLines) {
     const trimmed = line.trim();
     if (!trimmed) continue;
@@ -527,7 +551,7 @@ function measureBillToAddressHeight(
   addressLines: string[],
   addressWidth: number,
 ): number {
-  doc.font('Helvetica').fontSize(invFs(7));
+  doc.font('Times-Roman').fontSize(invFs(7));
   let h = 0;
   for (const line of addressLines) {
     h += doc.heightOfString(line, { width: addressWidth, lineGap: 0, lineBreak: true });
@@ -565,7 +589,7 @@ function renderBillToAddressBlock(
   addressLines: string[],
 ): void {
   if (maxH <= 0 || addressLines.length === 0) return;
-  doc.font('Helvetica').fontSize(invFs(7)).fillColor('#000');
+  doc.font('Times-Roman').fontSize(invFs(7)).fillColor('#000');
   doc.text(addressLines.join('\n'), x + CELL_PAD, startY, {
     width: addressWidth,
     height: maxH,
@@ -619,15 +643,15 @@ export function layoutInvoiceHeaderGrid(
   const w = CONTENT_W;
   const leftW = w / 2;
   const rightW = w / 2;
-  doc.font('Helvetica-Bold').fontSize(invFs(7));
+  doc.font('Times-Bold').fontSize(invFs(7));
   const headerLineH = doc.heightOfString('GSTIN', { lineGap: 0 });
-  const baseRowH = headerLineH + 4;
+  const baseRowH = headerLineH + 6;
   const companyLines = buildCompanyHeaderLines(input.company);
   const addressWidth = leftW - CELL_PAD * 2;
   // Value column above the particulars table is 30% of the page width.
   const metaLabelAbsW = rightW - w * 0.3;
 
-  doc.font('Helvetica-Bold').fontSize(invFs(8));
+  doc.font('Times-Bold').fontSize(invFs(8));
   const sellerNameH = doc.heightOfString(companyLines[0] ?? '', { width: addressWidth, lineGap: 1 });
 
   // Description sits opposite the seller box so Bill To top aligns with Flight Category.
@@ -646,8 +670,8 @@ export function layoutInvoiceHeaderGrid(
 
   const billAlignRightRows: Array<[string, string]> = [
     ['Flight Category', input.flightCategory ?? ''],
-    ['For the Period', input.billingPeriodLabel ?? ''],
-    ['Service Station', input.serviceStation ?? ''],
+    ['For the Month', input.billingPeriodLabel ?? ''],
+    ['Service Station', titleCaseStation(input.serviceStation ?? '')],
     ['State', input.state ?? ''],
   ];
   const billBodyH = measureBillToBodyHeight(doc, input.billTo, addressWidth);
@@ -752,7 +776,7 @@ function renderHeaderGrid(doc: PDFKit.PDFDocument, input: InvoicePdfInput, start
   strokeBox(doc, x, y, leftW, sellerH);
   const sellerTextH = Math.max(0, measureCompanyBlockHeight(doc, companyLines, addressWidth) - CELL_PAD * 2);
   let cy = y + Math.max(CELL_PAD, (sellerH - sellerTextH) / 2);
-  doc.font('Helvetica-Bold').fontSize(invFs(8)).fillColor('#000');
+  doc.font('Times-Bold').fontSize(invFs(8)).fillColor('#000');
   doc.text(companyLines[0] ?? '', x + CELL_PAD, cy, {
     width: addressWidth,
     lineGap: 1,
@@ -761,7 +785,7 @@ function renderHeaderGrid(doc: PDFKit.PDFDocument, input: InvoicePdfInput, start
   cy += sellerNameH + 1;
   const sellerAddrLines = companyLines.slice(1).map((line) => line.trim()).filter(Boolean);
   if (sellerAddrLines.length) {
-    doc.font('Helvetica').fontSize(invFs(7)).fillColor('#000');
+    doc.font('Times-Roman').fontSize(invFs(7)).fillColor('#000');
     doc.text(sellerAddrLines.join('\n'), x + CELL_PAD, cy, {
       width: addressWidth,
       lineGap: 0,
@@ -773,7 +797,7 @@ function renderHeaderGrid(doc: PDFKit.PDFDocument, input: InvoicePdfInput, start
   strokeBox(doc, x, billY, leftW, primaryAddressH);
   const primaryLines = input.billTo.addressLines.map((line) => line.trim()).filter(Boolean);
   let by = billY + CELL_PAD;
-  doc.font('Helvetica-Bold').fontSize(invFs(7)).fillColor('#000');
+  doc.font('Times-Bold').fontSize(invFs(7)).fillColor('#000');
   doc.text('Bill To:', x + CELL_PAD, by, {
     width: addressWidth,
     underline: true,
@@ -782,15 +806,16 @@ function renderHeaderGrid(doc: PDFKit.PDFDocument, input: InvoicePdfInput, start
   });
   by += doc.heightOfString('Bill To:', { width: addressWidth, lineGap: 0 });
   if (input.billTo.name) {
-    doc.text(input.billTo.name, x + CELL_PAD, by, {
+    const billToName = input.billTo.name.toUpperCase();
+    doc.text(billToName, x + CELL_PAD, by, {
       width: addressWidth,
       lineGap: 0,
       lineBreak: true,
     });
-    by += doc.heightOfString(input.billTo.name, { width: addressWidth, lineGap: 0 });
+    by += doc.heightOfString(billToName, { width: addressWidth, lineGap: 0 });
   }
   if (primaryLines.length) {
-    doc.font('Helvetica').fontSize(invFs(7)).fillColor('#000');
+    doc.font('Times-Roman').fontSize(invFs(7)).fillColor('#000');
     doc.text(primaryLines.join('\n'), x + CELL_PAD, by, {
       width: addressWidth,
       lineGap: 0,
@@ -803,8 +828,11 @@ function renderHeaderGrid(doc: PDFKit.PDFDocument, input: InvoicePdfInput, start
     const secondaryLines = (input.billTo.secondaryAddressLines ?? [])
       .map((line) => line.trim())
       .filter(Boolean);
-    doc.font('Helvetica').fontSize(invFs(7)).fillColor('#000');
-    doc.text(secondaryLines.join('\n'), x + CELL_PAD, secondaryY + CELL_PAD, {
+    const secondaryText = [secondaryLines[0], joinAddressForWrap(secondaryLines.slice(1))]
+      .filter(Boolean)
+      .join('\n');
+    doc.font('Times-Roman').fontSize(invFs(7)).fillColor('#000');
+    doc.text(secondaryText, x + CELL_PAD, secondaryY + CELL_PAD, {
       width: addressWidth,
       lineGap: 0,
       lineBreak: true,
@@ -817,13 +845,14 @@ function renderHeaderGrid(doc: PDFKit.PDFDocument, input: InvoicePdfInput, start
 
   const gstinY = stateCodeY + stateRowH;
   const gstPart = input.billTo.gstin ? `GSTIN/UIN : ${input.billTo.gstin}` : 'GSTIN/UIN :';
-  const panPart = input.billTo.pan?.trim() ? `PAN No. : ${input.billTo.pan.trim()}` : '';
+  // Label always prints; the value still follows the customer's show-PAN setting.
+  const panPart = input.billTo.pan?.trim() ? `PAN No. : ${input.billTo.pan.trim()}` : 'PAN No. :';
   const vatPart = input.billTo.vat?.trim() ? `VAT No. : ${input.billTo.vat.trim()}` : '';
   strokeBox(doc, x, gstinY, leftW, bottomRowH);
-  const gstinText = [gstPart, panPart, vatPart].filter(Boolean).join('    ');
+  // Reference: "GSTIN/UIN : 07AABCV6250D7ZE   PAN No. : AABCV6250D" — regular weight, one line.
+  const gstinText = [gstPart, panPart, vatPart].filter(Boolean).join('   ');
   const gstinTextY = headerFieldTextY(doc, gstinY, bottomRowH, gstinText, leftW - CELL_PAD * 2, {
     size: 7,
-    bold: true,
   });
   doc.text(gstinText, x + CELL_PAD, gstinTextY, {
     width: leftW - CELL_PAD * 2,
@@ -1046,10 +1075,10 @@ function renderLineItemsTable(doc: PDFKit.PDFDocument, input: InvoicePdfInput, s
     { header: 'Particular', w: colWidths[1], align: 'left' },
     { header: 'Used', w: colWidths[2], align: 'center' },
     { header: 'Charged', w: colWidths[3], align: 'center' },
-    { header: 'Aircraft Type', w: colWidths[4], align: 'center' },
+    { header: 'Aircraft\nType', w: colWidths[4], align: 'center' },
     { header: 'Unit', w: colWidths[5], align: 'center' },
     {
-      header: isUsd ? 'Rate/Unit (USD)' : 'Rate/Unit (INR)',
+      header: isUsd ? 'Rate/Unit\n(USD)' : 'Rate/Unit\n(INR)',
       w: colWidths[6],
       align: 'center',
     },
@@ -1098,7 +1127,7 @@ function renderLineItemsTable(doc: PDFKit.PDFDocument, input: InvoicePdfInput, s
           String(line.charged),
           line.aircraftType ?? '',
           line.uom,
-          fmtUsd(line.unitPrice),
+          fmtPlainInr(line.unitPrice),
           fmtUsd(line.amount),
         ]
       : [
@@ -1108,39 +1137,68 @@ function renderLineItemsTable(doc: PDFKit.PDFDocument, input: InvoicePdfInput, s
           String(line.charged),
           line.aircraftType ?? '',
           line.uom,
-          fmtInr(line.unitPrice),
+          // Reference prints the unit rate without digit grouping (1091.00).
+          fmtPlainInr(line.unitPrice),
           fmtInr(line.amount),
         ],
   );
 
   if (input.hasAnnexures) {
-    const annexCells = cols.map((_, i) => (i === 1 ? '[Refer attached annexures for details]' : ''));
+    const annexCells = cols.map((_, i) =>
+      i === 1 ? '[Refer attached annexure for details]' : i === cols.length - 1 ? '-' : '',
+    );
     lineRows.push(annexCells);
   }
 
+  // Reference body: column guides only (no row rules), rows breathe, and the box
+  // keeps a minimum height so short invoices still show the open particulars area.
+  const bodyRowH = invDim(19);
+  const bodyTopGapH = invDim(8);
+  const minBodyH = invDim(150);
+  const bodyStartY = y;
+  let bodyY = y + bodyTopGapH;
+  let segmentStartY = bodyStartY;
+
+  const closeSegment = (endY: number) => {
+    if (endY > segmentStartY) strokeColumnGuides(doc, x, segmentStartY, colWidths, endY - segmentStartY);
+  };
+
   for (const cells of lineRows) {
-    let rowH = minRowH;
+    let rowH = bodyRowH;
     for (let i = 0; i < cols.length; i++) {
       if (!cells[i]) continue;
       rowH = Math.max(
         rowH,
-        measureCellHeight(doc, cells[i], cols[i].w, { size: 6.5, align: cols[i].align ?? 'left' }),
+        measureCellHeight(doc, cells[i], cols[i].w, { size: 7, align: cols[i].align ?? 'left' }, 0, 2),
       );
     }
-    y = ensureTableSpace(y, rowH);
+    if (bodyY + rowH > FLOW_BOTTOM_Y) {
+      closeSegment(bodyY);
+      strokeHorizontal(doc, x, x + w, bodyY);
+      bodyY = ensureTableSpace(bodyY, rowH);
+      segmentStartY = bodyY;
+    }
     let cellX = x;
     for (let i = 0; i < cols.length; i++) {
-      strokeBox(doc, cellX, y, cols[i].w, rowH);
       if (cells[i]) {
-        putCellText(doc, cellX, y, cols[i].w, rowH, cells[i], {
-          size: 6.5,
+        putCellText(doc, cellX, bodyY, cols[i].w, rowH, cells[i], {
+          size: 7,
           align: cols[i].align ?? 'left',
         });
       }
       cellX += cols[i].w;
     }
-    y += rowH;
+    bodyY += rowH;
   }
+
+  // Pad the open area up to the reference minimum when the page has room.
+  const usedBodyH = bodyY - segmentStartY;
+  if (segmentStartY === bodyStartY && usedBodyH < minBodyH) {
+    bodyY = Math.min(bodyStartY + minBodyH, Math.max(bodyY, FLOW_BOTTOM_Y - invDim(260)));
+    bodyY = Math.max(bodyY, bodyStartY + usedBodyH);
+  }
+  closeSegment(bodyY);
+  y = bodyY;
 
   strokeHorizontal(doc, x, x + w, y);
 
@@ -1167,7 +1225,9 @@ function renderLineItemsTable(doc: PDFKit.PDFDocument, input: InvoicePdfInput, s
     if (leftPrefix) {
       putCellText(doc, x, y, labelW, rowHeight, leftPrefix, { bold, size: 7, align: 'left' });
     }
-    putCellText(doc, x, y, labelW, rowHeight, label, { bold, size: 7, align: 'right' });
+    // Reference: tax rows (CGST/SGST) sit at the right edge; every other label is left-aligned.
+    const labelAlign = /^(CGST|SGST|IGST)\b/.test(label) ? 'right' : 'left';
+    putCellText(doc, x, y, labelW, rowHeight, label, { bold, size: 7, align: labelAlign });
     strokeBox(doc, x + labelW, y, amountW, rowHeight);
     putCellText(doc, x + labelW, y, amountW, rowHeight, amount, { bold, size: 7, align: 'right' });
     y += rowHeight;
@@ -1182,30 +1242,30 @@ function renderLineItemsTable(doc: PDFKit.PDFDocument, input: InvoicePdfInput, s
     )) {
       addAmountRow(row.label, fmtUsd(row.amount));
     }
-    addAmountRow('Total Gross Revenue in USD', fmtUsd(input.grossAmount), true);
+    addAmountRow('Gross Amount in USD', fmtUsd(input.grossAmount), true);
 
     if (input.totalReceivableUsd != null) {
       let taxAddPlaced = false;
       if (input.cgstUsd != null && input.cgstUsd > 0) {
         addAmountRow(
           `CGST @ ${fmtPct(input.cgstPercent ?? 9)}%`,
-          fmtUsd(input.cgstUsd),
+          fmtPlainInr(input.cgstUsd),
           false,
-          taxAddPlaced ? undefined : 'Add',
+          taxAddPlaced ? undefined : 'Add:',
         );
         taxAddPlaced = true;
       }
       if (input.sgstUsd != null && input.sgstUsd > 0) {
         addAmountRow(
           `SGST @ ${fmtPct(input.sgstPercent ?? 9)}%`,
-          fmtUsd(input.sgstUsd),
+          fmtPlainInr(input.sgstUsd),
           false,
-          taxAddPlaced ? undefined : 'Add',
+          taxAddPlaced ? undefined : 'Add:',
         );
         taxAddPlaced = true;
       }
       const usdWords = input.amountInWordsUsd
-        ? `Total Amount Receivable In Words- ${input.amountInWordsUsd} (In USD) (Rounded Off)`
+        ? `Total Amount Receivable In Words- ${wordsWithPaisa(input.amountInWordsUsd)} (In USD) (Rounded Off)`
         : 'Total Amount Receivable in USD (Rounded Off)';
       const usdWordsH = Math.max(
         invDim(24),
@@ -1247,23 +1307,23 @@ function renderLineItemsTable(doc: PDFKit.PDFDocument, input: InvoicePdfInput, s
       if (input.cgstInr != null && input.cgstInr > 0) {
         addAmountRow(
           `CGST @ ${fmtPct(input.cgstPercent ?? 9)}%`,
-          fmtInr(input.cgstInr),
+          fmtPlainInr(input.cgstInr),
           false,
-          taxAddPlaced ? undefined : 'Add',
+          taxAddPlaced ? undefined : 'Add:',
         );
         taxAddPlaced = true;
       }
       if (input.sgstInr != null && input.sgstInr > 0) {
         addAmountRow(
           `SGST @ ${fmtPct(input.sgstPercent ?? 9)}%`,
-          fmtInr(input.sgstInr),
+          fmtPlainInr(input.sgstInr),
           false,
-          taxAddPlaced ? undefined : 'Add',
+          taxAddPlaced ? undefined : 'Add:',
         );
         taxAddPlaced = true;
       }
       const inrWords = input.amountInWordsInr
-        ? `Total Amount Receivable In Words- ${input.amountInWordsInr} (In INR) (Rounded Off)`
+        ? `Total Amount Receivable In Words- ${wordsWithPaisa(input.amountInWordsInr)} (In INR) (Rounded Off)`
         : 'Total Amount Receivable in INR (Rounded Off)';
       const inrWordsH = Math.max(
         invDim(24),
@@ -1295,27 +1355,27 @@ function renderLineItemsTable(doc: PDFKit.PDFDocument, input: InvoicePdfInput, s
     )) {
       addAmountRow(row.label, fmtInr(row.amount));
     }
-    addAmountRow('Total Gross Revenue in INR', fmtInr(input.grossAmount), true);
+    addAmountRow('Gross Amount in INR', fmtInr(input.grossAmount), true);
     let taxAddPlaced = false;
     if (input.cgstAmount > 0) {
       addAmountRow(
         `CGST @ ${fmtPct(input.cgstPercent ?? 9)}%`,
-        fmtInr(input.cgstAmount),
+        fmtPlainInr(input.cgstAmount),
         false,
-        taxAddPlaced ? undefined : 'Add',
+        taxAddPlaced ? undefined : 'Add:',
       );
       taxAddPlaced = true;
     }
     if (input.sgstAmount > 0) {
       addAmountRow(
         `SGST @ ${fmtPct(input.sgstPercent ?? 9)}%`,
-        fmtInr(input.sgstAmount),
+        fmtPlainInr(input.sgstAmount),
         false,
-        taxAddPlaced ? undefined : 'Add',
+        taxAddPlaced ? undefined : 'Add:',
       );
       taxAddPlaced = true;
     }
-    const wordsText = `Total Amount Receivable In Words- ${input.amountInWords} (In INR) (Rounded Off)`;
+    const wordsText = `Total Amount Receivable In Words- ${wordsWithPaisa(input.amountInWords)} (In INR) (Rounded Off)`;
     const wordsH = Math.max(
       invDim(24),
       measureCellHeight(doc, wordsText, labelW, { bold: true, size: 6.5 }),
@@ -1341,18 +1401,23 @@ function renderLineItemsTable(doc: PDFKit.PDFDocument, input: InvoicePdfInput, s
   return y + 4;
 }
 
+/** Reference bank block: bold label, regular value, one line per row, no blank rows. */
 function bankTableRows(input: InvoicePdfInput): Array<[string, string]> {
   const bank = input.bankDetails ?? {};
+  const isUsd = input.currencyCode === 'USD';
   return [
-    ['Bank Name:', bank.bankName ?? ''],
-    ['Branch:', bank.branchAddress ?? ''],
-    ['', ''],
-    ['', ''],
+    ['Bank Name :', bank.bankName ?? ''],
+    ['Branch Address :', bank.branchAddress ?? ''],
     ['Beneficiary Name :', bank.beneficiaryName ?? ''],
-    ['Beneficiary A/C No. for (USD/INR) :', bank.accountNumber ?? ''],
     ["Swift Code of Beneficiary's Bank :", bank.swiftCode ?? ''],
+    [isUsd ? 'USD Account Number :' : 'INR Account Number :', bank.accountNumber ?? ''],
+    ['MICR :', bank.micr ?? ''],
+    ['IFSC :', bank.ifscCode ?? ''],
+    ["Beneficiary's PAN :", input.company.pan ?? ''],
   ];
 }
+
+const BANK_ROW_H = invDim(12);
 
 function measureBankTableHeight(doc: PDFKit.PDFDocument, input: InvoicePdfInput): number {
   const w = CONTENT_W;
@@ -1364,8 +1429,7 @@ function measureBankTableHeight(doc: PDFKit.PDFDocument, input: InvoicePdfInput)
     invDim(16),
   );
   for (const [label, value] of bankTableRows(input)) {
-    const text = label && value ? `${label}${value}` : label || value;
-    total += text ? measureCellHeight(doc, text, w, { size: 7 }) : invDim(10);
+    total += measureCellHeight(doc, `${label} ${value}`, w, { size: 7 }, BANK_ROW_H, 2);
   }
   return total + 4;
 }
@@ -1380,85 +1444,29 @@ function renderBankTable(doc: PDFKit.PDFDocument, input: InvoicePdfInput, startY
   });
 
   const rows = bankTableRows(input);
-
   for (const [label, value] of rows) {
-    const text = label && value ? `${label}${value}` : label || value;
-    const h = text
-      ? measureCellHeight(doc, text, w, { size: 7 })
-      : invDim(10);
+    const h = measureCellHeight(doc, `${label} ${value}`, w, { size: 7 }, BANK_ROW_H, 2);
     y = ensureFlowSpace(doc, y, h);
-    y += drawCell(doc, x, y, w, h, text, { size: 7 });
+    strokeBox(doc, x, y, w, h);
+    doc.fontSize(invFs(7)).fillColor('#000');
+    const lineH = doc.font('Times-Bold').heightOfString('X', { lineGap: 0 });
+    const ty = y + Math.max(1, (h - lineH) / 2);
+    doc.font('Times-Bold').text(label, x + CELL_PAD, ty, { continued: true, lineBreak: false });
+    doc.font('Times-Roman').text(value ? ` ${value}` : '', { lineBreak: false });
+    y += h;
   }
   return y + 4;
 }
 
-function renderChandigarhBhsTermsBlock(
-  doc: PDFKit.PDFDocument,
-  input: InvoicePdfInput,
-  startY: number,
-): number {
-  let y = startY + 8;
-  doc.font('Helvetica-Bold').fontSize(invFs(8));
-  const title = 'Terms & Conditions:';
-  const titleH = doc.heightOfString(title, { width: CONTENT_W });
-  y = ensureFlowSpace(doc, y, titleH + invDim(14));
-  doc.text(title, MARGIN, y, { width: CONTENT_W, underline: true });
-  y += titleH + 4;
-
-  doc.font('Helvetica').fontSize(invFs(7));
-  const terms = chandigarhBhsTerms(input.company.name);
-  for (let i = 0; i < terms.length; i++) {
-    const text = `${i + 1}. ${terms[i]}`;
-    const h = doc.heightOfString(text, { width: CONTENT_W, lineGap: 1 });
-    y = ensureFlowSpace(doc, y, h + 4);
-    doc.text(text, MARGIN, y, { width: CONTENT_W, align: 'left', lineGap: 1, lineBreak: true });
-    y += h + 4;
-  }
-
-  y += 6;
-  const entityLine = `For ${input.company.name.trim() || 'BIRD AIRPORT SERVICES (MOHALI) PRIVATE LIMITED'}`;
-  const entityH = measureWrappedTextHeight(doc, entityLine, CONTENT_W, { bold: true, size: 8 });
-  y = ensureFlowSpace(doc, y, entityH + invDim(28));
-  doc.font('Helvetica-Bold').fontSize(invFs(8)).text(entityLine, MARGIN, y, { width: CONTENT_W });
-  y += entityH + invDim(18);
-
-  doc.font('Helvetica').fontSize(invFs(8));
-  doc.text('Authorised Signatory', MARGIN + 24, y);
-  doc.text('Authorised Signatory', MARGIN + CONTENT_W - 130, y);
-  y += invDim(20);
-
-  return y;
+/**
+ * Terms wording stays station-specific (IXC BHS keeps its own clauses); only the
+ * placement/typography is shared so every invoice reads the same.
+ */
+function resolveInvoiceTermsForLayout(input: InvoicePdfInput): string[] {
+  return isChandigarhBhsLayout(input) ? chandigarhBhsTerms(input.company.name) : invoiceTerms(input.company.name);
 }
 
-function renderChennaiTermsBelowParticulars(
-  doc: PDFKit.PDFDocument,
-  input: InvoicePdfInput,
-  startY: number,
-): number {
-  let y = startY + 8;
-  doc.font('Helvetica-Bold').fontSize(invFs(8));
-  const title = 'Other Terms & Conditions :';
-  const titleH = doc.heightOfString(title, { width: CONTENT_W });
-  y = ensureFlowSpace(doc, y, titleH + invDim(14));
-  doc.text(title, MARGIN, y, { width: CONTENT_W, underline: true });
-  y += titleH + 4;
-
-  doc.font('Helvetica').fontSize(invFs(7));
-  const terms = invoiceTerms(input.company.name);
-  for (let i = 0; i < terms.length; i++) {
-    const text = `${i + 1}. ${terms[i]}`;
-    const h = doc.heightOfString(text, { width: CONTENT_W, lineGap: 1 });
-    y = ensureFlowSpace(doc, y, h + 4);
-    doc.text(text, MARGIN, y, { width: CONTENT_W, align: 'justify', lineGap: 1, lineBreak: true });
-    y += h + 4;
-  }
-  return y + 6;
-}
-
-function isRafInvoiceLayout(input: Pick<InvoicePdfInput, 'serviceCode'>): boolean {
-  return String(input.serviceCode ?? '').trim().toUpperCase() === 'RAF';
-}
-
+/** Page 1 is identical for every station / service: brand, IRN, header grid, particulars, bank block. */
 function renderPage1(doc: PDFKit.PDFDocument, input: InvoicePdfInput): number {
   let y = renderBrandHeader(doc, input);
   y += drawCell(doc, MARGIN, y, CONTENT_W, invDim(16), `IRN :- ${input.irn?.trim() ?? ''}`, {
@@ -1467,56 +1475,35 @@ function renderPage1(doc: PDFKit.PDFDocument, input: InvoicePdfInput): number {
   });
   y = renderHeaderGrid(doc, input, y);
   y = renderLineItemsTable(doc, input, y);
-  if (isChandigarhBhsLayout(input)) {
-    y = renderChandigarhBhsTermsBlock(doc, input, y);
-  } else if (isRafInvoiceLayout(input)) {
-    // RAF: same Chennai terms text as SI/MA/327, placed directly under particulars.
-    y = renderChennaiTermsBelowParticulars(doc, input, y);
-  }
   return renderBankTable(doc, input, y);
 }
 
-type Page2Layout = {
-  /** Continue below page-1 body instead of forcing a fresh page. */
-  continueFromY?: number;
-  /** Tighter vertical gaps — font sizes unchanged. */
-  compact?: boolean;
-};
+/** Page 2 is identical for every invoice: notes title, terms, contacts, save-paper line, signatories. */
+function renderPage2(doc: PDFKit.PDFDocument, input: InvoicePdfInput) {
+  let y = FLOW_TOP_Y;
 
-function renderPage2(doc: PDFKit.PDFDocument, input: InvoicePdfInput, layout: Page2Layout = {}) {
-  const compact = layout.compact === true;
-  const continuedOnSamePage =
-    layout.continueFromY != null && layout.continueFromY > FLOW_TOP_Y + invDim(12);
-  let y = continuedOnSamePage ? layout.continueFromY! : FLOW_TOP_Y;
-
-  if (!continuedOnSamePage) {
-    doc.moveTo(MARGIN, y).lineTo(MARGIN + CONTENT_W, y).lineWidth(LINE_W).strokeColor(BORDER).stroke();
-    y += compact ? 6 : 8;
-  } else {
-    y += compact ? 4 : 8;
-  }
-
-  doc.font('Helvetica-Bold').fontSize(invFs(9)).fillColor('#000');
-  doc.text(`Notes to Invoice No. :- ${input.invoiceNumber}`, MARGIN, y, { width: CONTENT_W, align: 'center' });
-  y += compact ? invDim(12) : invDim(16);
   doc.moveTo(MARGIN, y).lineTo(MARGIN + CONTENT_W, y).lineWidth(LINE_W).strokeColor(BORDER).stroke();
-  y += compact ? 6 : 10;
-  if (!isChandigarhCompactFlow(input) && !isRafInvoiceLayout(input)) {
-    doc.font('Helvetica-Bold').fontSize(invFs(8)).text('Other Terms & Conditions :', MARGIN, y, { underline: true });
-    y += invDim(14);
+  y += 8;
 
-    doc.font('Helvetica').fontSize(invFs(7));
-    const terms = invoiceTerms(input.company.name);
-    for (let i = 0; i < terms.length; i++) {
-      const text = `${i + 1}. ${terms[i]}`;
-      const h = doc.heightOfString(text, { width: CONTENT_W, lineGap: 1 });
-      y = ensureFlowSpace(doc, y, h + (compact ? 3 : 5));
-      doc.text(text, MARGIN, y, { width: CONTENT_W, align: 'justify', lineGap: 1, lineBreak: true });
-      y += h + (compact ? 3 : 5);
-    }
+  doc.font('Times-Bold').fontSize(invFs(9)).fillColor('#000');
+  doc.text(`Notes to Invoice No. :- ${input.invoiceNumber}`, MARGIN, y, { width: CONTENT_W, align: 'center' });
+  y += invDim(16);
+  doc.moveTo(MARGIN, y).lineTo(MARGIN + CONTENT_W, y).lineWidth(LINE_W).strokeColor(BORDER).stroke();
+  y += 10;
 
-    y += compact ? 3 : 6;
+  doc.font('Times-Bold').fontSize(invFs(8)).text('Other Terms & Conditions :', MARGIN, y, { underline: true });
+  y += invDim(14);
+
+  doc.font('Times-Roman').fontSize(invFs(7));
+  const terms = resolveInvoiceTermsForLayout(input);
+  for (let i = 0; i < terms.length; i++) {
+    const text = `${i + 1}. ${terms[i]}`;
+    const h = doc.heightOfString(text, { width: CONTENT_W, lineGap: 1 });
+    y = ensureFlowSpace(doc, y, h + 5);
+    doc.text(text, MARGIN, y, { width: CONTENT_W, align: 'justify', lineGap: 1, lineBreak: true });
+    y += h + 5;
   }
+  y += 6;
   const cols = [
     { label: 'Location', w: 72 },
     { label: 'Name', w: 88 },
@@ -1582,22 +1569,22 @@ function renderPage2(doc: PDFKit.PDFDocument, input: InvoicePdfInput, layout: Pa
     y += rowH;
   }
 
-  y += compact ? 8 : 14;
+  y += 14;
   const savePaperH = measureWrappedTextHeight(
     doc,
     CHENNAI_INVOICE_FOOTER.savePaperMessage,
     CONTENT_W,
     { bold: true, size: 8 },
   );
-  y = ensureFlowSpace(doc, y, savePaperH + (compact ? invDim(32) : invDim(50)));
-  doc.font('Helvetica-Bold').fontSize(invFs(8)).text(CHENNAI_INVOICE_FOOTER.savePaperMessage, MARGIN, y, {
+  y = ensureFlowSpace(doc, y, savePaperH + invDim(50));
+  doc.font('Times-Bold').fontSize(invFs(8)).text(CHENNAI_INVOICE_FOOTER.savePaperMessage, MARGIN, y, {
     width: CONTENT_W,
     align: 'center',
     lineBreak: true,
   });
-  y += compact ? invDim(24) : invDim(36);
+  y += invDim(36);
   y = ensureFlowSpace(doc, y, invDim(12));
-  doc.font('Helvetica').fontSize(invFs(8));
+  doc.font('Times-Roman').fontSize(invFs(8));
   doc.text(CHENNAI_INVOICE_FOOTER.authorisedSignatoryLabel, MARGIN + 24, y);
   doc.text(CHENNAI_INVOICE_FOOTER.authorisedSignatoryLabel, MARGIN + CONTENT_W - 130, y);
 }
@@ -1610,14 +1597,10 @@ export function buildInvoicePdfBuffer(input: InvoicePdfInput): Promise<Buffer> {
     doc.on('end', () => resolve(Buffer.concat(chunks)));
     doc.on('error', reject);
 
-    const compactFlow = isChandigarhCompactFlow(input) || isRafInvoiceLayout(input);
-    const page1EndY = renderPage1(doc, input);
-    if (compactFlow) {
-      renderPage2(doc, input, { continueFromY: page1EndY, compact: true });
-    } else {
-      doc.addPage();
-      renderPage2(doc, input);
-    }
+    // One flow for every invoice: page 1 body, then notes/terms on a fresh page.
+    renderPage1(doc, input);
+    doc.addPage();
+    renderPage2(doc, input);
 
     addBufferedPageFooters(doc, input);
     doc.end();

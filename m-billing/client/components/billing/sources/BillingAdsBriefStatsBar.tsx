@@ -86,7 +86,7 @@ function WchPaletteChip({
       htmlFor={checkboxId}
       title={title}
       aria-label={title}
-      className={`col-span-2 flex min-h-[2.65rem] min-w-0 cursor-pointer items-start gap-1.5 rounded-lg border px-2 py-1.5 text-left sm:col-span-2 ${
+      className={`billing-palette-chip col-span-2 flex min-h-[2.65rem] min-w-0 cursor-pointer items-start gap-1.5 rounded-lg border px-2 py-1.5 text-left sm:col-span-2 ${
         selected ? 'ring-2 ring-offset-1' : ''
       }`}
       style={{
@@ -165,7 +165,7 @@ function MotorisedNbWbPaletteChip({
       htmlFor={checkboxId}
       title={title}
       aria-label={title}
-      className={`col-span-2 flex min-h-[2.65rem] min-w-0 cursor-pointer items-start gap-1.5 rounded-lg border px-2 py-1.5 text-left sm:col-span-2 ${
+      className={`billing-palette-chip col-span-2 flex min-h-[2.65rem] min-w-0 cursor-pointer items-start gap-1.5 rounded-lg border px-2 py-1.5 text-left sm:col-span-2 ${
         selected ? 'ring-2 ring-offset-1' : ''
       }`}
       style={{
@@ -244,7 +244,7 @@ function PaletteChip({
       htmlFor={checkboxId}
       title={title}
       aria-label={title}
-      className={`flex min-h-9 min-w-0 cursor-pointer items-center gap-1 rounded-lg border px-1.5 py-1 text-left ${
+      className={`billing-palette-chip flex min-h-9 min-w-0 cursor-pointer items-center gap-1 rounded-lg border px-1.5 py-1 text-left ${
         selected ? 'ring-2 ring-offset-1' : ''
       }`}
       style={{

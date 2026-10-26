@@ -73,6 +73,7 @@ type SettingsDoc = {
     address?: string;
     gstin?: string;
     pan?: string;
+    cin?: string;
   };
   bankDetails?: {
     bankName?: string;
@@ -111,6 +112,7 @@ export function StationProfilePage({ api }: Props) {
     companyAddress: '',
     companyGstin: '',
     companyPan: '',
+    companyCin: '',
     gstStateCode: '',
     defaultPaymentTerms: '',
     monthCloseLockDay: '',
@@ -146,6 +148,7 @@ export function StationProfilePage({ api }: Props) {
         companyAddress: doc.companyLegalEntity?.address ?? '',
         companyGstin: doc.companyLegalEntity?.gstin ?? '',
         companyPan: doc.companyLegalEntity?.pan ?? '',
+        companyCin: doc.companyLegalEntity?.cin ?? '',
         gstStateCode: doc.gstStateCode ?? '',
         defaultPaymentTerms: doc.defaultPaymentTerms ?? '',
         monthCloseLockDay:
@@ -188,6 +191,7 @@ export function StationProfilePage({ api }: Props) {
           address: form.companyAddress || undefined,
           gstin: form.companyGstin || undefined,
           pan: form.companyPan || undefined,
+          cin: form.companyCin.trim() || undefined,
         },
         bankDetails: {
           bankName: form.bankName || undefined,
@@ -355,6 +359,14 @@ export function StationProfilePage({ api }: Props) {
               id="companyPan"
               value={form.companyPan}
               onChange={(v) => setForm((f) => ({ ...f, companyPan: v }))}
+            />
+          </FieldGroup>
+          <FieldGroup label="CIN" htmlFor="companyCin" hint="Corporate Identification Number from MCA">
+            <TextInput
+              id="companyCin"
+              value={form.companyCin}
+              onChange={(v) => setForm((f) => ({ ...f, companyCin: v.toUpperCase() }))}
+              placeholder="U62200DL2008PTC184155"
             />
           </FieldGroup>
           <FieldGroup label="Default payment terms" htmlFor="paymentTerms">

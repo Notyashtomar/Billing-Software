@@ -13,6 +13,8 @@ export type StationLegalDetails = {
   country: string;
   pincode: string;
   gstNumber: string;
+  /** Corporate Identification Number (MCA). Optional — printed on invoices when known. */
+  cin?: string;
 };
 
 export const STATION_LEGAL_DETAILS: StationLegalDetails[] = [
@@ -25,6 +27,7 @@ export const STATION_LEGAL_DETAILS: StationLegalDetails[] = [
     country: 'India',
     pincode: '110001',
     gstNumber: '07AADCB5921B1Z6',
+    cin: 'U62200DL2008PTC184155',
   },
   {
     cityAliases: ['Kochi', 'Cochin'],

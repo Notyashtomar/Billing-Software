@@ -165,6 +165,7 @@ type StationLegalProfile = {
   name: string;
   address: string;
   gstin: string;
+  cin: string;
   state: string;
 };
 
@@ -176,6 +177,7 @@ function resolveStationLegalProfile(stationCode: string): StationLegalProfile | 
     name: defaults.companyLegalEntity.name.toUpperCase(),
     address: defaults.companyLegalEntity.address.toUpperCase(),
     gstin: defaults.companyLegalEntity.gstin,
+    cin: defaults.companyLegalEntity.cin,
     state: GST_STATE_NAMES[defaults.gstStateCode] ?? '',
   };
 }
@@ -297,6 +299,8 @@ export function resolveInvoiceBankDefaults(
     beneficiaryName: bank?.beneficiaryName?.trim() || base.beneficiaryName || '',
     accountNumber: bank?.accountNumber?.trim() || base.accountNumber || '',
     swiftCode: bank?.swiftCode?.trim() || base.swiftCode || '',
+    ...(bank?.ifscCode?.trim() ? { ifscCode: bank.ifscCode.trim() } : {}),
+    ...(bank?.micr?.trim() ? { micr: bank.micr.trim() } : {}),
   };
 }
 
