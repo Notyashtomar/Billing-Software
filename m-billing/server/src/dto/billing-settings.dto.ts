@@ -27,6 +27,10 @@ export class CompanyLegalEntityDto {
   @IsOptional()
   @IsString()
   pan?: string;
+
+  @IsOptional()
+  @IsString()
+  cin?: string;
 }
 
 export class BankDetailsDto {

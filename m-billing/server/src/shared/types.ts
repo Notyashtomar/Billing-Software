@@ -288,6 +288,8 @@ export interface BillingSettings {
     name: string;
     address?: string;
     gstin?: string;
+    pan?: string;
+    cin?: string;
     logoUrl?: string;
   };
   nativeBillingEnabled?: boolean;

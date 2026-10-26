@@ -24,6 +24,8 @@ export interface InvoicePdfBankDetails {
   beneficiaryName?: string;
   accountNumber?: string;
   swiftCode?: string;
+  ifscCode?: string;
+  micr?: string;
 }
 
 export interface InvoicePdfContactRow {

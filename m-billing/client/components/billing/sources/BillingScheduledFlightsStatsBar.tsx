@@ -50,7 +50,7 @@ function FilterableStatCard({
     <label
       htmlFor={checkboxId}
       title={label}
-      className={`flex min-h-10 min-w-[10.5rem] flex-1 cursor-pointer items-center gap-1.5 rounded-lg border px-2 py-1.5 text-left ${
+      className={`billing-palette-chip flex min-h-10 min-w-[10.5rem] flex-1 cursor-pointer items-center gap-1.5 rounded-lg border px-2 py-1.5 text-left ${
         selected ? 'ring-2 ring-offset-1' : ''
       }`}
       style={{

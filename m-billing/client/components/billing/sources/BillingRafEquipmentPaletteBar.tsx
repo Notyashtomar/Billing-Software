@@ -80,7 +80,7 @@ export function BillingRafEquipmentPaletteBar({
                     htmlFor={checkboxId}
                     title={rafEquipmentHoverTitle(item, count)}
                     aria-label={rafEquipmentHoverTitle(item, count)}
-                    className={`flex min-h-[2.65rem] min-w-0 cursor-pointer items-start gap-1.5 rounded-lg border px-2 py-1.5 text-left ${
+                    className={`billing-palette-chip flex min-h-[2.65rem] min-w-0 cursor-pointer items-start gap-1.5 rounded-lg border px-2 py-1.5 text-left ${
                       selected ? 'ring-2 ring-offset-1' : ''
                     }`}
                     style={{

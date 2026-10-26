@@ -80,6 +80,8 @@ type SettingsLike = {
     beneficiaryName?: string;
     accountNumber?: string;
     swiftCode?: string;
+    ifscCode?: string;
+    micr?: string;
   };
 };
 

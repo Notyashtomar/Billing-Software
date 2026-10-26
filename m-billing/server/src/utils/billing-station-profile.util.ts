@@ -14,6 +14,7 @@ export type BillingStationProfileDefaults = {
     address: string;
     gstin: string;
     pan: string;
+    cin: string;
   };
 };
 
@@ -56,12 +57,24 @@ export function resolveBillingStationProfileDefaults(
       address: formatStationLegalAddress(details),
       gstin,
       pan: panFromGstin(gstin),
+      cin: details.cin?.trim().toUpperCase() ?? '',
     },
   };
 }
 
+/**
+ * Sample values from the airport-setup Excel template. If they were imported
+ * as-is they are placeholders, not real registrations, so treat them as empty.
+ */
+const TEMPLATE_PLACEHOLDERS = new Set([
+  '33AAAAA0000A1Z5',
+  'AAAAA0000A',
+  'REGISTERED ADDRESS, CITY, PIN',
+]);
+
 function isBlank(value: unknown): boolean {
-  return !String(value ?? '').trim();
+  const text = String(value ?? '').trim();
+  return !text || TEMPLATE_PLACEHOLDERS.has(text.toUpperCase());
 }
 
 /**
@@ -87,10 +100,14 @@ export function mergeBillingSettingsWithRegistry(
     name: merged.companyLegalEntity?.name ?? '',
     ...(merged.companyLegalEntity ?? {}),
   };
-  for (const key of ['name', 'address', 'gstin', 'pan'] as const) {
+  for (const key of ['name', 'address', 'gstin', 'pan', 'cin'] as const) {
     if (isBlank(entity[key]) && defaults.companyLegalEntity[key]) {
       entity[key] = defaults.companyLegalEntity[key];
       changed = true;
+      if (key === 'gstin' && merged.gstStateCode !== defaults.gstStateCode) {
+        // A placeholder GSTIN carried a placeholder state code with it.
+        merged.gstStateCode = defaults.gstStateCode;
+      }
     }
   }
   if (changed || merged.companyLegalEntity == null) {

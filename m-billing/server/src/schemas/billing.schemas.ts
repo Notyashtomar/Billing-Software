@@ -929,6 +929,8 @@ export class BillingSettings {
     address?: string;
     gstin?: string;
     pan?: string;
+    /** Corporate Identification Number (MCA), e.g. U62200DL2008PTC184155. */
+    cin?: string;
     logoUrl?: string;
   };
 
