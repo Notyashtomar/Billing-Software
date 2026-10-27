@@ -17,6 +17,7 @@ import { Logger, Module } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from '../app.module';
 import { ExcelImportModule } from './excel-import.module';
+import { resolveDelhiScheduledEquipmentName } from './delhi-equipment-name-map';
 import { ScheduledEquipmentImportService } from './scheduled-equipment-import.service';
 
 /** CLI-only graph. The billing API shell does not register the Excel import providers. */
@@ -99,6 +100,7 @@ async function bootstrap() {
       fromYmd,
       toYmd,
       onlySerials,
+      resolveEquipmentName: resolveDelhiScheduledEquipmentName,
       preferDisplayedDmyDates: true,
       dedupeLines: true,
     });

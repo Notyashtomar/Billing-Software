@@ -25,8 +25,9 @@ describe('ads equipment annexure', () => {
     expect(adsAnnexureColumnLabel('Scheduled - Equipment - ASU-WB')).toBe('ASU-WB');
     expect(adsAnnexureColumnLabel('Motorized Passenger Step Ladder')).toBe('PSL-WB');
     expect(adsAnnexureColumnLabel('Crew Coach')).toBe('CREW-COACH');
-    expect(adsAnnexureColumnLabel('WCHR')).toBe('WCHR/S');
-    expect(adsAnnexureColumnLabel('Wheel Chair - WCHS')).toBe('WCHR/S');
+    expect(adsAnnexureColumnLabel('WCHR')).toBe('WCHR');
+    expect(adsAnnexureColumnLabel('Wheel Chair - WCHS')).toBe('WCHS');
+    expect(adsAnnexureColumnLabel('Wheel Chair - WCHR/S')).toBe('WCHR/S');
     expect(adsAnnexureColumnLabel('WCHC')).toBe('WCHC');
   });
 
@@ -39,7 +40,7 @@ describe('ads equipment annexure', () => {
     expect(rules.map((rule) => rule.serviceCode)).toEqual(['GPU-NB']);
   });
 
-  it('lists used flights and splits WCHR/S into Total then CHARGEABLE when FOC applies', () => {
+  it('lists chargeable counts and leaves free-of-charge usage off the annexure', () => {
     const rules = [
       {
         serviceCode: 'Scheduled - Equipment - WCHR',
@@ -93,15 +94,10 @@ describe('ads equipment annexure', () => {
       rules,
     );
 
-    expect(table.columns.map((column) => column.label)).toEqual([
-      'ACU-NB',
-      'Total WCHR/S',
-      'CHARGEABLE WCHR/S',
-    ]);
-    expect(table.rows).toHaveLength(3);
+    expect(table.columns.map((column) => column.label)).toEqual(['ACU-NB', 'WCHR']);
+    expect(table.rows).toHaveLength(2);
     const acuKey = table.columns.find((column) => column.label === 'ACU-NB')!.key;
-    const usedKey = table.columns.find((column) => column.label === 'Total WCHR/S')!.key;
-    const chargedKey = table.columns.find((column) => column.label === 'CHARGEABLE WCHR/S')!.key;
+    const wchrKey = table.columns.find((column) => column.label === 'WCHR')!.key;
     expect(table.rows[0]).toMatchObject({
       serialNo: '214149',
       flightNo: 'LX146/147',
@@ -109,15 +105,10 @@ describe('ads equipment annexure', () => {
       atdDate: '02/09/26',
       counts: { [acuKey]: 1 },
     });
-    expect(table.rows[1].serialNo).toBe('214150');
-    expect(table.rows[1].counts[usedKey]).toBe(4);
-    expect(table.rows[1].counts[chargedKey]).toBeUndefined();
-    expect(table.rows[2].serialNo).toBe('214151');
-    expect(table.rows[2].counts[usedKey]).toBe(12);
-    expect(table.rows[2].counts[chargedKey]).toBe(2);
+    expect(table.rows[1].serialNo).toBe('214151');
+    expect(table.rows[1].counts[wchrKey]).toBe(2);
     expect(table.totals[acuKey]).toBe(1);
-    expect(table.totals[usedKey]).toBe(16);
-    expect(table.totals[chargedKey]).toBe(2);
+    expect(table.totals[wchrKey]).toBe(2);
   });
 
   it('combines WCHR and WCHS on one flight before applying FOC', () => {
@@ -155,16 +146,10 @@ describe('ads equipment annexure', () => {
         },
       ],
     );
-    expect(table.columns.map((column) => column.label)).toEqual([
-      'Total WCHR/S',
-      'CHARGEABLE WCHR/S',
-    ]);
+    expect(table.columns.map((column) => column.label)).toEqual(['WCHR/S']);
     expect(table.rows).toHaveLength(1);
-    const usedKey = table.columns[0]!.key;
-    const chargedKey = table.columns[1]!.key;
-    expect(table.rows[0]!.counts[usedKey]).toBe(41);
+    const chargedKey = table.columns[0]!.key;
     expect(table.rows[0]!.counts[chargedKey]).toBe(31);
-    expect(table.totals[usedKey]).toBe(41);
     expect(table.totals[chargedKey]).toBe(31);
   });
 
@@ -294,15 +279,9 @@ describe('ads equipment annexure', () => {
         },
       ],
     );
-    expect(table.columns.map((column) => column.label)).toEqual([
-      'Total WCHR/S',
-      'CHARGEABLE WCHR/S',
-      'GPU-140KV',
-    ]);
-    const usedKey = table.columns[0]!.key;
-    const chargedKey = table.columns[1]!.key;
-    const gpuKey = table.columns[2]!.key;
-    expect(table.rows[0]!.counts[usedKey]).toBe(20);
+    expect(table.columns.map((column) => column.label)).toEqual(['WCHR', 'GPU-140KV']);
+    const chargedKey = table.columns[0]!.key;
+    const gpuKey = table.columns[1]!.key;
     expect(table.rows[0]!.counts[chargedKey]).toBe(10);
     expect(table.rows[0]!.counts[gpuKey]).toBe(9);
   });
@@ -351,9 +330,6 @@ describe('ads equipment annexure', () => {
         },
       ],
     );
-    expect(table.columns.map((column) => column.label)).toEqual([
-      'Total CREW-COACH',
-      'CHARGEABLE CREW-COACH',
-    ]);
+    expect(table.columns.map((column) => column.label)).toEqual(['CREW-COACH']);
   });
 });

@@ -21,6 +21,7 @@ import { join } from 'path';
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from '../app.module';
+import { resolveDelhiScheduledEquipmentName } from './delhi-equipment-name-map';
 import { ScheduledEquipmentImportService } from './scheduled-equipment-import.service';
 
 const cliLogger = new Logger('SeedDelAugEquipmentExcelCli');
@@ -126,6 +127,7 @@ async function bootstrap() {
       fromYmd,
       toYmd,
       onlySerials,
+      resolveEquipmentName: resolveDelhiScheduledEquipmentName,
     });
     cliLogger.log(JSON.stringify(res, null, 2));
 

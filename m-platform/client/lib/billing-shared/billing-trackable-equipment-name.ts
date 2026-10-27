@@ -435,9 +435,16 @@ const EQUIPMENT_ENTRIES: readonly NameEntry[] = [
   { full: 'Aircraft Pin', kind: 'equipment', aliases: ['PIN', 'Aircraft Pin'] },
   { full: 'Potable Water', kind: 'equipment', aliases: ['PW', 'Potable Water'] },
   {
-    full: 'Wheel Chair Battery',
+    full: 'Wheel Break Cooling',
     kind: 'equipment',
-    aliases: ['WBC', 'Wheel Chair Battery'],
+    aliases: [
+      'WBC',
+      'WBCF',
+      'Wheel Break Cooling',
+      'Wheel Brake Cooling',
+      'Wheel Chair Battery',
+      'Wheelchair Battery',
+    ],
   },
   { full: 'Water Service', kind: 'equipment', aliases: ['WS', 'Water Service'] },
   {
@@ -554,9 +561,13 @@ const MANPOWER_ENTRIES: readonly NameEntry[] = [
       'Additional Utility Helper',
       'Additional UH',
       'Add. UH',
-      'Utility Hand',
       'UA',
     ],
+  },
+  {
+    full: 'Utility Hand',
+    kind: 'manpower',
+    aliases: ['Utility Hand'],
   },
   {
     full: 'White Collar',

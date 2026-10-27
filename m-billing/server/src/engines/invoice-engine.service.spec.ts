@@ -537,7 +537,7 @@ describe('InvoiceEngineService', () => {
 
     // Flight1: max(0,2−1)=1; Flight2: max(0,5−1)=4 → charged 5 (not period pool 7−1).
     expect(composed.lines).toHaveLength(1);
-    expect(composed.lines[0].description).toBe('Wheel Chair - WCHR/S');
+    expect(composed.lines[0].description).toBe('Wheel Chair - WCHR');
     expect(composed.lines[0].quantity).toBe(5);
     expect(composed.lines[0].unitPrice).toBe(850);
     expect(composed.lines[0].lineAmountExclTax).toBe(4250);
@@ -1278,7 +1278,7 @@ describe('InvoiceEngineService', () => {
     expect(composed.lines[0].unitPrice).toBe(1050);
     expect(composed.lines[0].lineAmountExclTax).toBe(1050);
     expect(composed.lines[0].uom).toBe('Per Usage');
-    expect(composed.lines[0].description).toBe('Wheel Chair - WCHR/S');
+    expect(composed.lines[0].description).toBe('Wheel Chair - WCHR');
   });
 
   it('ADS: WCHR and WCHS share one FOC and bill as Wheel Chair - WCHR/S', async () => {

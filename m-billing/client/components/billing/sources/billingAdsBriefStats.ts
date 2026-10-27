@@ -28,7 +28,6 @@ export const BILLING_ADS_BRIEF_KEYS = [
   'csh',
   'srCsa',
   'sup',
-  'uh',
   'csa',
   'ldl',
   'do',
@@ -65,6 +64,7 @@ export const BILLING_ADS_BRIEF_KEYS = [
   'pin',
   'pw',
   'baggageCart',
+  'blueCollar',
   'exteriorCleaning',
   'wcb',
   'pd',
@@ -119,7 +119,6 @@ export const BILLING_ADS_BRIEF_FULL_NAMES: Record<BillingAdsBriefKey, string> = 
   csh: 'Customer Service Host',
   srCsa: 'Senior Customer Service Agent',
   sup: 'Supervisor',
-  uh: 'Unit Handling',
   csa: 'Customer Service Agent',
   ldl: 'Lower Deck Loader',
   do: 'Duty Officer',
@@ -141,7 +140,7 @@ export const BILLING_ADS_BRIEF_FULL_NAMES: Record<BillingAdsBriefKey, string> = 
   fe: 'Fire Extinguisher',
   trestle: 'Trestle',
   marshaller: 'Marshaller',
-  additionalUh: 'Additional Utility Hand',
+  additionalUh: 'Utility Hand',
   // Short codes seen in FHR equipmentDetails without a documented full form.
   ecNb: 'EC - NB',
   cbm: 'CBM',
@@ -153,8 +152,9 @@ export const BILLING_ADS_BRIEF_FULL_NAMES: Record<BillingAdsBriefKey, string> = 
   pin: 'Aircraft Pin',
   pw: 'Potable Water',
   baggageCart: 'Baggage Cart',
+  blueCollar: 'Blue Collar',
   exteriorCleaning: 'Exterior Cleaning',
-  wcb: 'Wheel Chair Battery',
+  wcb: 'Wheel Break Cooling',
   pd: 'Pallet Dollies',
 };
 
@@ -524,11 +524,6 @@ const DEFINITIONS: ReadonlyArray<
     aliases: ['Sup', 'SUP', 'Supervisor', 'SVP'],
   },
   {
-    key: 'uh',
-    label: 'UH',
-    aliases: ['UH', 'Unit Handling', 'Unskilled Helper'],
-  },
-  {
     key: 'csa',
     label: 'CSA',
     aliases: [
@@ -703,12 +698,18 @@ const DEFINITIONS: ReadonlyArray<
   },
   {
     key: 'additionalUh',
-    label: 'Add. UH',
+    label: 'Utility Hand',
     aliases: [
+      'Utility Hand',
+      'UH',
+      'U/H',
+      'Unit Handling',
+      'Unskilled Helper',
       'Additional Utility Hand',
       'Addl Utility Hand',
       'Additional Utility Helper',
       'Additional UH',
+      'Add. UH',
     ],
   },
   { key: 'ecNb', label: 'EC-NB', aliases: ['EC-NB', 'EC NB', 'ECNB'] },
@@ -742,6 +743,17 @@ const DEFINITIONS: ReadonlyArray<
     aliases: ['BC', 'Baggage Cart'],
   },
   {
+    key: 'blueCollar',
+    label: 'Blue Collar',
+    aliases: [
+      'Blue Collar',
+      'Blue collar',
+      'Additional Blue Collar',
+      'Additional blue collar',
+      'Manpower (Blue collar)',
+    ],
+  },
+  {
     key: 'exteriorCleaning',
     label: 'Exterior Cleaning',
     aliases: [
@@ -752,8 +764,15 @@ const DEFINITIONS: ReadonlyArray<
   },
   {
     key: 'wcb',
-    label: 'WBC',
-    aliases: ['WBC', 'Wheel Chair Battery', 'Wheelchair Battery'],
+    label: 'Wheel Break Cooling',
+    aliases: [
+      'WBC',
+      'WBCF',
+      'Wheel Break Cooling',
+      'Wheel Brake Cooling',
+      'Wheel Chair Battery',
+      'Wheelchair Battery',
+    ],
   },
   {
     key: 'pd',
@@ -780,13 +799,13 @@ const ADS_BRIEF_MANPOWER_KEYS: readonly BillingAdsBriefKey[] = [
   'csa',
   'srCsa',
   'sup',
-  'uh',
   'additionalUh',
   'do',
   'csh',
   'marshaller',
   'ww',
   'exteriorCleaning',
+  'blueCollar',
 ];
 
 const ADS_BRIEF_MOTORISED_KEYS: readonly BillingAdsBriefKey[] = [
@@ -1832,6 +1851,12 @@ export function adsRowUsedUnits(row: BillingSourceRow, uomOverride?: string): nu
       ? remarksFromField
       : parseAdsRemarksQuantity(op.remarks ?? op.Remarks ?? op.remark);
 
+  const briefKey = primaryBriefKey(row);
+  if (briefKey && ADS_BRIEF_MANPOWER_KEYS.includes(briefKey)) {
+    // Per Hour: started hours with a 5-minute grace, times the people on the line.
+    return manpowerBillableUnits(row, uom, qty);
+  }
+
   if (override && isTimeBasedAdsUom(uom)) {
     const units = adsTimeBasedUnitsFromMinutes(uom, adsRowEngagementMinutes(row));
     return capTurnaroundCrewCoachUsedClient(toWholeAdsUnits(units ?? 0), row, particular);
@@ -1952,6 +1977,8 @@ export function adsRowChargedQuantity(row: BillingSourceRow, uomOverride?: strin
   }
 
   const used = adsRowUsedUnits(row, override || undefined);
+  const briefKey = primaryBriefKey(row);
+  if (briefKey && ADS_BRIEF_MANPOWER_KEYS.includes(briefKey)) return used;
   const free = isTimeBasedAdsUom(override || adsRowDisplayUom(row))
     ? 0
     : adsRowFreeAllowance(row);
@@ -1964,10 +1991,50 @@ export function adsRowChargedQuantity(row: BillingSourceRow, uomOverride?: strin
  * `equipment_quantity`). Does **not** multiply by usage hours — GPU Per Hour
  * billing hours stay on invoice only, not palette totals.
  */
+/**
+ * Headcount on a manpower line.
+ * `00:50 (04 UH PROVIDED FOR WHEEL COOLING)` and `(04 PROVIDED FOR WHEEL COOLING` → 4.
+ */
+export function adsManpowerHeadcount(row: BillingSourceRow): number | null {
+  const briefKey = primaryBriefKey(row);
+  if (!briefKey || !ADS_BRIEF_MANPOWER_KEYS.includes(briefKey)) return null;
+  const op = (row.operationalData ?? {}) as Record<string, unknown>;
+  const remarks = String(op.remarks ?? op.Remarks ?? op.remark ?? '');
+  const staff = remarks.match(/(\d{1,3})\s*staffs?\b/i);
+  if (staff) {
+    const n = Number(staff[1]);
+    if (Number.isFinite(n) && n > 0) return n;
+  }
+  const provided = remarks.match(/\(\s*(\d{1,3})\b[^)\n]{0,40}PROVIDED\b/i);
+  if (!provided) return null;
+  const n = Number(provided[1]);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+function manpowerPeople(row: BillingSourceRow, qty: number): number {
+  return adsManpowerHeadcount(row) ?? qty;
+}
+
+/** Per Hour manpower: started hours (5-minute grace) × people on the line. */
+function manpowerBillableUnits(row: BillingSourceRow, uom: string, qty: number): number {
+  const people = manpowerPeople(row, qty);
+  if (!isAdsHourlyUom(uom)) return toWholeAdsUnits(people);
+  const minutes = adsRowEngagementMinutes(row);
+  const hours = minutes == null ? null : adsTimeBasedUnitsFromMinutes(uom, minutes);
+  if (hours == null || hours <= 0) return toWholeAdsUnits(people);
+  return toWholeAdsUnits(hours * people);
+}
+
 export function adsRowOperationalQuantity(row: BillingSourceRow): number {
+  const briefKey = primaryBriefKey(row);
   const op = (row.operationalData ?? {}) as Record<string, unknown>;
   const qtyRaw = Number(op.qty ?? op.equipment_quantity ?? op.quantity ?? 1);
   const qty = Number.isFinite(qtyRaw) && qtyRaw > 0 ? qtyRaw : 1;
+  if (briefKey && ADS_BRIEF_MANPOWER_KEYS.includes(briefKey)) {
+    const rate = (row.rateMatch ?? {}) as Record<string, unknown>;
+    const uom = String(rate.uom ?? op.adsUom ?? op.uom ?? '').trim();
+    return manpowerBillableUnits(row, uom, qty);
+  }
   return toWholeAdsUnits(qty);
 }
 

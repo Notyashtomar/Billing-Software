@@ -1,7 +1,11 @@
 import {
+  ADS_WCHR_PARTICULAR,
   ADS_WCHR_S_PARTICULAR,
+  ADS_WCHS_PARTICULAR,
   adsEquipmentFamilyKey,
   adsEquipmentLabelsMatch,
+  adsWheelchairChargedParticular,
+  adsWheelchairSubtype,
   contractBillsBmeEquipment,
   isBmeAdsEquipmentLabel,
   isWchrSCombinedAdsService,
@@ -38,6 +42,12 @@ describe('ads-equipment-inclusion.util', () => {
     expect(isWchrSCombinedAdsService('Wheel Chair - WCHC')).toBe(false);
     expect(adsEquipmentLabelsMatch('WCHR', 'WCHS')).toBe(true);
     expect(adsEquipmentLabelsMatch('WCHR', 'WCHC')).toBe(false);
+    expect(adsWheelchairSubtype('Wheel Chair - WCHR', 'Wheel Chair - WCHR/S')).toBe('WCHR');
+    expect(adsWheelchairSubtype('WCHS')).toBe('WCHS');
+    expect(adsWheelchairSubtype('WCHR', 'WCHS')).toBe('BOTH');
+    expect(adsWheelchairChargedParticular({ wchr: true, wchs: false })).toBe(ADS_WCHR_PARTICULAR);
+    expect(adsWheelchairChargedParticular({ wchr: false, wchs: true })).toBe(ADS_WCHS_PARTICULAR);
+    expect(adsWheelchairChargedParticular({ wchr: true, wchs: true })).toBe(ADS_WCHR_S_PARTICULAR);
   });
 
   it('prices FHR GPU-90KV from contract GPU-NB rule', () => {
