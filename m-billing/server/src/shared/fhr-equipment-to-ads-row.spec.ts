@@ -168,6 +168,7 @@ describe('fhr-equipment-to-ads-row', () => {
     expect(classifyAdsSourceType('Sup', null)).toBe('manpower');
     expect(classifyAdsSourceType('WC', null)).toBe('equipment');
     expect(classifyAdsSourceType('White Collar', null)).toBe('manpower');
+    expect(classifyAdsSourceType('Blue collar', null)).toBe('manpower');
     expect(classifyAdsSourceType('GPU-90KV', null)).toBe('equipment');
   });
 

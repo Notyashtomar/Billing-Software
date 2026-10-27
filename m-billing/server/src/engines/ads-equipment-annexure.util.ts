@@ -1,5 +1,6 @@
 import {
   adsEquipmentLabelsMatch,
+  adsWheelchairSubtype,
   isWchrSCombinedAdsService,
   resolveAdsPricingFromContractRule,
 } from '../shared/ads-equipment-inclusion.util';
@@ -97,9 +98,12 @@ export function adsAnnexureColumnLabel(serviceCode: string): string {
   const stripped = stripServiceWrapper(compactLabel(serviceCode));
   if (!stripped) return 'EQ';
   const compact = stripped.replace(/\s+/g, '');
+  const chair = adsWheelchairSubtype(stripped);
+  if (chair === 'BOTH') return 'WCHR/S';
+  if (chair === 'WCHR') return 'WCHR';
+  if (chair === 'WCHS') return 'WCHS';
   const aliases: Array<[RegExp, string]> = [
     [/\bWCHC\b|WHEEL\s*CHAIR\s*C/, 'WCHC'],
-    [/\bWCHR\s*\/\s*S\b|\bWCHRS\b|\bWCHR\b|\bWCHS\b|WHEEL\s*CHAIR\s*[RS]/, 'WCHR/S'],
     [/140\s*KV|\bGPU\b.*140/, 'GPU-140KV'],
     [/180\s*KV|\bGPU\b.*180/, 'GPU-180KV'],
     [/90\s*KV|\bGPU\b.*90/, 'GPU-90KV'],
@@ -328,14 +332,15 @@ function equipmentTexts(line: AdsAnnexureInvoiceLine): string[] {
 function annexureEquipmentFromLine(line: AdsAnnexureInvoiceLine): AnnexureEquipment | null {
   const texts = equipmentTexts(line);
   if (texts.length === 0) return null;
-  const wheelchair = isWchrSCombinedAdsService(...texts);
+  const chair = adsWheelchairSubtype(...texts);
   const displayName = texts[0] ?? '';
   const ref = line.sourceRef ?? {};
   const usedRaw = Number(ref.usedQuantity);
   const chargedRaw = Number(ref.chargedQuantity ?? line.quantity);
-  const label = adsAnnexureColumnLabel(displayName);
+  const label =
+    chair === 'BOTH' ? 'WCHR/S' : chair === 'WCHR' ? 'WCHR' : chair === 'WCHS' ? 'WCHS' : adsAnnexureColumnLabel(displayName);
   return {
-    key: wheelchair ? 'WCHR/S' : label,
+    key: chair === 'WCHR' || chair === 'WCHS' || chair === 'BOTH' ? (chair === 'BOTH' ? 'WCHR/S' : chair) : label,
     label,
     texts,
     invoiceUsed: Number.isFinite(usedRaw) && usedRaw >= 0 ? toWholeAdsUnits(usedRaw) : null,
@@ -360,6 +365,8 @@ function usageIdentityKey(serviceCode: string, particular: string, equipmentName
 
 function textsMatchEquipment(equipment: AnnexureEquipment, texts: string[]): boolean {
   if (equipment.key === 'WCHR/S') return isWchrSCombinedAdsService(...texts);
+  if (equipment.key === 'WCHR') return adsWheelchairSubtype(...texts) === 'WCHR';
+  if (equipment.key === 'WCHS') return adsWheelchairSubtype(...texts) === 'WCHS';
   return equipment.texts.some((left) => texts.some((right) => adsEquipmentLabelsMatch(left, right)));
 }
 
@@ -382,20 +389,8 @@ function pickEquipmentForUsage(
   return exact ?? matches[0]!;
 }
 
-function displayColumnsForEquipment(
-  equipment: AnnexureEquipment,
-  usedTotal: number,
-  chargedTotal: number,
-): AdsAnnexureColumn[] {
-  const used = equipment.invoiceUsed != null ? equipment.invoiceUsed : usedTotal;
-  const charged = equipment.invoiceCharged != null ? equipment.invoiceCharged : chargedTotal;
-  if (used === charged) {
-    return [{ key: equipment.key, label: equipment.label }];
-  }
-  return [
-    { key: `${equipment.key}::used`, label: `Total ${equipment.label}` },
-    { key: `${equipment.key}::charged`, label: `CHARGEABLE ${equipment.label}` },
-  ];
+function displayColumnsForEquipment(equipment: AnnexureEquipment): AdsAnnexureColumn[] {
+  return [{ key: equipment.key, label: equipment.label }];
 }
 
 function pricingForRecord(
@@ -441,8 +436,8 @@ function pricingForRecord(
 }
 
 /**
- * One annexure column per ADS invoice particular. If Used and Charged differ,
- * Total (used, flight-wise) is followed by CHARGEABLE (charged, flight-wise).
+ * One annexure column per ADS invoice particular. The count is the chargeable
+ * quantity for that flight. Usage inside the free allowance is left blank.
  */
 export function buildAdsAnnexureTable(
   records: AdsAnnexurePrepRecord[],
@@ -476,6 +471,8 @@ export function buildAdsAnnexureTable(
     AdsAnnexureFlightRow & {
       sortKey: string;
       usedByKey: Record<string, number>;
+      wchrUsedByKey: Record<string, number>;
+      wchsUsedByKey: Record<string, number>;
       freeByKey: Record<string, number>;
       alwaysByKey: Record<string, boolean>;
     }
@@ -544,12 +541,23 @@ export function buildAdsAnnexureTable(
         counts: {},
         sortKey: ymdSortKey(rec),
         usedByKey: {},
+        wchrUsedByKey: {},
+        wchsUsedByKey: {},
         freeByKey: {},
         alwaysByKey: {},
       };
       flights.set(flightKey, row);
     }
     row.usedByKey[equipment.key] = (row.usedByKey[equipment.key] ?? 0) + used;
+    const chairKind = adsWheelchairSubtype(equipmentName, particular, String(rec.rateMatch?.serviceCode ?? ''));
+    if (chairKind === 'WCHR') {
+      row.wchrUsedByKey[equipment.key] = (row.wchrUsedByKey[equipment.key] ?? 0) + used;
+    } else if (chairKind === 'WCHS') {
+      row.wchsUsedByKey[equipment.key] = (row.wchsUsedByKey[equipment.key] ?? 0) + used;
+    } else if (chairKind === 'BOTH') {
+      row.wchrUsedByKey[equipment.key] = (row.wchrUsedByKey[equipment.key] ?? 0) + used;
+      row.wchsUsedByKey[equipment.key] = (row.wchsUsedByKey[equipment.key] ?? 0) + used;
+    }
     row.freeByKey[equipment.key] = Math.max(row.freeByKey[equipment.key] ?? 0, pricing.freePerFlight);
     row.alwaysByKey[equipment.key] =
       row.alwaysByKey[equipment.key] === true || pricing.alwaysChargeable;
@@ -564,7 +572,6 @@ export function buildAdsAnnexureTable(
     : [...discovered.values()].sort(
         (a, b) => a.label.localeCompare(b.label) || a.key.localeCompare(b.key),
       );
-  const usedTotals: Record<string, number> = {};
   const chargedTotals: Record<string, number> = {};
   const chargedByFlight = new Map<string, Record<string, number>>();
   for (const row of flights.values()) {
@@ -573,18 +580,40 @@ export function buildAdsAnnexureTable(
       const used = row.usedByKey[key] ?? 0;
       const billed = chargedUnits(used, row.alwaysByKey[key] === true, row.freeByKey[key] ?? 0);
       charged[key] = billed;
-      usedTotals[key] = (usedTotals[key] ?? 0) + used;
       chargedTotals[key] = (chargedTotals[key] ?? 0) + billed;
     }
     chargedByFlight.set(`${row.serialNo}|${row.flightNo}|${row.atdDate}|${row.sortKey}`, charged);
   }
 
+  for (const equipment of equipments) {
+    if (equipment.key !== 'WCHR/S' && equipment.label !== 'WCHR/S') continue;
+    let wchrCharged = false;
+    let wchsCharged = false;
+    let wchrUsed = false;
+    let wchsUsed = false;
+    for (const row of flights.values()) {
+      const billed = chargedByFlight.get(
+        `${row.serialNo}|${row.flightNo}|${row.atdDate}|${row.sortKey}`,
+      )?.[equipment.key] ?? 0;
+      const wchr = row.wchrUsedByKey[equipment.key] ?? 0;
+      const wchs = row.wchsUsedByKey[equipment.key] ?? 0;
+      if (wchr > 0) wchrUsed = true;
+      if (wchs > 0) wchsUsed = true;
+      if (billed > 0 && wchr > 0) wchrCharged = true;
+      if (billed > 0 && wchs > 0) wchsCharged = true;
+    }
+    const showWchr = wchrCharged || wchsCharged ? wchrCharged : wchrUsed;
+    const showWchs = wchrCharged || wchsCharged ? wchsCharged : wchsUsed;
+    if (showWchr && !showWchs) equipment.label = 'WCHR';
+    else if (showWchs && !showWchr) equipment.label = 'WCHS';
+    else if (showWchr && showWchs) equipment.label = 'WCHR/S';
+  }
+
   const columns: AdsAnnexureColumn[] = [];
   for (const equipment of equipments) {
-    const usedTotal = toWholeAdsUnits(usedTotals[equipment.key] ?? 0);
     const chargedTotal = toWholeAdsUnits(chargedTotals[equipment.key] ?? 0);
-    if (!lockToInvoice && usedTotal <= 0) continue;
-    columns.push(...displayColumnsForEquipment(equipment, usedTotal, chargedTotal));
+    if (!lockToInvoice && chargedTotal <= 0) continue;
+    columns.push(...displayColumnsForEquipment(equipment));
   }
 
   const rows: AdsAnnexureFlightRow[] = [];
@@ -594,25 +623,15 @@ export function buildAdsAnnexureTable(
   })) {
     const charged = chargedByFlight.get(`${row.serialNo}|${row.flightNo}|${row.atdDate}|${row.sortKey}`) ?? {};
     const counts: Record<string, number> = {};
-    let usedOnFlight = false;
+    let chargedOnFlight = false;
     for (const equipment of equipments) {
-      const used = toWholeAdsUnits(row.usedByKey[equipment.key] ?? 0);
       const billed = toWholeAdsUnits(charged[equipment.key] ?? 0);
-      if (used > 0) usedOnFlight = true;
-      const display = displayColumnsForEquipment(
-        equipment,
-        toWholeAdsUnits(usedTotals[equipment.key] ?? 0),
-        toWholeAdsUnits(chargedTotals[equipment.key] ?? 0),
-      );
-      if (display.length === 1) {
-        const key = display[0]!.key;
-        if (used > 0) counts[key] = used;
-      } else {
-        if (used > 0) counts[`${equipment.key}::used`] = used;
-        if (billed > 0) counts[`${equipment.key}::charged`] = billed;
+      if (billed > 0) {
+        chargedOnFlight = true;
+        counts[equipment.key] = billed;
       }
     }
-    if (!usedOnFlight) continue;
+    if (!chargedOnFlight) continue;
     rows.push({
       serialNo: row.serialNo,
       flightNo: row.flightNo,

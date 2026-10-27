@@ -58,6 +58,7 @@ import {
   type RateCardBillingScope,
 } from '../../shared/rate-card-billing-scope';
 import {
+  adsWheelchairSubtype,
   contractBillsBmeEquipment,
   isBmeAdsEquipmentLabel,
   resolveAdsPricingFromContractRule,
@@ -883,7 +884,19 @@ export class BillingSourceEnrichmentService {
         });
         const liveRuleName = String(rulePricing.serviceCode ?? '').trim();
         if (rulePricing.matched && liveRuleName) {
-          billedParticular = liveRuleName;
+          const operationalChair = adsWheelchairSubtype(
+            particular,
+            input.operationalData.equipment,
+            input.operationalData.equipment_name,
+            input.operationalData.equipmentName,
+            input.serviceCode,
+          );
+          const ruleIsCombinedFamily = adsWheelchairSubtype(liveRuleName) === 'BOTH';
+          // Regenerate re-enriches every prep row. Keep WCHR and WCHS distinct
+          // so the invoice can name the line from what was actually charged.
+          if (!(operationalChair && operationalChair !== 'BOTH' && ruleIsCombinedFamily)) {
+            billedParticular = liveRuleName;
+          }
         }
 
         if (!rulePricing.matched) {

@@ -81,6 +81,61 @@ function gpuKvTag(value: string): string | null {
 }
 
 export const ADS_WCHR_S_PARTICULAR = 'Wheel Chair - WCHR/S';
+export const ADS_WCHR_PARTICULAR = 'Wheel Chair - WCHR';
+export const ADS_WCHS_PARTICULAR = 'Wheel Chair - WCHS';
+
+export type AdsWheelchairSubtype = 'WCHR' | 'WCHS' | 'BOTH';
+
+function wheelchairSubtypeOfOne(value: unknown): AdsWheelchairSubtype | null {
+  const raw = normalizeToken(value);
+  if (!raw) return null;
+  const compact = compactToken(raw);
+  if (compact.includes('WCHC') || /\bWHEEL\s*CHAIR\s*C\b/.test(raw)) return null;
+  if (
+    compact.includes('WCHRS') ||
+    /\bWCHR\s+S\b/.test(raw) ||
+    /\bWCHR\s*\/\s*S\b/.test(String(value ?? ''))
+  ) {
+    return 'BOTH';
+  }
+  if (compact.includes('WCHS') || /\bWCHS\b/.test(raw)) return 'WCHS';
+  if (compact.includes('WCHR') || /\bWCHR\b/.test(raw) || /\bWHEEL\s*CHAIR\s*R\b/.test(raw)) {
+    return 'WCHR';
+  }
+  return null;
+}
+
+/**
+ * WCHR, WCHS, or both. A combined `WCHR/S` label does not override a specific
+ * chair code in the same set of names.
+ */
+export function adsWheelchairSubtype(...values: unknown[]): AdsWheelchairSubtype | null {
+  let sawWchr = false;
+  let sawWchs = false;
+  let sawBoth = false;
+  for (const value of values) {
+    const kind = wheelchairSubtypeOfOne(value);
+    if (kind === 'WCHR') sawWchr = true;
+    else if (kind === 'WCHS') sawWchs = true;
+    else if (kind === 'BOTH') sawBoth = true;
+  }
+  if (sawWchr && sawWchs) return 'BOTH';
+  if (sawWchr) return 'WCHR';
+  if (sawWchs) return 'WCHS';
+  if (sawBoth) return 'BOTH';
+  return null;
+}
+
+/** Invoice particular for the chair types that were actually charged. */
+export function adsWheelchairChargedParticular(flags: {
+  wchr: boolean;
+  wchs: boolean;
+}): string | null {
+  if (flags.wchr && flags.wchs) return ADS_WCHR_S_PARTICULAR;
+  if (flags.wchr) return ADS_WCHR_PARTICULAR;
+  if (flags.wchs) return ADS_WCHS_PARTICULAR;
+  return null;
+}
 
 /** WCHR and WCHS bill as one unit. WCHC stays separate. */
 export function isWchrSCombinedAdsService(...values: unknown[]): boolean {

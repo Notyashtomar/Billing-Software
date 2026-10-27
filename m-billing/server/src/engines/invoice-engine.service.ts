@@ -37,12 +37,15 @@ import {
 import { extractPreparationFlightYmd } from '../utils/contract-fortnight-billing.util';
 import {
   ADS_WCHR_S_PARTICULAR,
+  adsWheelchairChargedParticular,
+  adsWheelchairSubtype,
   contractBillsBmeEquipment,
   isBmeAdsEquipmentLabel,
   isWchrSCombinedAdsService,
   resolveAdsPricingFromContractRule,
   type AdsEquipmentInclusionContract,
   type AdsEquipmentInclusionRule,
+  type AdsWheelchairSubtype,
 } from '../shared/ads-equipment-inclusion.util';
 import { preparationInvoiceCategory } from '../common/billing-invoice-period.util';
 import {
@@ -53,9 +56,12 @@ import {
   computeAdsUsedUnits,
   isCrewCoachEquipmentLabel,
   isTurnaroundFlightContext,
+  adsManpowerHeadcountFromRemarks,
+  isAdsManpowerLabel,
   parseAdsRemarksQuantity,
   toWholeAdsUnits,
 } from '../shared/fhr-equipment-to-ads-row';
+import { adsTimeBasedUnits, isAdsHourlyUom } from '../shared/rate-card-billing-scope';
 import {
   categoriesOfFlightFromSnapshots,
   pickCategoryOfFlight,
@@ -708,6 +714,8 @@ export class InvoiceEngineService {
       used: number;
       charged: number;
       freeAllowance: number;
+      chargedWchr: boolean;
+      chargedWchs: boolean;
       pricingBasis?: string;
       chargePercent: number;
       feeConcessionPercent: number;
@@ -731,6 +739,7 @@ export class InvoiceEngineService {
       equipmentKey: string;
       turnaroundCrew: boolean;
       feeConcessionPercent: number;
+      wheelchairKind: AdsWheelchairSubtype | null;
     };
     const pending: PendingAdsUse[] = [];
 
@@ -853,13 +862,40 @@ export class InvoiceEngineService {
         Number(snap.remarksQuantity) > 0
           ? Number(snap.remarksQuantity)
           : parseAdsRemarksQuantity(snap.remarks ?? snap.Remarks);
-      const usedFromContractUom = computeAdsUsedUnits({
-        qty: Number.isFinite(qtyRaw) && qtyRaw > 0 ? qtyRaw : Number.isFinite(usedRaw) && usedRaw > 0 ? usedRaw : 1,
-        usageHours,
-        uom,
-        remarksQuantity: remarksQty && Number.isFinite(remarksQty) ? remarksQty : null,
-      });
-      const used = capTurnaroundCrewCoachUsedUnits(usedFromContractUom, snap, particular);
+      const manpowerHeadcount = adsManpowerHeadcountFromRemarks(
+        snap.remarks ?? snap.Remarks,
+        particular,
+        equipmentName,
+        rateMatch.serviceCode,
+      );
+      const manpowerLine = isAdsManpowerLabel(
+        particular,
+        equipmentName,
+        rateMatch.serviceCode,
+      );
+      const people =
+        manpowerHeadcount ??
+        (Number.isFinite(qtyRaw) && qtyRaw > 0 ? qtyRaw : 1);
+      const hourlyPeople =
+        manpowerLine && isAdsHourlyUom(uom)
+          ? (() => {
+              const minutes =
+                usageHours != null && usageHours > 0 ? usageHours * 60 : null;
+              const hours = adsTimeBasedUnits(uom, minutes);
+              return hours != null && hours > 0 ? hours * people : people;
+            })()
+          : people;
+      const usedFromContractUom = manpowerLine
+        ? toWholeAdsUnits(hourlyPeople)
+        : computeAdsUsedUnits({
+            qty: Number.isFinite(qtyRaw) && qtyRaw > 0 ? qtyRaw : Number.isFinite(usedRaw) && usedRaw > 0 ? usedRaw : 1,
+            usageHours,
+            uom,
+            remarksQuantity: remarksQty && Number.isFinite(remarksQty) ? remarksQty : null,
+          });
+      const used = manpowerLine
+        ? usedFromContractUom
+        : capTurnaroundCrewCoachUsedUnits(usedFromContractUom, snap, particular);
 
       const livePriced =
         liveAds.matched &&
@@ -877,13 +913,15 @@ export class InvoiceEngineService {
         continue;
       }
 
-      const effectiveFree = liveAds.matched
-        ? toWholeAdsUnits(
-            Number.isFinite(liveAds.freePerFlight) && liveAds.freePerFlight > 0
-              ? liveAds.freePerFlight
-              : 0,
-          )
-        : freeAllowance;
+      const effectiveFree = manpowerLine
+        ? 0
+        : liveAds.matched
+          ? toWholeAdsUnits(
+              Number.isFinite(liveAds.freePerFlight) && liveAds.freePerFlight > 0
+                ? liveAds.freePerFlight
+                : 0,
+            )
+          : freeAllowance;
       const billedUnitPrice =
         liveAds.matched && liveAds.unitPrice != null && liveAds.unitPrice > 0
           ? liveAds.unitPrice
@@ -896,6 +934,9 @@ export class InvoiceEngineService {
         liveAds.serviceCode,
         rateMatch.serviceCode,
       );
+      const wheelchairKind = combinedWheelchair
+        ? (adsWheelchairSubtype(equipmentName, particular, rateMatch.serviceCode) ?? 'BOTH')
+        : null;
       const liveRuleName = String(liveAds.serviceCode ?? '').trim();
       const billedParticular = combinedWheelchair
         ? ADS_WCHR_S_PARTICULAR
@@ -940,6 +981,7 @@ export class InvoiceEngineService {
           isCrewCoachEquipmentLabel(particular) &&
           isTurnaroundFlightContext(snap, snap.flightNo ?? snap.flightNoEquipmentNo),
         feeConcessionPercent,
+        wheelchairKind,
       });
     }
 
@@ -963,6 +1005,18 @@ export class InvoiceEngineService {
       if (rows.some((row) => row.turnaroundCrew)) {
         charged = Math.min(charged, 1);
       }
+      let chargedWchr = false;
+      let chargedWchs = false;
+      if (charged > 0 && rows.some((row) => row.wheelchairKind)) {
+        const sawWchr = rows.some(
+          (row) => row.used > 0 && (row.wheelchairKind === 'WCHR' || row.wheelchairKind === 'BOTH'),
+        );
+        const sawWchs = rows.some(
+          (row) => row.used > 0 && (row.wheelchairKind === 'WCHS' || row.wheelchairKind === 'BOTH'),
+        );
+        chargedWchr = sawWchr;
+        chargedWchs = sawWchs;
+      }
       // A flight inside the free allowance still counts as used services.
       // Only the chargeable excess is billed. The line is omitted later when
       // every flight for this equipment stays inside the allowance.
@@ -970,7 +1024,8 @@ export class InvoiceEngineService {
       const chargePercent = 0;
       const concessionAppliedToUnitPrice = false;
       const effectiveUnitPrice = round2(head.billedUnitPrice);
-      const key = `${head.particular.toLowerCase()}|${head.aircraftType.toLowerCase()}|${head.billedUnitPrice}|${head.uom}|${chargePercent}|${head.feeConcessionPercent}|${concessionAppliedToUnitPrice ? 'unit' : 'header'}`;
+      const wheelCooling = /wheel\s*br(?:ake|eak)\s*cooling/i.test(head.particular);
+      const key = `${head.particular.toLowerCase()}|${wheelCooling ? '' : head.aircraftType.toLowerCase()}|${head.billedUnitPrice}|${head.uom}|${chargePercent}|${head.feeConcessionPercent}|${concessionAppliedToUnitPrice ? 'unit' : 'header'}`;
       const bucket =
         map.get(key) ??
         ({
@@ -984,6 +1039,8 @@ export class InvoiceEngineService {
           used: 0,
           charged: 0,
           freeAllowance: 0,
+          chargedWchr: false,
+          chargedWchs: false,
           pricingBasis: head.pricingBasis,
           chargePercent,
           feeConcessionPercent: head.feeConcessionPercent,
@@ -994,6 +1051,17 @@ export class InvoiceEngineService {
       bucket.used += usedSum;
       bucket.charged += charged;
       bucket.freeAllowance = Math.max(bucket.freeAllowance, groupFree);
+      if (wheelCooling && head.aircraftType) {
+        const types = new Set(
+          [bucket.aircraftType, head.aircraftType]
+            .flatMap((value) => String(value ?? '').split(','))
+            .map((value) => value.trim())
+            .filter(Boolean),
+        );
+        bucket.aircraftType = [...types].join(', ');
+      }
+      bucket.chargedWchr = bucket.chargedWchr || chargedWchr;
+      bucket.chargedWchs = bucket.chargedWchs || chargedWchs;
       for (const row of rows) bucket.records.push(row.rec);
       if (!bucket.pricingBasis && head.pricingBasis) bucket.pricingBasis = head.pricingBasis;
       map.set(key, bucket);
@@ -1005,6 +1073,14 @@ export class InvoiceEngineService {
       const freeAllowance = toWholeAdsUnits(bucket.freeAllowance);
       const charged = toWholeAdsUnits(bucket.charged);
       if (charged <= 0 || !(bucket.effectiveUnitPrice > 0)) continue;
+      const chairParticular = adsWheelchairChargedParticular({
+        wchr: bucket.chargedWchr,
+        wchs: bucket.chargedWchs,
+      });
+      if (chairParticular) {
+        bucket.particular = chairParticular;
+        bucket.equipmentServiceCode = chairParticular;
+      }
 
       const lineAmountExclTax = round2(bucket.effectiveUnitPrice * charged);
       const tax = await this.taxEngine.calculateLine(ctx, {

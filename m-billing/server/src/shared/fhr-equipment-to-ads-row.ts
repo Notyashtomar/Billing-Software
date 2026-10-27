@@ -207,7 +207,37 @@ export function engagementHoursFromWindow(
 }
 
 const MANPOWER_NAME_RE =
-  /\b(CSA|CSH|UH|WW|WCHR|WCHS|WCHC|SUP|SR\.?\s*CSA|MAAS|MANPOWER|MARSHAL|FLOOR\s*WALK|WING\s*WALK|CREW|STAFF|WHITE\s*COLLAR)\b/i;
+  /\b(CSA|CSH|UH|WW|WCHR|WCHS|WCHC|SUP|SR\.?\s*CSA|MAAS|MANPOWER|MARSHAL|FLOOR\s*WALK|WING\s*WALK|CREW|STAFF|WHITE\s*COLLAR|BLUE\s*COLLAR|UTILITY\s*HAND|UNIT\s*HANDLING|CABIN\s*CLEAN|DEEP\s*CLEAN|NIGHT\s*HALT|DUTY\s*OFFICER)\b/i;
+
+/** Roles billed as people. Wheelchairs and crew coach stay on their own rules. */
+const ADS_MANPOWER_BILLING_RE =
+  /\b(UTILITY\s*HAND|UNIT\s*HANDLING|BLUE\s*COLLAR|WHITE\s*COLLAR|CABIN\s*CLEAN|DEEP\s*CLEAN|NIGHT\s*HALT|WING\s*WALK|CUSTOMER\s*SERVICE|DUTY\s*OFFICER|MARSHALL|SUPERVISOR|UNSKILLED\s*HELPER)\b|\b(UH|CSA|CSH|SUP|DO)\b/i;
+
+/** Manpower lines bill the people in the remark, not a capped hour count. */
+export function isAdsManpowerLabel(...values: unknown[]): boolean {
+  return values.some((value) => ADS_MANPOWER_BILLING_RE.test(String(value ?? '')));
+}
+
+/**
+ * Headcount on a manpower line.
+ * `(04 UH PROVIDED …)` and `(04 PROVIDED …)` both count as 4 for that line.
+ */
+export function adsManpowerHeadcountFromRemarks(
+  remarks: unknown,
+  ...roleNames: unknown[]
+): number | null {
+  if (!isAdsManpowerLabel(...roleNames)) return null;
+  const text = String(remarks ?? '');
+  const staff = text.match(/(\d{1,3})\s*staffs?\b/i);
+  if (staff) {
+    const n = Number(staff[1]);
+    if (Number.isFinite(n) && n > 0) return n;
+  }
+  const provided = text.match(/\(\s*(\d{1,3})\b[^)\n]{0,40}PROVIDED\b/i);
+  if (!provided) return null;
+  const n = Number(provided[1]);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
 
 export function classifyAdsSourceType(
   rawName: string,
