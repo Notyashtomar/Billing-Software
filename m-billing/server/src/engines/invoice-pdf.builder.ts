@@ -620,6 +620,8 @@ export type InvoiceHeaderGridLayout = {
   afterStateHs: number[];
   sacRowH: number;
   stateRowH: number;
+  /** MSME row — customer MSME on the left, our MSME on the right. */
+  msmeRowH: number;
   bottomRowH: number;
   /** Right meta column height from header-grid top through Place of Supply. */
   rightHeaderH: number;
@@ -676,10 +678,12 @@ export function layoutInvoiceHeaderGrid(
   ];
   const billBodyH = measureBillToBodyHeight(doc, input.billTo, addressWidth);
 
+  // MSME is the last row: below Place of Supply (right) and below GSTIN/UIN (left).
   const afterStateRightRows: Array<[string, string]> = [
     ['SAC', input.sacCode ?? ''],
     ['Service Code', input.serviceCode ?? ''],
     ['Place of Supply', input.placeOfSupply ?? ''],
+    ['MSME No.', input.company.msme ?? ''],
   ];
   // Primary bill-to ends on the SAC bottom. The second address starts on that same line.
   const rigidSacSpanH = baseRowH * (billAlignRightRows.length + 1);
@@ -694,9 +698,10 @@ export function layoutInvoiceHeaderGrid(
   const rowShare = Math.max(0, primaryNaturalH - rigidSacSpanH) / flightToSacCount;
   const billAlignHs = billAlignRightRows.map(() => baseRowH + rowShare);
   const sacRowH = baseRowH + rowShare;
-  const afterStateHs = [sacRowH, baseRowH, baseRowH];
+  const afterStateHs = [sacRowH, baseRowH, baseRowH, baseRowH];
   const stateRowH = afterStateHs[1];
   const bottomRowH = afterStateHs[2];
+  const msmeRowH = afterStateHs[3];
   const billAlignSum = billAlignHs.reduce((sum, h) => sum + h, 0);
   const addressExtraH = 0;
   const primaryAddressH = billAlignSum + sacRowH;
@@ -712,9 +717,10 @@ export function layoutInvoiceHeaderGrid(
     addressExtraH +
     sacRowH +
     stateRowH +
+    msmeRowH +
     bottomRowH +
     afterSupplySpacerH;
-  const leftHeaderH = sellerH + billToH + stateRowH + bottomRowH;
+  const leftHeaderH = sellerH + billToH + stateRowH + msmeRowH + bottomRowH;
 
   return {
     sellerH,
@@ -732,6 +738,7 @@ export function layoutInvoiceHeaderGrid(
     afterStateHs,
     sacRowH,
     stateRowH,
+    msmeRowH,
     bottomRowH,
     rightHeaderH,
     leftHeaderH,
@@ -762,6 +769,7 @@ function renderHeaderGrid(doc: PDFKit.PDFDocument, input: InvoicePdfInput, start
     billAlignHs,
     afterStateHs,
     stateRowH,
+    msmeRowH,
     bottomRowH,
     companyLines,
     topRightMetaRows,
@@ -859,6 +867,14 @@ function renderHeaderGrid(doc: PDFKit.PDFDocument, input: InvoicePdfInput, start
     lineGap: 0,
     lineBreak: false,
   });
+
+  // Customer MSME row (left, last), level with our MSME row on the right.
+  const msmeY = gstinY + bottomRowH;
+  strokeBox(doc, x, msmeY, leftW, msmeRowH);
+  const msmeText = `MSME No. : ${input.billTo.msme?.trim() ?? ''}`;
+  const msmeTextY = headerFieldTextY(doc, msmeY, msmeRowH, msmeText, leftW - CELL_PAD * 2, { size: 7 });
+  doc.font('Times-Roman').fontSize(invFs(7)).fillColor('#000');
+  doc.text(msmeText, x + CELL_PAD, msmeTextY, { width: leftW - CELL_PAD * 2, lineGap: 0, lineBreak: false });
 
   let rightY = y;
   for (let i = 0; i < topRightMetaRows.length; i++) {
@@ -1060,6 +1076,29 @@ function renderInrUsdLineItemsTable(
   return y + 4;
 }
 
+/** Height the totals band below the particulars will take (layout reservation only). */
+function estimateTotalsHeight(doc: PDFKit.PDFDocument, input: InvoicePdfInput): number {
+  const isUsd = input.currencyCode === 'USD';
+  const rowH = Math.max(invDim(15), measureCellHeight(doc, 'X', 100, { size: 7 }));
+  let rows = 2; // Total Amount + Gross Amount
+  rows += concessionAmountRows(input.subtotalExclTax, input.concessionFeePercent, input.concessionFeeAmount).length;
+  if (isUsd) {
+    if (input.totalReceivableUsd != null) {
+      rows += (input.cgstUsd ?? 0) > 0 ? 1 : 0;
+      rows += (input.sgstUsd ?? 0) > 0 ? 1 : 0;
+    } else if (input.exchangeRate && input.totalReceivableInr != null) {
+      rows += 1;
+      rows += (input.cgstInr ?? 0) > 0 ? 1 : 0;
+      rows += (input.sgstInr ?? 0) > 0 ? 1 : 0;
+    }
+  } else {
+    rows += input.cgstAmount > 0 ? 1 : 0;
+    rows += input.sgstAmount > 0 ? 1 : 0;
+  }
+  const wordsH = Math.max(invDim(24), measureCellHeight(doc, 'X\nX', CONTENT_W, { bold: true, size: 6.5 }));
+  return rows * rowH + wordsH + 4;
+}
+
 function renderLineItemsTable(doc: PDFKit.PDFDocument, input: InvoicePdfInput, startY: number): number {
   if (input.dualCurrencyLayout && input.exchangeRate) {
     return renderInrUsdLineItemsTable(doc, input, startY);
@@ -1152,10 +1191,19 @@ function renderLineItemsTable(doc: PDFKit.PDFDocument, input: InvoicePdfInput, s
 
   // Reference body: column guides only (no row rules), rows breathe, and the box
   // keeps a minimum height so short invoices still show the open particulars area.
-  const bodyRowH = invDim(19);
-  const bodyTopGapH = invDim(8);
   const minBodyH = invDim(150);
   const bodyStartY = y;
+  // Reference row pitch; tightened (down to a floor) only when the totals + bank block
+  // would otherwise spill onto page 2.
+  const reserveBelowH = estimateTotalsHeight(doc, input) + measureBankTableHeight(doc, input) + 8;
+  const availableBodyH = FLOW_BOTTOM_Y - reserveBelowH - bodyStartY;
+  // Row pitch is ~15% tighter than the reference (19 → 16) so particulars read as one group.
+  const referenceRowH = invDim(16);
+  const floorRowH = invDim(12);
+  const rowCount = Math.max(1, lineRows.length);
+  const fitRowH = (availableBodyH - invDim(6)) / rowCount;
+  const bodyRowH = Math.max(floorRowH, Math.min(referenceRowH, fitRowH));
+  const bodyTopGapH = bodyRowH >= referenceRowH ? invDim(6) : Math.max(2, Math.min(invDim(6), availableBodyH - bodyRowH * rowCount));
   let bodyY = y + bodyTopGapH;
   let segmentStartY = bodyStartY;
 
@@ -1191,10 +1239,12 @@ function renderLineItemsTable(doc: PDFKit.PDFDocument, input: InvoicePdfInput, s
     bodyY += rowH;
   }
 
-  // Pad the open area up to the reference minimum when the page has room.
+  // Pad the open area up to the reference minimum, but never so far that the totals and
+  // bank block no longer fit on this page.
   const usedBodyH = bodyY - segmentStartY;
   if (segmentStartY === bodyStartY && usedBodyH < minBodyH) {
-    bodyY = Math.min(bodyStartY + minBodyH, Math.max(bodyY, FLOW_BOTTOM_Y - invDim(260)));
+    const reserveH = estimateTotalsHeight(doc, input) + measureBankTableHeight(doc, input) + 8;
+    bodyY = Math.min(bodyStartY + minBodyH, Math.max(bodyY, FLOW_BOTTOM_Y - reserveH));
     bodyY = Math.max(bodyY, bodyStartY + usedBodyH);
   }
   closeSegment(bodyY);
