@@ -941,6 +941,7 @@ export class BillingInvoicesService {
           gstRegistrationNo: header.customBillOverrides?.billToGstin?.trim() || undefined,
           showPanOnInvoice: customer?.showPanOnInvoice === true,
           panNumber: customer?.panNumber,
+          msmeNumber: customer?.msmeNumber,
           showVatOnInvoice: customer?.showVatOnInvoice === true,
           vatNumber: customer?.vatNumber,
         }

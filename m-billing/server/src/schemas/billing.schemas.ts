@@ -98,6 +98,10 @@ export class BillingCustomer {
   @Prop({ trim: true, uppercase: true })
   panNumber?: string;
 
+  /** Customer's MSME / Udyam registration number, printed on invoices. */
+  @Prop({ trim: true, uppercase: true })
+  msmeNumber?: string;
+
   /** When true, print customer VAT number on tax invoices. Default false. */
   @Prop({ default: false })
   showVatOnInvoice?: boolean;
@@ -939,6 +943,8 @@ export class BillingSettings {
     pan?: string;
     /** Corporate Identification Number (MCA), e.g. U62200DL2008PTC184155. */
     cin?: string;
+    /** Our MSME / Udyam registration number for this station. */
+    msme?: string;
     logoUrl?: string;
   };
 

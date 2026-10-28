@@ -31,6 +31,7 @@ const emptyForm = {
   active: true,
   showPanOnInvoice: false,
   panNumber: '',
+  msmeNumber: '',
   showVatOnInvoice: false,
   vatNumber: '',
 };
@@ -70,6 +71,7 @@ export function CustomerFormDialog({ api, open, onOpenChange, onSaved, record }:
         active: record.active ?? true,
         showPanOnInvoice: record.showPanOnInvoice === true,
         panNumber: record.panNumber ?? '',
+        msmeNumber: record.msmeNumber ?? '',
         showVatOnInvoice: record.showVatOnInvoice === true,
         vatNumber: record.vatNumber ?? '',
       });
@@ -117,6 +119,7 @@ export function CustomerFormDialog({ api, open, onOpenChange, onSaved, record }:
           active: form.active,
           showPanOnInvoice: form.showPanOnInvoice,
           panNumber: form.panNumber.trim().toUpperCase() || undefined,
+          msmeNumber: form.msmeNumber.trim().toUpperCase() || undefined,
           showVatOnInvoice: form.showVatOnInvoice,
           vatNumber: form.vatNumber.trim().toUpperCase() || undefined,
         });
@@ -145,6 +148,7 @@ export function CustomerFormDialog({ api, open, onOpenChange, onSaved, record }:
           active: form.active,
           showPanOnInvoice: form.showPanOnInvoice,
           panNumber: form.panNumber.trim().toUpperCase() || undefined,
+          msmeNumber: form.msmeNumber.trim().toUpperCase() || undefined,
           showVatOnInvoice: form.showVatOnInvoice,
           vatNumber: form.vatNumber.trim().toUpperCase() || undefined,
         });
@@ -342,6 +346,18 @@ export function CustomerFormDialog({ api, open, onOpenChange, onSaved, record }:
 
             <fieldset className="space-y-3 rounded-lg border border-gray-200 p-3">
               <legend className="px-1 text-sm font-medium text-gray-800">Invoice tax numbers</legend>
+              <FieldGroup label="MSME number" htmlFor="msmeNumber">
+                <TextInput
+                  id="msmeNumber"
+                  value={form.msmeNumber}
+                  onChange={(v) => setForm((f) => ({ ...f, msmeNumber: v.toUpperCase() }))}
+                  placeholder="UDYAM-DL-00-0000000"
+                  autoComplete="off"
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  Customer&apos;s MSME / Udyam number. Prints in the MSME row below GSTIN/UIN on the invoice.
+                </p>
+              </FieldGroup>
               <label className="flex cursor-pointer items-start gap-2 text-sm text-gray-800">
                 <input
                   id="showPanOnInvoice"

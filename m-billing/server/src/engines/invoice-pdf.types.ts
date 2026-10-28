@@ -5,6 +5,8 @@ export interface InvoicePdfCompanyBlock {
   cin?: string;
   phone?: string;
   pan?: string;
+  /** Our MSME / Udyam number (from Airport setup). */
+  msme?: string;
 }
 
 export interface InvoicePdfBillToBlock {
@@ -16,6 +18,8 @@ export interface InvoicePdfBillToBlock {
   pan?: string;
   vat?: string;
   stateCode?: string;
+  /** Customer's MSME / Udyam number. */
+  msme?: string;
 }
 
 export interface InvoicePdfBankDetails {

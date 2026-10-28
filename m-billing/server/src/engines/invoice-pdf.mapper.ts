@@ -72,6 +72,7 @@ type SettingsLike = {
     gstin?: string;
     pan?: string;
     cin?: string;
+    msme?: string;
     phone?: string;
   };
   bankDetails?: {
@@ -97,6 +98,7 @@ type CustomerLike = {
   /** When true, print PAN on the invoice. */
   showPanOnInvoice?: boolean;
   panNumber?: string;
+  msmeNumber?: string;
   /** When true, print VAT number on the invoice. */
   showVatOnInvoice?: boolean;
   vatNumber?: string;
@@ -422,6 +424,7 @@ function resolveBillTo(customer: CustomerLike | null | undefined) {
     pan: showPan ? storedPan || panFromGstin(customerGstin) : undefined,
     vat: showVat ? storedVat : undefined,
     stateCode: extractStateCode(customerGstin),
+    msme: customer?.msmeNumber?.trim().toUpperCase() || undefined,
   };
 }
 
@@ -679,6 +682,7 @@ export function buildInvoicePdfInput(params: BuildInvoicePdfInputParams): Invoic
       cin: companyDefaults.cin,
       phone: companyDefaults.phone,
       pan: companyDefaults.pan,
+      msme: companyDefaults.msme,
     },
     invoiceNumber: header.invoiceNumber?.trim() || header.draftNumber,
     invoiceDate: formatInvoiceDate(header.documentDate),

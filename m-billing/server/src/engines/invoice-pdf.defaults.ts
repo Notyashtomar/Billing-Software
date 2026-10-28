@@ -31,6 +31,7 @@ export type InvoicePdfCompanyDefaults = {
   cin: string;
   phone: string;
   pan: string;
+  msme: string;
 };
 
 export type InvoicePdfAirportConfig = {
@@ -101,6 +102,7 @@ export const CHENNAI_INVOICE_DEFAULTS = {
     cin: 'U63032TN2023PTC158390',
     phone: '30417700',
     pan: 'AALCB3911H',
+    msme: '',
   } satisfies InvoicePdfCompanyDefaults,
   bank: {
     bankName: 'HDFC BANK',
@@ -193,6 +195,7 @@ type SettingsEntity = {
   gstin?: string;
   pan?: string;
   cin?: string;
+  msme?: string;
   phone?: string;
 };
 
@@ -223,6 +226,7 @@ export function resolveInvoiceCompanyDefaults(
     cin: entity?.cin?.trim() || base.cin || '',
     phone: entity?.phone?.trim() || base.phone || '',
     pan: entity?.pan?.trim() || panFromGstin(gstin) || base.pan || '',
+    msme: entity?.msme?.trim() || '',
   };
 }
 
