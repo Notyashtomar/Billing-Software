@@ -8,8 +8,22 @@ import {
   isDelhiStation,
   readLoginStationCode,
 } from '@/lib/billing-default-period';
-import { Calendar, ChevronDown, ChevronRight, FileStack, Loader2, RefreshCw } from 'lucide-react';
+import {
+  AlertCircle,
+  Calendar,
+  CheckCheck,
+  ChevronRight,
+  FilePlus2,
+  FileStack,
+  Inbox,
+  Info,
+  Loader2,
+  RefreshCw,
+  Search,
+  Trash2,
+} from 'lucide-react';
 import { BillingPageHeader } from '../BillingLayout';
+import { billingUi } from '../billingUi';
 import { StatusBadge } from '../StatusBadge';
 import { MatchIndicator, ValidationIndicator } from '../sources/ValidationIndicator';
 import { PreparationWorkflowPanel, buildPreparationContext } from './PreparationWorkflowPanel';
@@ -176,6 +190,18 @@ function monthBounds(month: string): { from: string; to: string } | null {
     to: `${year}-${mm}-${String(lastDay).padStart(2, '0')}`,
   };
 }
+
+/* ── Page-scoped presentation tokens (styling only) ── */
+const prepFocusRing =
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--billing-info)] focus-visible:ring-offset-1';
+const prepRowActionBase = `inline-flex min-h-7 items-center gap-1 rounded-[var(--billing-radius)] border px-2.5 py-1 text-xs font-medium transition-[background-color,border-color,color] duration-150 ${prepFocusRing}`;
+const prepRowActionNeutral = `${prepRowActionBase} border-[color:var(--billing-border-strong)] bg-[color:var(--billing-surface)] text-[color:var(--billing-text-secondary)] hover:bg-[color:var(--billing-surface-muted)] hover:text-[color:var(--billing-text)]`;
+const prepRowActionPrimary = `${prepRowActionBase} border-[color:var(--billing-primary)] bg-[color:var(--billing-surface)] text-[color:var(--billing-primary)] hover:bg-[color:var(--billing-primary-soft)] disabled:cursor-not-allowed disabled:border-[color:var(--billing-border)] disabled:text-[color:var(--billing-text-muted)] disabled:hover:bg-transparent`;
+const prepRowActionInfo = `${prepRowActionBase} border-[color:var(--billing-info-border)] bg-[color:var(--billing-surface)] text-[color:var(--billing-info)] hover:bg-[color:var(--billing-info-soft)]`;
+const prepRowActionDanger = `${prepRowActionBase} border-[color:var(--billing-danger-border)] bg-[color:var(--billing-surface)] text-[color:var(--billing-danger)] hover:bg-[color:var(--billing-danger-soft)]`;
+const prepInlineLink = `font-medium text-[color:var(--billing-info)] underline decoration-[color:var(--billing-info-border)] underline-offset-2 transition-colors hover:text-[color:var(--billing-primary)] ${prepFocusRing}`;
+const prepCheckbox =
+  'h-4 w-4 cursor-pointer rounded border-[color:var(--billing-border-strong)] accent-[color:var(--billing-primary)] disabled:cursor-not-allowed disabled:opacity-40';
 
 type PreparationPeriodSlice = {
   from: string;
@@ -807,14 +833,14 @@ export function PreparationPage({ api }: Props) {
         title="Preparation workspace"
         description="Bridge operational data to invoice drafts — review eligibility, fix validation errors, mark ready."
         actions={
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {!isCustomTab ? (
             <button
               type="button"
               disabled={refreshing || loading}
               onClick={() => void refreshAll()}
               title="Re-apply latest contracts, rate cards, and validation rules for rows on this tab"
-              className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40"
+              className={billingUi.btnSecondary}
             >
               <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} aria-hidden />
               {refreshing ? 'Refreshing…' : 'Refresh'}
@@ -825,7 +851,7 @@ export function PreparationPage({ api }: Props) {
                 type="button"
                 disabled={selectedCount === 0 || deleting || markingReady}
                 onClick={() => void deleteSelected()}
-                className="inline-flex items-center gap-2 rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-40"
+                className={billingUi.btnDangerOutline}
               >
                 {deleting ? (
                   <>
@@ -833,7 +859,10 @@ export function PreparationPage({ api }: Props) {
                     Deleting…
                   </>
                 ) : (
-                  `Delete selected (${selectedCount})`
+                  <>
+                    <Trash2 className="h-4 w-4" aria-hidden />
+                    {`Delete selected (${selectedCount})`}
+                  </>
                 )}
               </button>
             ) : null}
@@ -842,7 +871,7 @@ export function PreparationPage({ api }: Props) {
                 type="button"
                 disabled={selectedCount === 0 || markingReady || deleting || refreshing}
                 onClick={() => void markReadySelected()}
-                className="inline-flex items-center gap-2 rounded-lg bg-[color:var(--billing-primary)] px-4 py-2 text-sm font-medium text-white hover:bg-[color:var(--billing-primary-hover)] disabled:opacity-40"
+                className={billingUi.btnPrimary}
               >
                 {markingReady ? (
                   <>
@@ -850,7 +879,10 @@ export function PreparationPage({ api }: Props) {
                     Marking ready…
                   </>
                 ) : (
-                    `Mark ready (${selectedCount})`
+                  <>
+                    <CheckCheck className="h-4 w-4" aria-hidden />
+                    {`Mark ready (${selectedCount})`}
+                  </>
                 )}
               </button>
             ) : null}
@@ -970,7 +1002,7 @@ export function PreparationPage({ api }: Props) {
                     }
                   })()
                 }
-                className="inline-flex items-center gap-2 rounded-lg border border-[color:var(--billing-accent)] px-4 py-2 text-sm font-medium text-[color:var(--billing-accent-strong)] hover:bg-[color:var(--billing-accent-soft)] disabled:opacity-40"
+                className={billingUi.btnOutline}
               >
                 {creatingDrafts ? (
                   <>
@@ -978,7 +1010,10 @@ export function PreparationPage({ api }: Props) {
                     {draftProgress ? `Creating ${draftProgress}…` : 'Creating invoice…'}
                   </>
                 ) : (
-                  `Create invoice (${readyInPeriod} flights)`
+                  <>
+                    <FilePlus2 className="h-4 w-4" aria-hidden />
+                    {`Create invoice (${readyInPeriod} flights)`}
+                  </>
                 )}
               </button>
             ) : null}
@@ -986,7 +1021,7 @@ export function PreparationPage({ api }: Props) {
               <button
                 type="button"
                 onClick={openDefaultMonthPicker}
-                className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                className={billingUi.btnSecondary}
               >
                 <Calendar className="h-4 w-4" aria-hidden />
                 Set default month for flights
@@ -1013,41 +1048,62 @@ export function PreparationPage({ api }: Props) {
       <div
         role="tablist"
         aria-label="Preparation status"
-        className="z-20 -mx-4 mb-4 flex flex-wrap gap-1 border-b border-gray-200/80 bg-[color:var(--billing-bg)]/95 px-4 py-2 backdrop-blur-sm sm:-mx-6 sm:px-6 supports-[backdrop-filter]:bg-[color:var(--billing-bg)]/90"
+        className="z-20 -mx-4 mb-4 flex flex-wrap gap-1 border-b border-[color:var(--billing-border)] bg-[color:var(--billing-bg)]/95 px-4 py-2 backdrop-blur-sm sm:-mx-6 sm:px-6 supports-[backdrop-filter]:bg-[color:var(--billing-bg)]/90"
       >
-        <div className="flex w-full flex-wrap gap-1 rounded-xl border border-gray-200 bg-white p-1 shadow-sm">
-        {TABS.map((t) => (
+        <div className="flex w-full gap-1 overflow-x-auto rounded-[var(--billing-radius-xl)] border border-[color:var(--billing-border)] bg-[color:var(--billing-surface)] p-1 shadow-[var(--billing-shadow-sm)]">
+        {TABS.map((t) => {
+          const active = resolvedTab === t.id;
+          const count = tabBadgeCount(t.id);
+          return (
           <button
             key={t.id}
             type="button"
             role="tab"
-            aria-selected={resolvedTab === t.id}
+            aria-selected={active}
             onClick={() => setTab(t.id)}
-            className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-              resolvedTab === t.id
-                ? 'bg-[color:var(--billing-primary)] text-white'
-                : 'text-gray-700 hover:bg-gray-50'
+            className={`inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-[var(--billing-radius-lg)] px-3.5 py-2 text-sm font-medium transition-[background-color,color,box-shadow] duration-150 ${prepFocusRing} ${
+              active
+                ? 'bg-[color:var(--billing-primary)] text-[color:var(--billing-text-inverse)] shadow-[var(--billing-shadow-sm)]'
+                : 'text-[color:var(--billing-text-secondary)] hover:bg-[color:var(--billing-primary-soft)] hover:text-[color:var(--billing-primary)]'
             }`}
           >
             {t.label}
-            <span className="ml-1.5 rounded-full bg-black/10 px-1.5 py-0.5 text-xs">
-              {tabBadgeCount(t.id)}
+            <span
+              className={`inline-flex min-w-[1.5rem] items-center justify-center rounded-full px-1.5 py-0.5 text-[11px] font-semibold tabular-nums ${
+                active
+                  ? 'bg-white/20 text-[color:var(--billing-text-inverse)]'
+                  : count > 0
+                    ? 'bg-[color:var(--billing-info-soft)] text-[color:var(--billing-info)]'
+                    : 'bg-[color:var(--billing-surface-muted)] text-[color:var(--billing-text-muted)]'
+              }`}
+            >
+              {count}
             </span>
           </button>
-        ))}
+          );
+        })}
+        <span className="mx-1 my-1.5 w-px shrink-0 bg-[color:var(--billing-border)]" aria-hidden />
         <button
           type="button"
           role="tab"
           aria-selected={isCustomTab}
           onClick={() => setTab('custom')}
-          className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+          className={`inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-[var(--billing-radius-lg)] px-3.5 py-2 text-sm font-medium transition-[background-color,color,box-shadow] duration-150 ${prepFocusRing} ${
             isCustomTab
-              ? 'bg-amber-700 text-white'
-              : 'text-gray-700 hover:bg-gray-50'
+              ? 'bg-[color:var(--billing-warning)] text-[color:var(--billing-text-inverse)] shadow-[var(--billing-shadow-sm)]'
+              : 'text-[color:var(--billing-text-secondary)] hover:bg-[color:var(--billing-warning-soft)] hover:text-[color:var(--billing-warning)]'
           }`}
         >
           {CUSTOM_TAB.label}
-          <span className="ml-1.5 rounded-full bg-black/10 px-1.5 py-0.5 text-xs">
+          <span
+            className={`inline-flex min-w-[1.5rem] items-center justify-center rounded-full px-1.5 py-0.5 text-[11px] font-semibold tabular-nums ${
+              isCustomTab
+                ? 'bg-white/20 text-[color:var(--billing-text-inverse)]'
+                : (tabCounts.custom ?? 0) > 0
+                  ? 'bg-[color:var(--billing-warning-soft)] text-[color:var(--billing-warning)]'
+                  : 'bg-[color:var(--billing-surface-muted)] text-[color:var(--billing-text-muted)]'
+            }`}
+          >
             {tabCounts.custom ?? 0}
           </span>
         </button>
@@ -1055,8 +1111,11 @@ export function PreparationPage({ api }: Props) {
       </div>
 
       {!loading && scopedTotal > 0 ? (
-        <p className="mb-3 text-sm text-gray-600">
-          <strong>{scopedTotal}</strong> flight{scopedTotal === 1 ? '' : 's'} in this period
+        <p className="mb-3 flex items-start gap-2 text-sm text-[color:var(--billing-text-secondary)]">
+          <Info className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--billing-text-muted)]" aria-hidden />
+          <span>
+          <strong className="font-semibold text-[color:var(--billing-heading)]">{scopedTotal}</strong>{' '}
+          flight{scopedTotal === 1 ? '' : 's'} in this period
           {periodStatusSummary ? ` — ${periodStatusSummary}` : ''}.
           {resolvedTab === 'pending' ? (
             <>
@@ -1064,7 +1123,7 @@ export function PreparationPage({ api }: Props) {
               Pending means validation passed and contract/rate are matched — check{' '}
               <button
                 type="button"
-                className="font-medium text-[color:var(--billing-accent-strong)] underline hover:text-[color:var(--billing-heading)]"
+                className={prepInlineLink}
                 onClick={() => setTab('validation_error')}
               >
                 Validation errors
@@ -1072,7 +1131,7 @@ export function PreparationPage({ api }: Props) {
               or{' '}
               <button
                 type="button"
-                className="font-medium text-[color:var(--billing-accent-strong)] underline hover:text-[color:var(--billing-heading)]"
+                className={prepInlineLink}
                 onClick={() => setTab('eligible')}
               >
                 Eligible
@@ -1080,18 +1139,21 @@ export function PreparationPage({ api }: Props) {
               for other issues. Rows already on drafts are in{' '}
               <Link
                 href="/billing/invoice-drafts"
-                className="font-medium text-[color:var(--billing-accent-strong)] underline hover:text-[color:var(--billing-heading)]"
+                className={prepInlineLink}
               >
                 Invoice drafts
               </Link>
               .
             </>
           ) : null}
+          </span>
         </p>
       ) : null}
 
       {selectAllMatching && flightGroups.length > 0 && !isCustomTab ? (
-        <p className="mb-3 rounded-lg border border-[color:var(--billing-accent-border)] bg-[color:var(--billing-accent-soft)] px-3 py-2 text-sm text-[color:var(--billing-heading)]">
+        <p className={`${billingUi.alertInfo} mb-3 flex items-start gap-2.5`}>
+          <CheckCheck className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+          <span>
           All <strong>{flightGroups.length}</strong> flight
           {flightGroups.length === 1 ? '' : 's'} in this tab selected.
           <strong> Delete selected</strong> removes those flights for the
@@ -1100,43 +1162,44 @@ export function PreparationPage({ api }: Props) {
             ? '; Mark ready sends them to Ready for invoice'
             : ''}
           .
+          </span>
         </p>
       ) : null}
 
       {!isCustomTab ? (
-      <div className="mb-4 flex flex-wrap items-end gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-        <label className="flex flex-col gap-1 text-xs font-medium text-gray-600">
+      <div className={`${billingUi.filterBar} mb-4`}>
+        <label className={`${billingUi.filterField} sm:max-w-[11rem]`}>
           Period from
           <input
             type="date"
             value={from}
             onChange={(e) => setFrom(e.target.value)}
             onBlur={syncPeriodToUrl}
-            className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
+            className={`${billingUi.input} min-h-10`}
           />
         </label>
-        <label className="flex flex-col gap-1 text-xs font-medium text-gray-600">
+        <label className={`${billingUi.filterField} sm:max-w-[11rem]`}>
           Period to
           <input
             type="date"
             value={to}
             onChange={(e) => setTo(e.target.value)}
             onBlur={syncPeriodToUrl}
-            className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
+            className={`${billingUi.input} min-h-10`}
           />
         </label>
-        <label className="flex flex-col gap-1 text-xs font-medium text-gray-600">
+        <label className={`${billingUi.filterField} sm:max-w-[9rem]`}>
           Customer
           <input
             type="text"
             value={customerCode}
             onChange={(e) => setCustomerCode(e.target.value.toUpperCase())}
             placeholder="Optional"
-            className="w-28 rounded-lg border border-gray-300 px-2 py-1.5 text-sm uppercase"
+            className={`${billingUi.input} min-h-10 uppercase placeholder:normal-case`}
           />
         </label>
         {resolvedTab === 'validation_error' && validationKindCounts ? (
-          <label className="flex min-w-[12rem] flex-col gap-1 text-xs font-medium text-gray-600">
+          <label className={`${billingUi.filterField} sm:max-w-[14rem]`}>
             Flight kind
             <select
               value={flightKind}
@@ -1145,7 +1208,7 @@ export function PreparationPage({ api }: Props) {
                 setSelected(new Set());
                 setSelectAllMatching(false);
               }}
-              className="rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-sm text-gray-900"
+              className={`${billingUi.select} min-h-10`}
               aria-label="Filter validation errors by flight kind"
             >
               <option value="all">All flights ({validationKindCounts.all})</option>
@@ -1167,8 +1230,9 @@ export function PreparationPage({ api }: Props) {
             syncPeriodToUrl();
             void load();
           }}
-          className="rounded-lg bg-[color:var(--billing-primary)] px-4 py-2 text-sm font-medium text-white hover:bg-[color:var(--billing-primary-hover)]"
+          className={`${billingUi.btnPrimary} min-h-10 sm:self-end`}
         >
+          <Search className="h-4 w-4" aria-hidden />
           Search
         </button>
       </div>
@@ -1176,7 +1240,7 @@ export function PreparationPage({ api }: Props) {
 
       {deleting ? (
         <div
-          className="mb-4 flex items-center gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-950"
+          className={`${billingUi.alertDanger} mb-4 flex items-center gap-3`}
           role="status"
           aria-live="polite"
         >
@@ -1190,7 +1254,7 @@ export function PreparationPage({ api }: Props) {
 
       {markingReady ? (
         <div
-          className="mb-4 flex items-center gap-3 rounded-lg border border-[color:var(--billing-accent-border)] bg-[color:var(--billing-accent-soft)] px-4 py-3 text-sm text-[color:var(--billing-heading)]"
+          className={`${billingUi.alertInfo} mb-4 flex items-center gap-3`}
           role="status"
           aria-live="polite"
         >
@@ -1204,7 +1268,7 @@ export function PreparationPage({ api }: Props) {
 
       {creatingDrafts ? (
         <div
-          className="mb-4 flex items-center gap-3 rounded-lg border border-[color:var(--billing-accent-border)] bg-[color:var(--billing-accent-soft)] px-4 py-3 text-sm text-[color:var(--billing-heading)]"
+          className={`${billingUi.alertInfo} mb-4 flex items-center gap-3`}
           role="status"
           aria-live="polite"
         >
@@ -1223,14 +1287,16 @@ export function PreparationPage({ api }: Props) {
       ) : null}
 
       {actionMsg ? (
-        <div className="mb-4 rounded-lg border border-[color:var(--billing-accent-border)] bg-[color:var(--billing-accent-soft)] px-4 py-3 text-sm text-[color:var(--billing-heading)]">
-          {actionMsg}
+        <div className={`${billingUi.alertSuccess} mb-4 flex items-start gap-2.5`} role="status">
+          <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+          <span className="min-w-0 break-words">{actionMsg}</span>
         </div>
       ) : null}
 
       {error ? (
-        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-          {error}
+        <div className={`${billingUi.alertDanger} mb-4 flex items-start gap-2.5`} role="alert">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+          <span className="min-w-0 break-words">{error}</span>
         </div>
       ) : null}
       </div>
@@ -1249,18 +1315,26 @@ export function PreparationPage({ api }: Props) {
         />
         </div>
       ) : loading ? (
-        <div className="rounded-xl border border-gray-200 bg-white p-8 text-center text-sm text-gray-500">
-          Loading preparation records…
+        <div
+          className={`${billingUi.card} flex min-h-[220px] flex-col items-center justify-center gap-3 p-8 text-center`}
+          role="status"
+          aria-live="polite"
+        >
+          <span className={billingUi.spinner} aria-hidden />
+          <p className="text-sm text-[color:var(--billing-text-muted)]">Loading preparation records…</p>
         </div>
       ) : flightGroups.length === 0 ? (
-        <div className="rounded-xl border border-gray-200 bg-white p-8 text-center text-sm text-gray-600">
-          <p>
+        <div className="flex flex-col items-center rounded-[var(--billing-radius-xl)] border border-dashed border-[color:var(--billing-border-strong)] bg-[color:var(--billing-surface)] px-6 py-14 text-center">
+          <span className="grid h-12 w-12 place-items-center rounded-full bg-[color:var(--billing-primary-soft)] text-[color:var(--billing-primary)]">
+            <Inbox className="h-6 w-6" aria-hidden />
+          </span>
+          <p className="mt-4 max-w-xl text-sm font-semibold text-[color:var(--billing-heading)]">
             {kindFilterActive
               ? `No ${flightKind} flights in validation errors for this period.`
               : activeTab.empty}
           </p>
           {scopedTotal > 0 ? (
-            <p className="mt-3 text-gray-700">
+            <p className="mt-3 max-w-xl text-sm text-[color:var(--billing-text-secondary)]">
               {scopedTotal} flight{scopedTotal === 1 ? '' : 's'} in this period are in other
               tabs
               {periodStatusSummary ? ` (${periodStatusSummary})` : ''}.
@@ -1271,7 +1345,7 @@ export function PreparationPage({ api }: Props) {
                   <button
                     type="button"
                     onClick={() => setTab('custom')}
-                    className="mx-1 font-medium text-amber-800 underline hover:text-amber-950"
+                    className="mx-1 font-medium text-[color:var(--billing-warning)] underline underline-offset-2 hover:opacity-80"
                   >
                     Custom ({tabCounts.custom})
                   </button>
@@ -1288,7 +1362,7 @@ export function PreparationPage({ api }: Props) {
                     key={id}
                     type="button"
                     onClick={() => setTab(id)}
-                    className="mx-1 font-medium text-[color:var(--billing-accent-strong)] underline hover:text-[color:var(--billing-heading)]"
+                    className={`mx-1 ${prepInlineLink}`}
                   >
                     {label} ({count})
                   </button>
@@ -1296,7 +1370,7 @@ export function PreparationPage({ api }: Props) {
               })}
             </p>
           ) : (
-            <p className="mt-3 text-xs text-gray-500">
+            <p className="mt-3 max-w-xl text-xs text-[color:var(--billing-text-muted)]">
               Period filter uses the billing period start from when flights were sent. Match
               Period from/to to the source page dates used for Send to preparation.
               {isCustomTab
@@ -1306,14 +1380,14 @@ export function PreparationPage({ api }: Props) {
           )}
         </div>
       ) : (
-        <div className="rounded-[var(--billing-radius-xl)] border border-[color:var(--billing-border)] bg-[color:var(--billing-surface)] shadow-[var(--billing-shadow-sm)]">
+        <div className={`${billingUi.tableWrap} overflow-hidden`}>
           <div
             className="billing-table-scroll"
             role="region"
             aria-label="Preparation flights"
           >
             <table className="billing-table min-w-full text-left text-sm">
-              <thead className="sticky top-0 z-10 bg-[color:var(--billing-surface-muted)] text-[color:var(--billing-heading)] shadow-sm">
+              <thead className="sticky top-0 z-10 bg-[color:var(--billing-surface-muted)] text-[color:var(--billing-heading)] shadow-[0_1px_0_var(--billing-border)]">
                 <tr>
                   <th className="w-10 px-3 py-3" />
                   <th className="w-10 px-3 py-3" scope="col">
@@ -1330,22 +1404,23 @@ export function PreparationPage({ api }: Props) {
                           : 'Select all flights in this tab'
                       }
                       disabled={selectingAll || flightGroups.length === 0}
+                      className={prepCheckbox}
                     />
                   </th>
-                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide">Source</th>
-                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide">Serial / ID</th>
-                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide">Flight no</th>
-                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide">Customer</th>
-                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide">Period</th>
+                  <th className={billingUi.tableHeadCell}>Source</th>
+                  <th className={billingUi.tableHeadCell}>Serial / ID</th>
+                  <th className={billingUi.tableHeadCell}>Flight no</th>
+                  <th className={billingUi.tableHeadCell}>Customer</th>
+                  <th className={billingUi.tableHeadCell}>Period</th>
                   {hideContractColumn ? null : (
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide">
+                    <th className={billingUi.tableHeadCell}>
                       Contract
                     </th>
                   )}
-                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide">Rate</th>
-                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide">Validation</th>
-                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide">Status</th>
-                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide">Actions</th>
+                  <th className={billingUi.tableHeadCell}>Rate</th>
+                  <th className={billingUi.tableHeadCell}>Validation</th>
+                  <th className={billingUi.tableHeadCell}>Status</th>
+                  <th className={billingUi.tableHeadCell}>Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[color:var(--billing-border)]">
@@ -1401,19 +1476,23 @@ export function PreparationPage({ api }: Props) {
                     : buildRateCardsFixHref(context);
                   return (
                     <Fragment key={groupKey}>
-                      <tr className="hover:bg-gray-50">
+                      <tr
+                        className={`transition-colors duration-150 hover:bg-[color:var(--billing-surface-muted)] ${
+                          isOpen ? 'bg-[color:var(--billing-primary-soft)]' : ''
+                        }`}
+                      >
                         <td className="px-3 py-3">
                           <button
                             type="button"
                             onClick={() => toggleExpand(groupKey)}
                             aria-expanded={isOpen}
-                            className="text-gray-500 hover:text-gray-800"
+                            aria-label={isOpen ? 'Collapse flight details' : 'Expand flight details'}
+                            className={`inline-flex h-7 w-7 items-center justify-center rounded-[var(--billing-radius)] text-[color:var(--billing-text-muted)] transition-colors hover:bg-[color:var(--billing-primary-soft)] hover:text-[color:var(--billing-primary)] ${prepFocusRing}`}
                           >
-                            {isOpen ? (
-                              <ChevronDown className="h-4 w-4" />
-                            ) : (
-                              <ChevronRight className="h-4 w-4" />
-                            )}
+                            <ChevronRight
+                              className={`h-4 w-4 transition-transform duration-150 ${isOpen ? 'rotate-90' : ''}`}
+                              aria-hidden
+                            />
                           </button>
                         </td>
                         <td className="px-3 py-3">
@@ -1422,18 +1501,21 @@ export function PreparationPage({ api }: Props) {
                             checked={selectAllMatching || selected.has(groupKey)}
                             onChange={() => toggleSelect(groupKey)}
                             aria-label={`Select flight ${serialLabel}`}
+                            className={prepCheckbox}
                           />
                         </td>
-                        <td className="px-4 py-3 capitalize text-gray-800">
-                          {row.sourceType.replace(/_/g, ' ')}
+                        <td className="px-4 py-3">
+                          <span className="inline-flex rounded-full bg-[color:var(--billing-surface-muted)] px-2 py-0.5 text-xs font-medium capitalize text-[color:var(--billing-text-secondary)]">
+                            {row.sourceType.replace(/_/g, ' ')}
+                          </span>
                         </td>
-                        <td className="px-4 py-3 text-gray-800">
+                        <td className="px-4 py-3 text-[color:var(--billing-text-secondary)]">
                           {serialHref ? (
                             <a
                               href={serialHref}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="font-medium text-[color:var(--billing-accent-strong)] underline decoration-[color:var(--billing-accent)]/40 underline-offset-2 hover:text-[color:var(--billing-heading)]"
+                              className={prepInlineLink}
                               title={
                                 isRafRow
                                   ? 'Open this flight on Ramp Assistance Forms'
@@ -1446,30 +1528,30 @@ export function PreparationPage({ api }: Props) {
                             serialLabel
                           )}
                         </td>
-                        <td className="px-4 py-3 text-gray-900">
-                          <span className="font-medium">{flightNo || '—'}</span>
+                        <td className="px-4 py-3 text-[color:var(--billing-text)]">
+                          <span className="font-semibold tabular-nums">{flightNo || '—'}</span>
                           {rowKind === 'cancelled' ? (
-                            <span className="mt-0.5 block text-xs font-medium text-red-700">
+                            <span className={`${billingUi.badgeDanger} mt-1 normal-case`}>
                               Cancelled
                             </span>
                           ) : null}
                         </td>
-                        <td className="px-4 py-3 text-gray-800">
-                          {row.customerCode}
+                        <td className="px-4 py-3 text-[color:var(--billing-text)]">
+                          <span className="font-medium">{row.customerCode}</span>
                           {row.customerName ? (
-                            <span className="block text-xs text-gray-500">
+                            <span className="block max-w-[14rem] truncate text-xs text-[color:var(--billing-text-muted)]">
                               {row.customerName}
                             </span>
                           ) : null}
                         </td>
-                        <td className="px-4 py-3 text-xs text-gray-600">
+                        <td className="whitespace-nowrap px-4 py-3 text-xs tabular-nums text-[color:var(--billing-text-secondary)]">
                           {formatBillingDateRange(row.billingPeriodStart, row.billingPeriodEnd)}
                         </td>
                         {hideContractColumn ? null : (
                           <td className="px-4 py-3">
                             {isRafRow ? (
                               <span
-                                className="text-xs text-gray-400"
+                                className="text-xs text-[color:var(--billing-text-muted)]"
                                 title="RAF is billed on adhoc rates only — no contract"
                               >
                                 —
@@ -1504,11 +1586,11 @@ export function PreparationPage({ api }: Props) {
                           <StatusBadge status={row.status} />
                         </td>
                         <td className="px-4 py-3">
-                          <div className="flex flex-wrap gap-1">
+                          <div className="flex flex-wrap gap-1.5">
                             <button
                               type="button"
                               onClick={() => void validateGroup(group)}
-                              className="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-50"
+                              className={prepRowActionNeutral}
                             >
                               Validate
                             </button>
@@ -1528,7 +1610,7 @@ export function PreparationPage({ api }: Props) {
                                     : 'Complete the billing readiness checklist for this flight first'
                                 }
                                 onClick={() => void markReadyGroup(group)}
-                                className="inline-flex items-center gap-1 rounded border border-[color:var(--billing-accent)] px-2 py-1 text-xs text-[color:var(--billing-accent-strong)] hover:bg-[color:var(--billing-accent-soft)] disabled:cursor-not-allowed disabled:border-gray-300 disabled:text-gray-400 disabled:hover:bg-transparent"
+                                className={prepRowActionPrimary}
                               >
                                 {markingReadyRowId === groupKey ? (
                                   <>
@@ -1547,7 +1629,7 @@ export function PreparationPage({ api }: Props) {
                                     ? `/billing/invoice-drafts?draft=${row.invoiceDraftId}`
                                     : '/billing/invoice-drafts'
                                 }
-                                className="rounded border border-[color:var(--billing-info-border)] px-2 py-1 text-xs text-[color:var(--billing-info)] hover:bg-[color:var(--billing-info-soft)]"
+                                className={prepRowActionInfo}
                               >
                                 Open draft
                               </Link>
@@ -1584,7 +1666,7 @@ export function PreparationPage({ api }: Props) {
                                     }
                                   })()
                                 }
-                                className="inline-flex items-center gap-1 rounded border border-[color:var(--billing-accent)] px-2 py-1 text-xs text-[color:var(--billing-accent-strong)] hover:bg-[color:var(--billing-accent-soft)] disabled:cursor-not-allowed disabled:border-gray-300 disabled:text-gray-400 disabled:hover:bg-transparent"
+                                className={prepRowActionPrimary}
                               >
                                 {draftingRowId === groupKey ? (
                                   <>
@@ -1603,7 +1685,7 @@ export function PreparationPage({ api }: Props) {
                               <button
                                 type="button"
                                 onClick={() => void rejectGroup(group)}
-                                className="rounded border border-red-300 px-2 py-1 text-xs text-red-700 hover:bg-red-50"
+                                className={prepRowActionDanger}
                               >
                                 Reject
                               </button>
@@ -1612,16 +1694,16 @@ export function PreparationPage({ api }: Props) {
                         </td>
                       </tr>
                       {isOpen ? (
-                        <tr className="bg-gray-50">
-                          <td colSpan={11} className="px-6 py-4">
+                        <tr className="bg-[color:var(--billing-surface-muted)]">
+                          <td colSpan={11} className="border-l-2 border-[color:var(--billing-primary)] px-6 py-4">
                               <>
                             {isAdsFamily && lineCount > 1 ? (
-                              <div className="mb-4 overflow-x-auto rounded-lg border border-gray-200 bg-white">
-                                <p className="border-b border-gray-100 px-3 py-2 text-xs font-medium text-gray-600">
+                              <div className={`${billingUi.card} mb-4 overflow-x-auto`}>
+                                <p className="border-b border-[color:var(--billing-border)] px-3 py-2 text-xs font-semibold uppercase tracking-wide text-[color:var(--billing-heading)]">
                                   Equipment / manpower lines on this flight
                                 </p>
                                 <table className="min-w-full text-left text-xs">
-                                  <thead className="bg-gray-50 text-gray-600">
+                                  <thead className="bg-[color:var(--billing-surface-muted)] text-[color:var(--billing-text-muted)]">
                                     <tr>
                                       <th className="px-3 py-2 font-medium">Equipment / service</th>
                                       <th className="px-3 py-2 font-medium">Rate</th>
@@ -1629,12 +1711,12 @@ export function PreparationPage({ api }: Props) {
                                       <th className="px-3 py-2 font-medium">Status</th>
                                     </tr>
                                   </thead>
-                                  <tbody className="divide-y divide-gray-100">
+                                  <tbody className="divide-y divide-[color:var(--billing-border)]">
                                     {lines.map((line) => {
                                       const lineCheck = getChecklistSummary(line);
                                       return (
                                         <tr key={String(line._id)}>
-                                          <td className="px-3 py-2 text-gray-800">
+                                          <td className="px-3 py-2 text-[color:var(--billing-text)]">
                                             {prepLineEquipmentLabel(line)}
                                           </td>
                                           <td className="px-3 py-2">
@@ -1643,7 +1725,7 @@ export function PreparationPage({ api }: Props) {
                                               label="Rate"
                                             />
                                           </td>
-                                          <td className="px-3 py-2 text-gray-600">
+                                          <td className="px-3 py-2 tabular-nums text-[color:var(--billing-text-secondary)]">
                                             {lineCheck.confirmed}/{lineCheck.total}
                                           </td>
                                           <td className="px-3 py-2">
@@ -1662,12 +1744,12 @@ export function PreparationPage({ api }: Props) {
                                   key={String(line._id)}
                                   className={
                                     lineCount > 1
-                                      ? 'rounded-lg border border-gray-200 bg-white p-3'
+                                      ? `${billingUi.card} p-3`
                                       : undefined
                                   }
                                 >
                                   {lineCount > 1 ? (
-                                    <p className="mb-2 text-xs font-medium text-gray-700">
+                                    <p className="mb-2 text-xs font-semibold text-[color:var(--billing-heading)]">
                                       {prepLineEquipmentLabel(line)}
                                     </p>
                                   ) : null}

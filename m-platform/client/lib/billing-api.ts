@@ -893,6 +893,56 @@ export function createBillingApi({ getApiBase, fetch }: BillingApiConfig) {
     listRaf: (params: { from: string; to: string; customerCode?: string }) =>
       listSources('raf', params),
 
+    listUld: (params: { month?: string; airline?: string } = {}) => {
+      const q = new URLSearchParams();
+      if (params.month) q.set('month', params.month);
+      if (params.airline) q.set('airline', params.airline);
+      const qs = q.toString();
+      return request(`/billing/sources/uld${qs ? `?${qs}` : ''}`).then((r) =>
+        parseJson<{
+          success?: boolean;
+          months: Array<{ month: string; label: string; airlines: number; rows: number }>;
+          month: string | null;
+          airlines: string[];
+          sheet: {
+            airline: string;
+            uldTypes: string[];
+            opening: Array<{ uldType: string; balance: number | null }>;
+            rows: Array<{
+              date: string;
+              flightNo: string;
+              flag: '' | 'A320' | 'XXLD';
+              movements: Array<{
+                uldType: string;
+                inQty: number | null;
+                outQty: number | null;
+                balance: number | null;
+              }>;
+            }>;
+          } | null;
+        }>(r),
+      );
+    },
+
+    importUld: async (file: File, kind: 'others' | 'ua-vs') => {
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      let binary = '';
+      const chunk = 0x8000;
+      for (let i = 0; i < bytes.length; i += chunk) {
+        binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+      }
+      return request('/billing/sources/uld/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dataBase64: btoa(binary), kind }),
+      }).then((r) =>
+        parseJson<{
+          success?: boolean;
+          months: Array<{ month: string; label: string; airlines: number; rows: number }>;
+        }>(r),
+      );
+    },
+
     listRafAirlines: () =>
       request('/billing/sources/raf/airlines').then((r) =>
         parseJson<{

@@ -304,7 +304,7 @@ nav.billing-nav-chrome .billing-logo-plate img {
 }
 
 .billing-app nav.billing-nav-chrome .billing-nav-link-active {
-  background-color: var(--billing-accent-soft) !important;
+  background-color: #ebe6f7 !important;
   color: var(--billing-primary) !important;
 }
 
@@ -920,6 +920,16 @@ html[data-billing-night] nav.billing-nav-chrome .billing-nav-dropdown {
   color: #ffffff !important;
   border-color: rgba(76, 141, 255, 0.35) !important;
   box-shadow: 0 16px 36px rgba(0, 0, 0, 0.45) !important;
+}
+
+html[data-billing-night] nav.billing-nav-chrome .billing-nav-link-active,
+html[data-billing-night] nav.billing-nav-chrome .billing-nav-link-active:hover {
+  background-color: #2f6bff !important;
+  color: #ffffff !important;
+}
+
+html[data-billing-night] nav.billing-nav-chrome .billing-nav-link-active-icon {
+  color: #ffffff !important;
 }
 
 html[data-billing-night] nav.billing-nav-chrome .billing-night-toggle {

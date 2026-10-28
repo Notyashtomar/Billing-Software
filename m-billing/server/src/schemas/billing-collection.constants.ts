@@ -27,6 +27,7 @@ export const BillingDocType = {
   KycCase: 'kyc_case',
   AircraftMaster: 'aircraft_master',
   EquipmentMaster: 'equipment_master',
+  UldSheet: 'uld_sheet',
 } as const;
 
 export type BillingDocTypeValue = (typeof BillingDocType)[keyof typeof BillingDocType];

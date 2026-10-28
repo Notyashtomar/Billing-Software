@@ -24,6 +24,8 @@ import {
   BillingInvoiceLineSchema,
   BillingKycCase,
   BillingKycCaseSchema,
+  BillingUldSheet,
+  BillingUldSheetSchema,
   BillingParallelRunSnapshot,
   BillingParallelRunSnapshotSchema,
   BillingPreparationRecord,
@@ -143,6 +145,11 @@ export const billingMongooseFeature = {
       name: BillingEquipmentMaster.name,
       schema: BillingEquipmentMasterSchema,
       value: BillingDocType.EquipmentMaster,
+    },
+    {
+      name: BillingUldSheet.name,
+      schema: BillingUldSheetSchema,
+      value: BillingDocType.UldSheet,
     },
   ],
 };

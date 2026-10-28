@@ -1,5 +1,7 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query } from '@nestjs/common';
+import { IsIn, IsString, MaxLength } from 'class-validator';
 import { BillingSourcesService } from '../services/billing-sources.service';
+import { BillingUldService } from '../services/billing-uld.service';
 import { BillingSourcesQueryDto } from '../dto/billing-sources-query.dto';
 import {
   CurrentBillingStation,
@@ -14,10 +16,41 @@ import type { StationScopeContext } from '../common/station-scope';
 import { BillingPageAccess } from '../common/billing-page-access.decorator';
 import { SkipTimeout } from 'src/protection/decorators/skip-timeout.decorator';
 
+class ImportUldWorkbookDto {
+  @IsString()
+  @MaxLength(20_000_000)
+  dataBase64: string;
+
+  /** ua-vs: one airline per sheet (UA / VS). others: the multi-airline station matrix. */
+  @IsIn(['others', 'ua-vs'])
+  kind: 'others' | 'ua-vs';
+}
+
 @BillingPageAccess()
 @Controller('billing/sources')
 export class BillingSourcesController {
-  constructor(private readonly sourcesService: BillingSourcesService) {}
+  constructor(
+    private readonly sourcesService: BillingSourcesService,
+    private readonly uldService: BillingUldService,
+  ) {}
+
+  @Get('uld')
+  uld(
+    @CurrentBillingStation() station: StationScopeContext,
+    @Query('month') month?: string,
+    @Query('airline') airline?: string,
+  ) {
+    return this.uldService.list(station, month, airline);
+  }
+
+  @Post('uld/import')
+  importUld(
+    @CurrentBillingStation() station: StationScopeContext,
+    @Body() body: ImportUldWorkbookDto,
+  ) {
+    const buffer = Buffer.from(body.dataBase64, 'base64');
+    return this.uldService.importWorkbook(station, buffer, body.kind);
+  }
 
   @Get('scheduled-flights')
   @SkipTimeout()
