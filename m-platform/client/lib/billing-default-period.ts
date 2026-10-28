@@ -11,6 +11,15 @@ export function isDelhiStation(stationCode?: string | null): boolean {
   return String(stationCode ?? '').trim().toUpperCase() === 'DEL';
 }
 
+/** Inclusive YYYY-MM-DD window covering the calendar month before `now` (local time). */
+export function previousMonthBillingPeriod(now: Date = new Date()): { from: string; to: string } {
+  const first = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const last = new Date(now.getFullYear(), now.getMonth(), 0);
+  const ymd = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  return { from: ymd(first), to: ymd(last) };
+}
+
 /** Inclusive YYYY-MM-DD window for the logged-in station. */
 export function defaultBillingPeriodForStation(stationCode?: string | null): {
   from: string;

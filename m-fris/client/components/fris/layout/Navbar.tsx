@@ -31,7 +31,9 @@ import {
   PlusCircle,
   Sliders,
   Sparkles,
+  Layers,
   LineChart,
+  Luggage,
   MessageSquare,
   Package,
   Radio,
@@ -146,6 +148,9 @@ const BILLING_SOURCES_PAGE_IDS = [
   'equipment',
   'manpower',
   'raf',
+  'uld',
+  'ebc',
+  'oth',
   'maas',
 ] as const;
 
@@ -161,6 +166,9 @@ function mayUseBillingHref(href: string): boolean {
   if (
     path === '/billing/billed-services' ||
     path === '/billing/raf' ||
+    path === '/billing/uld' ||
+    path === '/billing/ebc' ||
+    path === '/billing/oth' ||
     path === '/billing/maas'
   ) {
     return BILLING_SOURCES_PAGE_IDS.some((id) =>
@@ -226,7 +234,12 @@ function billingDropdownIcon(href: string): React.ReactNode {
       return <ClipboardList className={cls} />;
     case '/billing/service-catalog':
     case '/billing/ads':
+    case '/billing/uld':
       return <Package className={cls} />;
+    case '/billing/ebc':
+      return <Luggage className={cls} />;
+    case '/billing/oth':
+      return <Layers className={cls} />;
     case '/billing/contracts':
     case '/billing/backing-sheets':
       return <FileText className={cls} />;
@@ -1175,7 +1188,7 @@ const Navbar: React.FC = () => {
         linkHover: 'billing-nav-soft-hover hover:text-[#261CC1] hover:bg-[#ebe6f7]',
         linkFocus: 'billing-nav-soft-focus focus:bg-[#ebe6f7]',
         linkFocusVisible: 'billing-nav-soft-focus focus-visible:bg-[#ebe6f7]',
-        linkActive: 'billing-nav-link-active bg-[#f9ffc4] text-[#1C0770]',
+        linkActive: 'billing-nav-link-active bg-[#ebe6f7] text-[#1C0770]',
         linkActiveIcon: 'billing-nav-link-active-icon text-[#1C0770]',
         linkHoverIcon: 'billing-nav-link-hover-icon text-gray-400 group-hover/item:text-[#261CC1]',
         nestedOpen: 'billing-nav-nested-open bg-[#ebe6f7] text-[#1C0770]',
@@ -1184,7 +1197,7 @@ const Navbar: React.FC = () => {
         avatarChevronOpen: 'billing-nav-avatar-chevron text-[#1C0770]',
         profileHeader: 'billing-nav-profile-header from-[#ebe6f7] to-[#e8f3ff]',
         mobileRoleBg: 'billing-nav-mobile-role bg-[#ebe6f7]',
-        mobileItemActive: 'billing-nav-link-active bg-[#f9ffc4] text-[#1C0770]',
+        mobileItemActive: 'billing-nav-link-active bg-[#ebe6f7] text-[#1C0770]',
         mobileItemIdle: 'billing-nav-item-idle text-gray-700 hover:text-[#261CC1]',
         softHover: 'billing-nav-soft-hover hover:bg-[#ebe6f7]',
         hamburgerHover: 'billing-nav-item-idle text-gray-700 hover:text-[#261CC1]',

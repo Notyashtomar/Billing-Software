@@ -1,15 +1,36 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
-  OTHER_STATION_BILLING_PERIOD,
   billingPeriodOverlaps,
   isDelhiStation,
+  previousMonthBillingPeriod,
   readLoginStationCode,
 } from '@/lib/billing-default-period';
-import { Building2, CalendarDays, ChevronLeft, Download, Loader2, Package, Plane, RefreshCw, UsersRound, Wrench } from 'lucide-react';
+import {
+  AlertCircle,
+  Archive,
+  ArrowRight,
+  Building2,
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  Files,
+  Info,
+  Layers,
+  Loader2,
+  Luggage,
+  Package,
+  Plane,
+  RefreshCw,
+  Search,
+  UsersRound,
+  Wrench,
+  X,
+} from 'lucide-react';
 import { BillingPageHeader } from '../BillingLayout';
 import { billingUi } from '../billingUi';
 import { BillingDataTable } from '../BillingDataTable';
@@ -506,8 +527,239 @@ function SelectionCheckbox({
       disabled={disabled}
       onChange={onChange}
       aria-label={label}
-      className="h-4 w-4 shrink-0 rounded border-gray-300 accent-[color:var(--billing-accent)] disabled:opacity-40"
+      className="h-4 w-4 shrink-0 cursor-pointer rounded border-[color:var(--billing-border-strong)] accent-[color:var(--billing-primary)] disabled:cursor-not-allowed disabled:opacity-40"
     />
+  );
+}
+
+/* ───────────────────────── Invoice drafts — page-scoped presentation ───────────────────────── */
+
+const draftFocusRing =
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--billing-info)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--billing-bg)]';
+
+/** Static card shell — surface, border, radius, soft shadow. */
+const draftCardClass =
+  'rounded-[var(--billing-radius-xl)] border border-[color:var(--billing-border)] bg-[color:var(--billing-surface)] shadow-[var(--billing-shadow-sm)] transition-[border-color,box-shadow,transform] duration-150 ease-out hover:border-[color:var(--billing-border-strong)] hover:shadow-[var(--billing-shadow-md)]';
+
+/** Whole-card button tile (category cards). */
+const draftTileClass = `group relative flex h-full w-full flex-col ${draftCardClass} p-5 text-left hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.995] ${draftFocusRing}`;
+
+const draftIconTileClass =
+  'grid h-11 w-11 shrink-0 place-items-center rounded-[var(--billing-radius-lg)] bg-[color:var(--billing-primary-soft)] text-[color:var(--billing-primary)] transition-colors duration-150 group-hover:bg-[color:var(--billing-primary)] group-hover:text-[color:var(--billing-text-inverse)]';
+
+const draftMonogramClass =
+  'grid h-11 w-11 shrink-0 place-items-center rounded-[var(--billing-radius-lg)] bg-[color:var(--billing-primary)] text-sm font-bold uppercase tracking-wide text-[color:var(--billing-text-inverse)] shadow-[var(--billing-shadow-sm)]';
+
+const draftRowActionClass = `inline-flex min-h-8 items-center rounded-[var(--billing-radius)] px-2.5 py-1 text-sm font-medium text-[color:var(--billing-info)] transition-colors hover:bg-[color:var(--billing-primary-soft)] hover:text-[color:var(--billing-primary)] ${draftFocusRing}`;
+
+/** Staggered entrance that reuses the design-system keyframes (max 6 delays). */
+function draftTileEnterClass(index: number): string {
+  const step = Math.min(index, 6);
+  return step === 0 ? 'billing-tile-enter' : `billing-tile-enter billing-tile-enter-delay-${step}`;
+}
+
+function DraftStat({
+  label,
+  value,
+  hint,
+  emphasis = false,
+  compact = false,
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+  emphasis?: boolean;
+  compact?: boolean;
+}) {
+  return (
+    <div
+      className={`flex min-w-0 flex-col ${
+        compact
+          ? 'gap-0 sm:items-end'
+          : 'gap-0.5 border-l-2 pl-3 ' +
+            (emphasis
+              ? 'border-[color:var(--billing-info)]'
+              : 'border-[color:var(--billing-border-strong)]')
+      }`}
+    >
+      <dt className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[color:var(--billing-text-muted)]">
+        {label}
+      </dt>
+      <dd
+        className={`truncate font-semibold tabular-nums ${
+          compact ? 'text-sm' : 'text-lg leading-6'
+        } ${emphasis ? 'text-[color:var(--billing-info)]' : 'text-[color:var(--billing-heading)]'}`}
+      >
+        {value}
+      </dd>
+      {hint && !compact ? (
+        <dd className="truncate text-xs text-[color:var(--billing-text-muted)]">{hint}</dd>
+      ) : null}
+    </div>
+  );
+}
+
+function DraftSectionHeading({
+  title,
+  description,
+  aside,
+}: {
+  title: string;
+  description: string;
+  aside?: string;
+}) {
+  return (
+    <div className="mb-3 flex items-end justify-between gap-4">
+      <div className="min-w-0">
+        <h2 className={billingUi.sectionTitle}>{title}</h2>
+        <p className={billingUi.sectionDesc}>{description}</p>
+      </div>
+      {aside ? (
+        <span className="hidden shrink-0 text-xs tabular-nums text-[color:var(--billing-text-muted)] sm:inline">
+          {aside}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+function DraftCountPill({ count, muted = false }: { count: number; muted?: boolean }) {
+  return (
+    <span
+      className={`inline-flex shrink-0 items-center rounded-full px-2.5 py-0.5 text-xs font-medium tabular-nums ${
+        muted
+          ? 'bg-[color:var(--billing-surface-muted)] text-[color:var(--billing-text-muted)]'
+          : 'bg-[color:var(--billing-info-soft)] text-[color:var(--billing-info)]'
+      }`}
+    >
+      {count} draft{count === 1 ? '' : 's'}
+    </span>
+  );
+}
+
+function DraftTileFooter({
+  label,
+  value,
+  cta,
+  muted = false,
+}: {
+  label: string;
+  value: string;
+  cta: string;
+  muted?: boolean;
+}) {
+  return (
+    <div className="mt-5 flex w-full items-end justify-between gap-3 border-t border-[color:var(--billing-border)] pt-3">
+      <div className="min-w-0">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[color:var(--billing-text-muted)]">
+          {label}
+        </p>
+        <p
+          className={`truncate text-sm font-semibold tabular-nums ${
+            muted ? 'text-[color:var(--billing-text-muted)]' : 'text-[color:var(--billing-heading)]'
+          }`}
+        >
+          {value}
+        </p>
+      </div>
+      <span className="inline-flex shrink-0 items-center gap-1.5 text-sm font-medium text-[color:var(--billing-info)] transition-colors group-hover:text-[color:var(--billing-primary)]">
+        <span className="sr-only sm:not-sr-only">{cta}</span>
+        <span className="grid h-7 w-7 place-items-center rounded-full border border-[color:var(--billing-border)] transition-[transform,border-color,background-color] duration-150 group-hover:translate-x-0.5 group-hover:border-[color:var(--billing-primary)] group-hover:bg-[color:var(--billing-primary-soft)]">
+          <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+        </span>
+      </span>
+    </div>
+  );
+}
+
+function DraftTrail({ items }: { items: Array<{ label: string; onClick?: () => void }> }) {
+  return (
+    <nav aria-label="Breadcrumb" className="mb-4 flex flex-wrap items-center gap-0.5 text-sm">
+      {items.map((item, index) => {
+        const isLast = index === items.length - 1;
+        return (
+          <Fragment key={`${item.label}-${index}`}>
+            {index > 0 ? (
+              <ChevronRight
+                className="h-3.5 w-3.5 shrink-0 text-[color:var(--billing-text-muted)]"
+                aria-hidden
+              />
+            ) : null}
+            {item.onClick && !isLast ? (
+              <button
+                type="button"
+                onClick={item.onClick}
+                className={`inline-flex min-h-8 max-w-[14rem] items-center gap-1 truncate rounded-[var(--billing-radius)] px-2 py-1 font-medium text-[color:var(--billing-text-secondary)] transition-colors hover:bg-[color:var(--billing-primary-soft)] hover:text-[color:var(--billing-primary)] ${draftFocusRing}`}
+              >
+                {index === 0 ? <ChevronLeft className="h-4 w-4 shrink-0" aria-hidden /> : null}
+                <span className="truncate">{item.label}</span>
+              </button>
+            ) : (
+              <span
+                aria-current="page"
+                className="inline-flex min-h-8 max-w-[16rem] items-center truncate px-2 py-1 font-semibold text-[color:var(--billing-heading)]"
+              >
+                {item.label}
+              </span>
+            )}
+          </Fragment>
+        );
+      })}
+    </nav>
+  );
+}
+
+function DraftEmptyState({
+  icon: Icon,
+  title,
+  body,
+  action,
+}: {
+  icon: typeof Files;
+  title: string;
+  body: string;
+  action?: ReactNode;
+}) {
+  return (
+    <div className="flex flex-col items-center rounded-[var(--billing-radius-xl)] border border-dashed border-[color:var(--billing-border-strong)] bg-[color:var(--billing-surface)] px-6 py-14 text-center">
+      <span className="grid h-12 w-12 place-items-center rounded-full bg-[color:var(--billing-primary-soft)] text-[color:var(--billing-primary)]">
+        <Icon className="h-6 w-6" aria-hidden />
+      </span>
+      <p className="mt-4 text-sm font-semibold text-[color:var(--billing-heading)]">{title}</p>
+      <p className="mt-1 max-w-md text-sm text-[color:var(--billing-text-muted)]">{body}</p>
+      {action ? <div className="mt-5">{action}</div> : null}
+    </div>
+  );
+}
+
+function DraftSkeletonGrid() {
+  return (
+    <div
+      className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4"
+      role="status"
+      aria-live="polite"
+      aria-label="Loading drafts"
+    >
+      {Array.from({ length: 4 }).map((_, index) => (
+        <div
+          key={index}
+          className={`${draftCardClass} animate-pulse p-5 hover:translate-y-0 hover:shadow-[var(--billing-shadow-sm)]`}
+        >
+          <div className="flex items-start justify-between">
+            <span className="h-11 w-11 rounded-[var(--billing-radius-lg)] bg-[color:var(--billing-surface-muted)]" />
+            <span className="h-5 w-16 rounded-full bg-[color:var(--billing-surface-muted)]" />
+          </div>
+          <span className="mt-5 block h-4 w-20 rounded bg-[color:var(--billing-surface-muted)]" />
+          <span className="mt-2 block h-3 w-full rounded bg-[color:var(--billing-surface-muted)]" />
+          <span className="mt-1.5 block h-3 w-3/4 rounded bg-[color:var(--billing-surface-muted)]" />
+          <div className="mt-5 flex items-end justify-between border-t border-[color:var(--billing-border)] pt-3">
+            <span className="h-4 w-24 rounded bg-[color:var(--billing-surface-muted)]" />
+            <span className="h-7 w-7 rounded-full bg-[color:var(--billing-surface-muted)]" />
+          </div>
+        </div>
+      ))}
+      <span className="sr-only">Loading drafts…</span>
+    </div>
   );
 }
 
@@ -540,9 +792,9 @@ export function InvoiceDraftsPage({ api }: Props) {
   const [periodTo, setPeriodTo] = useState('');
 
   useEffect(() => {
-    if (isDelhiStation(readLoginStationCode())) return;
-    setPeriodFrom(OTHER_STATION_BILLING_PERIOD.from);
-    setPeriodTo(OTHER_STATION_BILLING_PERIOD.to);
+    const previous = previousMonthBillingPeriod();
+    setPeriodFrom(previous.from);
+    setPeriodTo(previous.to);
   }, []);
 
   const load = useCallback(async () => {
@@ -572,7 +824,16 @@ export function InvoiceDraftsPage({ api }: Props) {
     );
   }, [periodFrom, periodTo, rows]);
 
-  const categoryGroups = useMemo(() => groupDraftsByCategory(periodRows), [periodRows]);
+  const [stationCode, setStationCode] = useState('');
+  useEffect(() => {
+    setStationCode(readLoginStationCode());
+  }, []);
+  const hideMaas = isDelhiStation(stationCode);
+
+  const categoryGroups = useMemo(
+    () => groupDraftsByCategory(periodRows).filter((group) => !(hideMaas && group.key === 'MAAS')),
+    [hideMaas, periodRows],
+  );
 
   const categoryRows = useMemo(() => {
     if (!selectedCategory) return [];
@@ -873,7 +1134,7 @@ export function InvoiceDraftsPage({ api }: Props) {
 
   const pageDescription =
     navLevel === 'categories'
-      ? 'Open BHS, ADS, RAF, or MAAS to browse drafts by category'
+      ? 'Browse draft invoices by service family, billing month, and airline'
       : navLevel === 'months' && selectedCategory
         ? `${selectedCategory} drafts — browse by billing month, then airline`
         : navLevel === 'airlines' && selectedMonth
@@ -882,18 +1143,22 @@ export function InvoiceDraftsPage({ api }: Props) {
             ? `${selectedCategory} · ${selectedAirline.name} drafts for ${selectedMonth?.label ?? 'selected month'}`
             : 'Draft invoices composed from preparation records';
 
+  const familiesWithDrafts = categoryGroups.filter((group) => group.invoiceCount > 0).length;
+  const periodFiltered = Boolean(periodFrom || periodTo);
+  const bulkBusy = deleting || merging || binning || refreshingAll;
+
   return (
     <>
       <BillingPageHeader
         title="Invoice drafts"
         description={pageDescription}
         actions={
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
               disabled={refreshingAll || merging || binning || deleting || loading}
               onClick={() => setRefreshDialogOpen(true)}
-              className="inline-flex items-center gap-2 rounded-lg border border-[color:var(--billing-accent)] bg-white px-4 py-2 text-sm font-medium text-[color:var(--billing-primary)] hover:bg-[color:var(--billing-surface)] disabled:opacity-40"
+              className={billingUi.btnSecondary}
               title="Re-apply customer, contract, and conversion masters to all open drafts. Rebuilds from preparation when linked rows still exist."
             >
               {refreshingAll ? (
@@ -911,7 +1176,7 @@ export function InvoiceDraftsPage({ api }: Props) {
                       type="button"
                       disabled={selected.size < 2 || merging || binning || deleting || refreshingAll}
                       onClick={() => setMergeDialogOpen(true)}
-                      className="rounded-lg border border-[color:var(--billing-accent)] bg-[color:var(--billing-primary)] px-4 py-2 text-sm font-medium text-white hover:bg-[color:var(--billing-primary-hover)] disabled:opacity-40"
+                      className={billingUi.btnPrimary}
                     >
                       {merging
                         ? 'Merging…'
@@ -921,8 +1186,9 @@ export function InvoiceDraftsPage({ api }: Props) {
                       type="button"
                       disabled={selected.size === 0 || binning || merging || refreshingAll}
                       onClick={() => setBinDialogOpen(true)}
-                      className="rounded-lg border border-amber-300 bg-white px-4 py-2 text-sm font-medium text-amber-800 hover:bg-amber-50 disabled:opacity-40"
+                      className="inline-flex items-center justify-center gap-1.5 rounded-[var(--billing-radius)] border border-[color:var(--billing-warning-border)] bg-[color:var(--billing-surface)] px-4 py-2 text-sm font-medium text-[color:var(--billing-warning)] transition-[background-color,border-color,color,box-shadow,transform] duration-150 ease-out hover:bg-[color:var(--billing-warning-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--billing-info)] focus-visible:ring-offset-2 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
                     >
+                      <Archive className="h-4 w-4" aria-hidden />
                       {binning ? 'Moving…' : `Move to bin${selected.size > 0 ? ` (${selected.size})` : ''}`}
                     </button>
                   </>
@@ -931,7 +1197,7 @@ export function InvoiceDraftsPage({ api }: Props) {
                   type="button"
                   disabled={selectedRows.length === 0 || deleting || merging || refreshingAll}
                   onClick={() => setDeleteDialogOpen(true)}
-                  className="min-h-11 rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-40"
+                  className={billingUi.btnDangerOutline}
                 >
                   {deleting
                     ? 'Deleting…'
@@ -943,70 +1209,84 @@ export function InvoiceDraftsPage({ api }: Props) {
         }
       />
 
-      <div className="mb-4 flex flex-wrap items-end gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-        <label className="flex flex-col gap-1 text-xs font-medium text-gray-600">
-          Period from
-          <input
-            type="date"
-            value={periodFrom}
-            onChange={(e) => setPeriodFrom(e.target.value)}
-            className="min-h-11 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900"
-          />
-        </label>
-        <label className="flex flex-col gap-1 text-xs font-medium text-gray-600">
-          Period to
-          <input
-            type="date"
-            value={periodTo}
-            onChange={(e) => setPeriodTo(e.target.value)}
-            className="min-h-11 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900"
-          />
-        </label>
-        {periodFrom || periodTo ? (
-          <button
-            type="button"
-            onClick={() => {
-              setPeriodFrom('');
-              setPeriodTo('');
-            }}
-            className="min-h-11 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+      <div className={`${billingUi.card} mb-5`}>
+        <div className="flex flex-col gap-3 p-3 sm:flex-row sm:items-end sm:justify-between sm:p-4">
+          <form
+            className="flex flex-col gap-2 sm:flex-row sm:items-end"
+            onSubmit={(event) => event.preventDefault()}
+            aria-label="Billing period filter"
           >
-            Show all periods
-          </button>
-        ) : null}
+            <label className="flex min-w-0 flex-col gap-1 text-xs font-medium text-[color:var(--billing-text-secondary)]">
+              Period from
+              <input
+                type="date"
+                value={periodFrom}
+                onChange={(e) => setPeriodFrom(e.target.value)}
+                className={`${billingUi.input} min-h-10 sm:w-40`}
+              />
+            </label>
+            <label className="flex min-w-0 flex-col gap-1 text-xs font-medium text-[color:var(--billing-text-secondary)]">
+              Period to
+              <input
+                type="date"
+                value={periodTo}
+                onChange={(e) => setPeriodTo(e.target.value)}
+                className={`${billingUi.input} min-h-10 sm:w-40`}
+              />
+            </label>
+            {periodFiltered ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setPeriodFrom('');
+                  setPeriodTo('');
+                }}
+                className={`${billingUi.btnGhost} min-h-10 whitespace-nowrap`}
+              >
+                <X className="h-4 w-4" aria-hidden />
+                Show all periods
+              </button>
+            ) : null}
+          </form>
+        </div>
       </div>
 
       {actionMsg ? (
-        <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 text-sm text-gray-800">
-          {actionMsg}
+        <div className={`${billingUi.alertInfo} mb-4 flex items-start gap-2.5`} role="status">
+          <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+          <span className="min-w-0 break-words">{actionMsg}</span>
         </div>
       ) : null}
       {loadError ? (
-        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-          {loadError}
+        <div className={`${billingUi.alertDanger} mb-4 flex items-start gap-2.5`} role="alert">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+          <span className="min-w-0 break-words">{loadError}</span>
         </div>
       ) : null}
 
       {loading ? (
-        <div className="rounded-xl border border-gray-200 bg-white p-8 text-center text-sm text-gray-500">
-          Loading drafts…
-        </div>
+        <DraftSkeletonGrid />
       ) : rows.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-gray-300 bg-white px-4 py-12 text-center text-sm text-gray-500">
-          No drafts — create from preparation workspace
-        </div>
+        <DraftEmptyState
+          icon={Files}
+          title="No invoice drafts yet"
+          body="Drafts composed from the preparation workspace appear here, grouped by service family, billing month, and airline."
+        />
       ) : navLevel === 'categories' ? (
         <section aria-label="Invoice draft categories">
-          <div className="mb-3">
-            <h2 className="text-sm font-semibold text-gray-900">Invoice categories</h2>
-            <p className="mt-0.5 text-xs text-gray-500">
-              BHS, ADS, RAF, and MAAS drafts stay separate — open a card to list only that family.
-            </p>
-          </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {categoryGroups.map((cat) => {
+          <DraftSectionHeading
+            title="Invoice categories"
+            description={
+              hideMaas
+                ? 'BHS, ADS, RAF, ULD, EBC, and OTH drafts stay separate — open a card to list only that family.'
+                : 'BHS, ADS, RAF, MAAS, ULD, EBC, and OTH drafts stay separate — open a card to list only that family.'
+            }
+            aside={`${familiesWithDrafts} of ${categoryGroups.length} families have drafts`}
+          />
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {categoryGroups.map((cat, index) => {
               const Icon =
-                cat.key === 'ADS'
+                cat.key === 'ADS' || cat.key === 'ULD'
                   ? Package
                   : cat.key === 'RAF'
                     ? Wrench
@@ -1014,30 +1294,37 @@ export function InvoiceDraftsPage({ api }: Props) {
                       ? UsersRound
                       : cat.key === 'CUSTOM'
                         ? Building2
-                        : Plane;
+                        : cat.key === 'EBC'
+                          ? Luggage
+                          : cat.key === 'OTH'
+                            ? Layers
+                            : Plane;
+              const isEmpty = cat.invoiceCount === 0;
               return (
                 <button
                   key={cat.key}
                   type="button"
                   onClick={() => openCategory(cat.key)}
-                  className="group flex w-full flex-col rounded-xl border border-gray-200 bg-white p-5 text-left shadow-sm transition-[border-color,box-shadow,transform] hover:border-[color:var(--billing-accent-border)] hover:shadow-md active:scale-[0.99]"
+                  className={`${draftTileClass} ${draftTileEnterClass(index)}`}
                 >
                   <div className="flex items-start justify-between gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[color:var(--billing-accent-soft)] text-[color:var(--billing-accent-strong)]">
+                    <span className={draftIconTileClass}>
                       <Icon className="h-5 w-5" aria-hidden />
-                    </div>
-                    <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium tabular-nums text-gray-700">
-                      {cat.invoiceCount} draft{cat.invoiceCount === 1 ? '' : 's'}
                     </span>
+                    <DraftCountPill count={cat.invoiceCount} muted={isEmpty} />
                   </div>
-                  <h3 className="mt-4 text-lg font-semibold text-gray-900">{cat.label}</h3>
-                  <p className="mt-1 text-sm text-gray-600">{cat.description}</p>
-                  <p className="mt-2 text-xs tabular-nums text-gray-500">
-                    Total receivable {fmt(cat.totalInclTax)}
+                  <h3 className="mt-4 text-base font-semibold tracking-tight text-[color:var(--billing-heading)]">
+                    {cat.label}
+                  </h3>
+                  <p className="mt-1 line-clamp-2 text-sm leading-5 text-[color:var(--billing-text-secondary)]">
+                    {cat.description}
                   </p>
-                  <span className="mt-4 text-sm font-medium text-[color:var(--billing-accent-strong)] group-hover:underline">
-                    View {cat.key} drafts →
-                  </span>
+                  <DraftTileFooter
+                    label="Total receivable"
+                    value={isEmpty ? 'No drafts yet' : fmt(cat.totalInclTax)}
+                    muted={isEmpty}
+                    cta={`View ${cat.key} drafts`}
+                  />
                 </button>
               );
             })}
@@ -1045,276 +1332,274 @@ export function InvoiceDraftsPage({ api }: Props) {
         </section>
       ) : navLevel === 'months' ? (
         <section aria-label="Draft billing months">
-          <div className="mb-4 flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={backToCategories}
-              className="inline-flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
-            >
-              <ChevronLeft className="h-4 w-4" aria-hidden />
-              Categories
-            </button>
-            <span className="text-gray-300" aria-hidden>
-              /
-            </span>
-            <span className="truncate text-sm font-semibold text-gray-900">
-              {selectedCategory}
-            </span>
-          </div>
-          <div className="mb-3">
-            <h2 className="text-sm font-semibold text-gray-900">Billing months</h2>
-            <p className="mt-0.5 text-xs text-gray-500">
-              Open a month to see airlines, or download one combined {selectedCategory} PDF for every
-              airline in that period.
-            </p>
-          </div>
+          <DraftTrail
+            items={[
+              { label: 'Categories', onClick: backToCategories },
+              { label: selectedCategory ?? '' },
+            ]}
+          />
+          <DraftSectionHeading
+            title="Billing months"
+            description={`Open a month to see airlines, or download one combined ${selectedCategory} PDF for every airline in that period.`}
+            aside={`${monthGroups.length} month${monthGroups.length === 1 ? '' : 's'}`}
+          />
           {monthGroups.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-gray-300 bg-white px-4 py-12 text-center text-sm text-gray-500">
-              No {selectedCategory} drafts yet — create from preparation (ADS / scheduled / RAF / MAAS sources).
-            </div>
+            <DraftEmptyState
+              icon={CalendarDays}
+              title={`No ${selectedCategory} drafts yet`}
+              body="Create drafts from the preparation workspace and they will be grouped here by billing month."
+            />
           ) : (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {monthGroups.map((month) => {
-              const isDownloading = downloadingMonthKey === month.key;
-              const downloadBusy = downloadingMonthKey != null;
-              return (
-                <div
-                  key={month.key}
-                  className="group flex w-full flex-col rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition-[border-color,box-shadow] hover:border-[color:var(--billing-accent-border)] hover:shadow-md"
-                >
-                  <button
-                    type="button"
-                    onClick={() => openMonth(month.key)}
-                    className="flex w-full flex-col text-left outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--billing-accent)] focus-visible:ring-offset-2 active:scale-[0.99]"
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {monthGroups.map((month, index) => {
+                const isDownloading = downloadingMonthKey === month.key;
+                const downloadBusy = downloadingMonthKey != null;
+                return (
+                  <article
+                    key={month.key}
+                    className={`${draftCardClass} ${draftTileEnterClass(index)} flex flex-col p-5`}
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[color:var(--billing-accent-soft)] text-[color:var(--billing-accent-strong)]">
-                        <CalendarDays className="h-5 w-5" aria-hidden />
+                    <button
+                      type="button"
+                      onClick={() => openMonth(month.key)}
+                      className="group flex w-full flex-col rounded-[var(--billing-radius)] text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--billing-info)] focus-visible:ring-offset-2"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <span className={draftIconTileClass}>
+                          <CalendarDays className="h-5 w-5" aria-hidden />
+                        </span>
+                        <DraftCountPill count={month.invoiceCount} />
                       </div>
-                      <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium tabular-nums text-gray-700">
-                        {month.invoiceCount} draft{month.invoiceCount === 1 ? '' : 's'}
-                      </span>
-                    </div>
-                    <h3 className="mt-4 text-lg font-semibold text-gray-900">{month.label}</h3>
-                    <p className="mt-1 text-sm text-gray-600">
-                      {month.airlineCount} airline{month.airlineCount === 1 ? '' : 's'}
-                    </p>
-                    <p className="mt-2 text-xs tabular-nums text-gray-500">
-                      Total receivable {fmt(month.totalInclTax)}
-                    </p>
-                    <span className="mt-4 text-sm font-medium text-[color:var(--billing-accent-strong)] group-hover:underline">
-                      View airlines →
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    disabled={downloadBusy || month.invoiceCount === 0}
-                    onClick={() => void downloadAllMonthInvoices(month)}
-                    aria-label={`Download combined ${selectedCategory ?? ''} PDF with all ${month.invoiceCount} invoices for ${month.label}`}
-                    className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-[color:var(--billing-accent-border)] bg-[color:var(--billing-accent-soft)] px-3 py-2 text-sm font-semibold text-[color:var(--billing-accent-strong)] transition-[background-color,opacity,transform] hover:bg-[color:var(--billing-accent-soft)]/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--billing-accent)] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 active:scale-[0.98]"
-                  >
-                    {isDownloading ? (
-                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                    ) : (
-                      <Download className="h-4 w-4" aria-hidden />
-                    )}
-                    {isDownloading
-                      ? 'Building PDF…'
-                      : `Download combined PDF (${month.invoiceCount})`}
-                  </button>
-                </div>
-              );
-            })}
-          </div>
+                      <h3 className="mt-4 text-base font-semibold tracking-tight text-[color:var(--billing-heading)]">
+                        {month.label}
+                      </h3>
+                      <p className="mt-1 text-sm text-[color:var(--billing-text-secondary)]">
+                        {month.airlineCount} airline{month.airlineCount === 1 ? '' : 's'}
+                      </p>
+                      <DraftTileFooter
+                        label="Total receivable"
+                        value={fmt(month.totalInclTax)}
+                        cta="View airlines"
+                      />
+                    </button>
+                    <button
+                      type="button"
+                      disabled={downloadBusy || month.invoiceCount === 0}
+                      onClick={() => void downloadAllMonthInvoices(month)}
+                      aria-label={`Download combined ${selectedCategory ?? ''} PDF with all ${month.invoiceCount} invoices for ${month.label}`}
+                      className={`${billingUi.btnSecondary} mt-4 w-full`}
+                    >
+                      {isDownloading ? (
+                        <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                      ) : (
+                        <Download className="h-4 w-4" aria-hidden />
+                      )}
+                      {isDownloading
+                        ? 'Building PDF…'
+                        : `Download combined PDF (${month.invoiceCount})`}
+                    </button>
+                  </article>
+                );
+              })}
+            </div>
           )}
         </section>
       ) : navLevel === 'airlines' && selectedMonth ? (
         <section aria-label={`${selectedMonth.label} airlines`}>
-          <div className="mb-4 flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={backToCategories}
-              className="inline-flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
-            >
-              <ChevronLeft className="h-4 w-4" aria-hidden />
-              Categories
-            </button>
-            <span className="text-gray-300" aria-hidden>
-              /
-            </span>
-            <button
-              type="button"
-              onClick={backToMonths}
-              className="truncate text-sm font-medium text-[color:var(--billing-accent-strong)] hover:underline"
-            >
-              {selectedCategory}
-            </button>
-            <span className="text-gray-300" aria-hidden>
-              /
-            </span>
-            <span className="truncate text-sm font-semibold text-gray-900">{selectedMonth.label}</span>
-          </div>
-          <div className="mb-3">
-            <h2 className="text-sm font-semibold text-gray-900">Airlines</h2>
-            <p className="mt-0.5 text-xs text-gray-500" aria-live="polite">
-              {airlineSearch.trim()
-                ? filteredAirlineGroups.length === 0
-                  ? `No airlines match “${airlineSearch.trim()}”.`
-                  : `Showing ${filteredAirlineGroups.length} of ${airlineGroups.length} airlines for “${airlineSearch.trim()}”. Select cards to delete those drafts.`
-                : `Select airlines to delete their ${selectedMonth.label} drafts, or open an airline to review each invoice.`}
-            </p>
-          </div>
-          <form
-            role="search"
-            className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center"
-            onSubmit={(event) => event.preventDefault()}
-          >
-            <label className="min-w-0 flex-1 sm:max-w-md">
-              <span className="sr-only">Airline name or code</span>
-              <input
-                type="search"
-                value={airlineSearch}
-                onChange={(event) => setAirlineSearch(event.target.value)}
-                placeholder="Airline name or code"
-                aria-label="Filter airlines by name or code"
-                autoComplete="off"
-                className={billingUi.input}
-              />
-            </label>
-            {airlineSearch ? (
-              <button type="button" onClick={clearAirlineSearch} className={billingUi.btnSecondary}>
-                Clear
-              </button>
-            ) : null}
-          </form>
-          {airlineGroups.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-gray-300 bg-white px-4 py-12 text-center text-sm text-gray-500">
-              No airlines for {selectedMonth.label}.
-            </div>
-          ) : filteredAirlineGroups.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-gray-300 bg-white px-4 py-12 text-center text-sm text-gray-500">
-              <p>No airlines match “{airlineSearch}”.</p>
-              <button
-                type="button"
-                onClick={clearAirlineSearch}
-                className={`${billingUi.btnSecondary} mt-4`}
-              >
-                Clear search
-              </button>
-            </div>
-          ) : (
-          <>
-          <div className="mb-3 flex flex-col gap-2 rounded-xl border border-gray-200 bg-white px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <label className="inline-flex min-h-11 items-center gap-2 text-sm font-medium text-gray-800">
-              <SelectionCheckbox
-                checked={allSelected}
-                indeterminate={selectedRows.length > 0 && !allSelected}
-                disabled={selectionLocked || airlinePageInvoices.length === 0}
-                onChange={toggleSelectAll}
-                label={`Select all ${airlinePageInvoices.length} visible drafts`}
-              />
-              Select all visible
-              <span className="font-normal tabular-nums text-gray-500">
-                ({airlinePageInvoices.length} draft{airlinePageInvoices.length === 1 ? '' : 's'})
-              </span>
-            </label>
-            {selectedRows.length > 0 ? (
-              <p className="text-sm text-gray-600" aria-live="polite">
-                {selectedRows.length} draft{selectedRows.length === 1 ? '' : 's'} selected
+          <DraftTrail
+            items={[
+              { label: 'Categories', onClick: backToCategories },
+              { label: selectedCategory ?? '', onClick: backToMonths },
+              { label: selectedMonth.label },
+            ]}
+          />
+          <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+            <div className="min-w-0">
+              <h2 className={billingUi.sectionTitle}>Airlines</h2>
+              <p className={billingUi.sectionDesc} aria-live="polite">
+                {airlineSearch.trim()
+                  ? filteredAirlineGroups.length === 0
+                    ? `No airlines match “${airlineSearch.trim()}”.`
+                    : `Showing ${filteredAirlineGroups.length} of ${airlineGroups.length} airlines for “${airlineSearch.trim()}”. Select cards to delete those drafts.`
+                  : `Select airlines to delete their ${selectedMonth.label} drafts, or open an airline to review each invoice.`}
               </p>
-            ) : null}
-          </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {filteredAirlineGroups.map((airline) => {
-              const airlineIds = airline.invoices.map(rowId);
-              const selectedCount = airlineIds.filter((id) => selected.has(id)).length;
-              const airlineAllSelected =
-                airlineIds.length > 0 && selectedCount === airlineIds.length;
-              const airlineSomeSelected = selectedCount > 0 && !airlineAllSelected;
-              return (
-                <article
-                  key={airline.key}
-                  className={`flex flex-col rounded-xl border bg-white p-5 text-left shadow-sm transition-[border-color,box-shadow] ${
-                    airlineAllSelected || airlineSomeSelected
-                      ? 'border-[color:var(--billing-accent-border)] ring-1 ring-[color:var(--billing-accent-border)]'
-                      : 'border-gray-200'
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <label className="inline-flex min-h-11 min-w-11 items-center">
-                      <SelectionCheckbox
-                        checked={airlineAllSelected}
-                        indeterminate={airlineSomeSelected}
-                        disabled={selectionLocked || airlineIds.length === 0}
-                        onChange={() => toggleAirlineSelection(airline)}
-                        label={`Select ${airline.invoiceCount} draft${airline.invoiceCount === 1 ? '' : 's'} for ${airline.code}`}
-                      />
-                    </label>
-                    <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium tabular-nums text-gray-700">
-                      {airline.invoiceCount} draft{airline.invoiceCount === 1 ? '' : 's'}
-                    </span>
-                  </div>
+            </div>
+            <form
+              role="search"
+              className="flex w-full items-center gap-2 lg:w-auto"
+              onSubmit={(event) => event.preventDefault()}
+            >
+              <label className="relative min-w-0 flex-1 lg:w-80">
+                <span className="sr-only">Airline name or code</span>
+                <Search
+                  className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[color:var(--billing-text-muted)]"
+                  aria-hidden
+                />
+                <input
+                  type="search"
+                  value={airlineSearch}
+                  onChange={(event) => setAirlineSearch(event.target.value)}
+                  placeholder="Airline name or code"
+                  aria-label="Filter airlines by name or code"
+                  autoComplete="off"
+                  className={`${billingUi.input} min-h-10 pl-9 ${airlineSearch ? 'pr-9' : ''}`}
+                />
+                {airlineSearch ? (
                   <button
                     type="button"
-                    onClick={() => openAirline(airline.key)}
-                    className="group mt-2 flex w-full flex-col rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--billing-accent)] focus-visible:ring-offset-2"
+                    onClick={clearAirlineSearch}
+                    aria-label="Clear airline search"
+                    className="absolute right-1.5 top-1/2 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-[var(--billing-radius-sm)] text-[color:var(--billing-text-muted)] transition-colors hover:bg-[color:var(--billing-surface-muted)] hover:text-[color:var(--billing-text)]"
                   >
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-sky-50 text-sky-700">
-                      <Building2 className="h-5 w-5" aria-hidden />
-                    </div>
-                    <h3 className="mt-4 text-lg font-semibold text-gray-900">{airline.code}</h3>
-                    <p className="mt-1 line-clamp-2 text-sm text-gray-600">{airline.name}</p>
-                    <p className="mt-2 text-xs tabular-nums text-gray-500">
-                      Total receivable {fmt(airline.totalInclTax)}
-                    </p>
-                    <span className="mt-4 text-sm font-medium text-[color:var(--billing-accent-strong)] group-hover:underline">
-                      View invoices →
-                    </span>
+                    <X className="h-4 w-4" aria-hidden />
                   </button>
-                </article>
-              );
-            })}
+                ) : null}
+              </label>
+            </form>
           </div>
-          </>
+          {airlineGroups.length === 0 ? (
+            <DraftEmptyState
+              icon={Building2}
+              title={`No airlines for ${selectedMonth.label}`}
+              body="There are no drafts for any airline in this billing month."
+            />
+          ) : filteredAirlineGroups.length === 0 ? (
+            <DraftEmptyState
+              icon={Search}
+              title={`No airlines match “${airlineSearch}”`}
+              body="Try the two-letter airline code or the start of the airline name."
+              action={
+                <button type="button" onClick={clearAirlineSearch} className={billingUi.btnSecondary}>
+                  Clear search
+                </button>
+              }
+            />
+          ) : (
+            <>
+              <div
+                className={`${billingUi.card} mb-3 flex flex-col gap-2 px-4 py-2.5 sm:flex-row sm:items-center sm:justify-between ${
+                  selectedRows.length > 0 ? 'border-[color:var(--billing-border-strong)]' : ''
+                }`}
+              >
+                <label className="inline-flex min-h-10 items-center gap-2.5 text-sm font-medium text-[color:var(--billing-text)]">
+                  <SelectionCheckbox
+                    checked={allSelected}
+                    indeterminate={selectedRows.length > 0 && !allSelected}
+                    disabled={selectionLocked || airlinePageInvoices.length === 0}
+                    onChange={toggleSelectAll}
+                    label={`Select all ${airlinePageInvoices.length} visible drafts`}
+                  />
+                  Select all visible
+                  <span className="font-normal tabular-nums text-[color:var(--billing-text-muted)]">
+                    ({airlinePageInvoices.length} draft{airlinePageInvoices.length === 1 ? '' : 's'})
+                  </span>
+                </label>
+                {selectedRows.length > 0 ? (
+                  <div className="flex items-center gap-2" aria-live="polite">
+                    <span className={`${billingUi.badgeInfo} normal-case tabular-nums`}>
+                      {selectedRows.length} draft{selectedRows.length === 1 ? '' : 's'} selected
+                    </span>
+                    <button
+                      type="button"
+                      onClick={clearSelection}
+                      disabled={bulkBusy}
+                      className={`${billingUi.btnGhost} min-h-8 px-2 py-1 text-xs`}
+                    >
+                      Clear
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {filteredAirlineGroups.map((airline, index) => {
+                  const airlineIds = airline.invoices.map(rowId);
+                  const selectedCount = airlineIds.filter((id) => selected.has(id)).length;
+                  const airlineAllSelected =
+                    airlineIds.length > 0 && selectedCount === airlineIds.length;
+                  const airlineSomeSelected = selectedCount > 0 && !airlineAllSelected;
+                  const highlighted = airlineAllSelected || airlineSomeSelected;
+                  return (
+                    <article
+                      key={airline.key}
+                      className={`${draftCardClass} ${draftTileEnterClass(index)} flex flex-col p-5 ${
+                        highlighted
+                          ? 'border-[color:var(--billing-info)] ring-1 ring-[color:var(--billing-info)]'
+                          : ''
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <span className={draftMonogramClass}>{airline.code.slice(0, 2)}</span>
+                        <label className="inline-flex min-h-10 min-w-10 items-center justify-end gap-2">
+                          {highlighted ? (
+                            <span className="text-[11px] font-medium tabular-nums text-[color:var(--billing-info)]">
+                              {selectedCount}/{airlineIds.length}
+                            </span>
+                          ) : null}
+                          <SelectionCheckbox
+                            checked={airlineAllSelected}
+                            indeterminate={airlineSomeSelected}
+                            disabled={selectionLocked || airlineIds.length === 0}
+                            onChange={() => toggleAirlineSelection(airline)}
+                            label={`Select ${airline.invoiceCount} draft${airline.invoiceCount === 1 ? '' : 's'} for ${airline.code}`}
+                          />
+                        </label>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => openAirline(airline.key)}
+                        className="group mt-3 flex w-full flex-col rounded-[var(--billing-radius)] text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--billing-info)] focus-visible:ring-offset-2"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <h3 className="text-base font-semibold tracking-tight text-[color:var(--billing-heading)]">
+                            {airline.code}
+                          </h3>
+                          <DraftCountPill count={airline.invoiceCount} />
+                        </div>
+                        <p className="mt-0.5 line-clamp-2 text-sm text-[color:var(--billing-text-secondary)]">
+                          {airline.name}
+                        </p>
+                        <DraftTileFooter
+                          label="Total receivable"
+                          value={fmt(airline.totalInclTax)}
+                          cta="View invoices"
+                        />
+                      </button>
+                    </article>
+                  );
+                })}
+              </div>
+            </>
           )}
         </section>
       ) : selectedAirline && selectedMonth ? (
         <section aria-label={`${selectedAirline.code} invoices`}>
-          <div className="mb-4 flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={backToCategories}
-              className="inline-flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
-            >
-              <ChevronLeft className="h-4 w-4" aria-hidden />
-              Categories
-            </button>
-            <span className="text-gray-300" aria-hidden>
-              /
-            </span>
-            <button
-              type="button"
-              onClick={backToMonths}
-              className="truncate text-sm font-medium text-[color:var(--billing-accent-strong)] hover:underline"
-            >
-              {selectedCategory}
-            </button>
-            <span className="text-gray-300" aria-hidden>
-              /
-            </span>
-            <button
-              type="button"
-              onClick={backToAirlines}
-              className="truncate text-sm font-medium text-[color:var(--billing-accent-strong)] hover:underline"
-            >
-              {selectedMonth.label}
-            </button>
-            <span className="text-gray-300" aria-hidden>
-              /
-            </span>
-            <span className="truncate text-sm font-semibold text-gray-900">
-              {selectedAirline.code}
-            </span>
+          <DraftTrail
+            items={[
+              { label: 'Categories', onClick: backToCategories },
+              { label: selectedCategory ?? '', onClick: backToMonths },
+              { label: selectedMonth.label, onClick: backToAirlines },
+              { label: selectedAirline.code },
+            ]}
+          />
+          <div className={`${billingUi.card} mb-3 flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between`}>
+            <div className="flex min-w-0 items-center gap-3">
+              <span className={draftMonogramClass}>{selectedAirline.code.slice(0, 2)}</span>
+              <div className="min-w-0">
+                <h2 className="truncate text-base font-semibold tracking-tight text-[color:var(--billing-heading)]">
+                  {selectedAirline.code}
+                  <span className="ml-2 text-sm font-normal text-[color:var(--billing-text-secondary)]">
+                    {selectedAirline.name}
+                  </span>
+                </h2>
+                <p className={billingUi.sectionDesc}>
+                  {selectedCategory} · {selectedMonth.label}
+                </p>
+              </div>
+            </div>
+            <dl className="grid shrink-0 grid-cols-2 gap-x-8">
+              <DraftStat label="Drafts" value={String(visibleInvoices.length)} compact />
+              <DraftStat label="Receivable" value={fmt(selectedAirline.totalInclTax)} compact />
+            </dl>
           </div>
 
           <BillingDataTable
@@ -1339,7 +1624,7 @@ export function InvoiceDraftsPage({ api }: Props) {
                     checked={selected.has(rowId(r))}
                     onChange={() => toggleSelect(rowId(r))}
                     aria-label={`Select ${r.draftNumber}`}
-                    className="h-4 w-4 rounded border-gray-300 accent-[color:var(--billing-accent)]"
+                    className="h-4 w-4 cursor-pointer rounded border-[color:var(--billing-border-strong)] accent-[color:var(--billing-primary)]"
                   />
                 ),
               },
@@ -1381,10 +1666,10 @@ export function InvoiceDraftsPage({ api }: Props) {
                 key: 'actions',
                 header: 'Actions',
                 render: (r) => (
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-1.5">
                     <Link
                       href={`/billing/invoices/${r._id}`}
-                      className="text-sm font-medium text-[color:var(--billing-accent-strong)] hover:underline"
+                      className={draftRowActionClass}
                     >
                       Open
                     </Link>
@@ -1393,7 +1678,7 @@ export function InvoiceDraftsPage({ api }: Props) {
                         href={`/billing/invoices/${r._id}?edit=${
                           selectedCategory === 'CUSTOM' ? 'custom' : '1'
                         }`}
-                        className="text-sm font-medium text-[color:var(--billing-accent-strong)] hover:underline"
+                        className={draftRowActionClass}
                       >
                         Edit
                       </Link>
@@ -1406,12 +1691,15 @@ export function InvoiceDraftsPage({ api }: Props) {
         </section>
       ) : null}
 
-      <p className="mt-4 text-sm text-gray-600">
-        <Link href="/billing/invoice-bin" className="font-medium text-amber-800 underline">
-          Invoice bin
-        </Link>{' '}
-        — hide drafts you no longer need without deleting them.
-      </p>
+      <div className="mt-5 flex items-center gap-2.5 text-sm text-[color:var(--billing-text-muted)]">
+        <Archive className="h-4 w-4 shrink-0" aria-hidden />
+        <p>
+          <Link href="/billing/invoice-bin" className={billingUi.link}>
+            Invoice bin
+          </Link>{' '}
+          — hide drafts you no longer need without deleting them.
+        </p>
+      </div>
       <InvoiceDeleteDialog
         mode="selected"
         variant="draft"
@@ -1485,7 +1773,7 @@ type DraftAirlineGroup = {
   invoices: BillingInvoiceHeader[];
 };
 
-type DraftInvoiceCategory = 'BHS' | 'ADS' | 'RAF' | 'MAAS' | 'CUSTOM';
+type DraftInvoiceCategory = 'BHS' | 'ADS' | 'RAF' | 'MAAS' | 'CUSTOM' | 'ULD' | 'EBC' | 'OTH';
 
 type DraftCategoryGroup = {
   key: DraftInvoiceCategory;
@@ -1499,7 +1787,16 @@ function resolveDraftInvoiceCategory(invoice: BillingInvoiceHeader): DraftInvoic
   const raw = String(invoice.invoiceCategory ?? '')
     .trim()
     .toUpperCase();
-  if (raw === 'ADS' || raw === 'RAF' || raw === 'BHS' || raw === 'CUSTOM' || raw === 'MAAS') {
+  if (
+    raw === 'ADS' ||
+    raw === 'RAF' ||
+    raw === 'BHS' ||
+    raw === 'CUSTOM' ||
+    raw === 'MAAS' ||
+    raw === 'ULD' ||
+    raw === 'EBC' ||
+    raw === 'OTH'
+  ) {
     return raw;
   }
   return 'BHS';
@@ -1527,6 +1824,9 @@ function groupDraftsByCategory(invoices: BillingInvoiceHeader[]): DraftCategoryG
     RAF: { count: 0, total: 0 },
     MAAS: { count: 0, total: 0 },
     CUSTOM: { count: 0, total: 0 },
+    ULD: { count: 0, total: 0 },
+    EBC: { count: 0, total: 0 },
+    OTH: { count: 0, total: 0 },
   };
   for (const invoice of invoices) {
     const cat = resolveDraftInvoiceCategory(invoice);
@@ -1557,8 +1857,20 @@ function groupDraftsByCategory(invoices: BillingInvoiceHeader[]): DraftCategoryG
       label: 'Custom Bills',
       description: 'Airline custom bills — create or edit lines from Preparation / invoice detail',
     },
+    ULD: {
+      label: 'ULD',
+      description: 'Unit load device movements — airline container and pallet invoices',
+    },
+    EBC: {
+      label: 'EBC',
+      description: 'Excess baggage collection charges',
+    },
+    OTH: {
+      label: 'OTH',
+      description: 'Other billed services',
+    },
   };
-  return (['BHS', 'ADS', 'RAF', 'MAAS', 'CUSTOM'] as DraftInvoiceCategory[]).map((key) => ({
+  return (['ADS', 'BHS', 'CUSTOM', 'EBC', 'MAAS', 'OTH', 'RAF', 'ULD'] as DraftInvoiceCategory[]).map((key) => ({
     key,
     label: meta[key].label,
     description: meta[key].description,

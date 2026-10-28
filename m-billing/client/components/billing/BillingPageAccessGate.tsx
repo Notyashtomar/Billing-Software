@@ -43,7 +43,13 @@ export function BillingPageAccessGate({ children }: { children: ReactNode }) {
           clientMayUseBwmsAppPage('billing-finance', 'dashboard')
         );
       }
-      if (path === '/billing/billed-services' || path === '/billing/raf') {
+      if (
+        path === '/billing/billed-services' ||
+        path === '/billing/raf' ||
+        path === '/billing/uld' ||
+        path === '/billing/ebc' ||
+        path === '/billing/oth'
+      ) {
         return (
           [
             'billed-services',
@@ -52,6 +58,8 @@ export function BillingPageAccessGate({ children }: { children: ReactNode }) {
             'equipment',
             'manpower',
             'raf',
+            'uld',
+            'ebc',
           ] as const
         ).some((id) => clientMayUseBwmsAppPage('billing-finance', id));
       }
