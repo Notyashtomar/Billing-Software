@@ -108,6 +108,8 @@ export interface BillingCustomer {
   /** When true, print PAN on this airline's invoices. */
   showPanOnInvoice?: boolean;
   panNumber?: string;
+  /** Customer's MSME / Udyam registration number, printed on invoices. */
+  msmeNumber?: string;
   /** When true, print VAT number on this airline's invoices. */
   showVatOnInvoice?: boolean;
   vatNumber?: string;

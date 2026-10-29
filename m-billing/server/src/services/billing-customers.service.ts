@@ -201,6 +201,7 @@ export class BillingCustomersService {
       existing.active = dto.active ?? true;
       existing.showPanOnInvoice = dto.showPanOnInvoice ?? false;
       existing.panNumber = dto.panNumber?.trim().toUpperCase() || undefined;
+      existing.msmeNumber = dto.msmeNumber?.trim().toUpperCase() || undefined;
       existing.showVatOnInvoice = dto.showVatOnInvoice ?? false;
       existing.vatNumber = dto.vatNumber?.trim().toUpperCase() || undefined;
       const currentLines = Array.isArray(existing.scheduleLines)
@@ -254,6 +255,7 @@ export class BillingCustomersService {
           active: dto.active ?? true,
           showPanOnInvoice: dto.showPanOnInvoice ?? false,
           panNumber: dto.panNumber?.trim().toUpperCase() || undefined,
+          msmeNumber: dto.msmeNumber?.trim().toUpperCase() || undefined,
           showVatOnInvoice: dto.showVatOnInvoice ?? false,
           vatNumber: dto.vatNumber?.trim().toUpperCase() || undefined,
           invoiceTerms: dto.invoiceTerms?.trim() || undefined,
@@ -352,6 +354,9 @@ export class BillingCustomersService {
     }
     if (dto.panNumber !== undefined) {
       doc.panNumber = dto.panNumber.trim().toUpperCase() || undefined;
+    }
+    if (dto.msmeNumber !== undefined) {
+      doc.msmeNumber = dto.msmeNumber.trim().toUpperCase() || undefined;
     }
     if (dto.showVatOnInvoice !== undefined) {
       doc.showVatOnInvoice = dto.showVatOnInvoice;

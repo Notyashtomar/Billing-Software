@@ -31,6 +31,10 @@ export class CompanyLegalEntityDto {
   @IsOptional()
   @IsString()
   cin?: string;
+
+  @IsOptional()
+  @IsString()
+  msme?: string;
 }
 
 export class BankDetailsDto {

@@ -95,6 +95,11 @@ export class CreateBillingCustomerDto {
   @MaxLength(20)
   panNumber?: string;
 
+  @IsOptional()
+  @IsString()
+  @MaxLength(30)
+  msmeNumber?: string;
+
   /** When true, print customer VAT number on invoices (default off). */
   @IsOptional()
   @IsBoolean()
@@ -197,6 +202,11 @@ export class UpdateBillingCustomerDto {
   @IsString()
   @MaxLength(20)
   panNumber?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(30)
+  msmeNumber?: string;
 
   /** When true, print customer VAT number on invoices (default off). */
   @IsOptional()

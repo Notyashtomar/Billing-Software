@@ -74,6 +74,7 @@ type SettingsDoc = {
     gstin?: string;
     pan?: string;
     cin?: string;
+    msme?: string;
   };
   bankDetails?: {
     bankName?: string;
@@ -113,6 +114,7 @@ export function StationProfilePage({ api }: Props) {
     companyGstin: '',
     companyPan: '',
     companyCin: '',
+    companyMsme: '',
     gstStateCode: '',
     defaultPaymentTerms: '',
     monthCloseLockDay: '',
@@ -149,6 +151,7 @@ export function StationProfilePage({ api }: Props) {
         companyGstin: doc.companyLegalEntity?.gstin ?? '',
         companyPan: doc.companyLegalEntity?.pan ?? '',
         companyCin: doc.companyLegalEntity?.cin ?? '',
+        companyMsme: doc.companyLegalEntity?.msme ?? '',
         gstStateCode: doc.gstStateCode ?? '',
         defaultPaymentTerms: doc.defaultPaymentTerms ?? '',
         monthCloseLockDay:
@@ -192,6 +195,7 @@ export function StationProfilePage({ api }: Props) {
           gstin: form.companyGstin || undefined,
           pan: form.companyPan || undefined,
           cin: form.companyCin.trim() || undefined,
+          msme: form.companyMsme.trim() || undefined,
         },
         bankDetails: {
           bankName: form.bankName || undefined,
@@ -367,6 +371,14 @@ export function StationProfilePage({ api }: Props) {
               value={form.companyCin}
               onChange={(v) => setForm((f) => ({ ...f, companyCin: v.toUpperCase() }))}
               placeholder="U62200DL2008PTC184155"
+            />
+          </FieldGroup>
+          <FieldGroup label="MSME" htmlFor="companyMsme" hint="Our MSME / Udyam registration number — prints below Place of Supply">
+            <TextInput
+              id="companyMsme"
+              value={form.companyMsme}
+              onChange={(v) => setForm((f) => ({ ...f, companyMsme: v.toUpperCase() }))}
+              placeholder="UDYAM-DL-00-0000000"
             />
           </FieldGroup>
           <FieldGroup label="Default payment terms" htmlFor="paymentTerms">

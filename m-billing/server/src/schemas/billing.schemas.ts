@@ -98,6 +98,10 @@ export class BillingCustomer {
   @Prop({ trim: true, uppercase: true })
   panNumber?: string;
 
+  /** Customer's MSME / Udyam registration number, printed on invoices. */
+  @Prop({ trim: true, uppercase: true })
+  msmeNumber?: string;
+
   /** When true, print customer VAT number on tax invoices. Default false. */
   @Prop({ default: false })
   showVatOnInvoice?: boolean;
@@ -939,6 +943,8 @@ export class BillingSettings {
     pan?: string;
     /** Corporate Identification Number (MCA), e.g. U62200DL2008PTC184155. */
     cin?: string;
+    /** Our MSME / Udyam registration number for this station. */
+    msme?: string;
     logoUrl?: string;
   };
 
@@ -1821,6 +1827,69 @@ export class BillingKycCase {
 }
 
 export const BillingKycCaseSchema = SchemaFactory.createForClass(BillingKycCase);
+
+/** One airline's ULD control sheet for one station-month, imported from the station workbook. */
+@Schema({ timestamps: true })
+export class BillingUldSheet {
+  @Prop({ required: true, uppercase: true, trim: true })
+  stationCode: string;
+
+  /** YYYY-MM */
+  @Prop({ required: true, trim: true })
+  month: string;
+
+  @Prop({ required: true, trim: true })
+  airline: string;
+
+  @Prop({ type: [String], default: [] })
+  uldTypes: string[];
+
+  @Prop({
+    type: [{ uldType: { type: String }, balance: { type: Number, default: null } }],
+    default: [],
+  })
+  opening: Array<{ uldType: string; balance: number | null }>;
+
+  @Prop({
+    type: [
+      {
+        date: { type: String, default: '' },
+        flightNo: { type: String, default: '' },
+        /** '' | 'A320' (green in the workbook) | 'XXLD' (red / cancelled). */
+        flag: { type: String, default: '' },
+        movements: {
+          type: [
+            {
+              uldType: { type: String },
+              inQty: { type: Number, default: null },
+              outQty: { type: Number, default: null },
+              balance: { type: Number, default: null },
+            },
+          ],
+          default: [],
+        },
+      },
+    ],
+    default: [],
+  })
+  rows: Array<{
+    date: string;
+    flightNo: string;
+    flag: '' | 'A320' | 'XXLD';
+    movements: Array<{
+      uldType: string;
+      inQty: number | null;
+      outQty: number | null;
+      balance: number | null;
+    }>;
+  }>;
+}
+
+export const BillingUldSheetSchema = SchemaFactory.createForClass(BillingUldSheet);
+BillingUldSheetSchema.index(
+  { stationCode: 1, month: 1, airline: 1 },
+  { unique: true, partialFilterExpression: { docType: BillingDocType.UldSheet } },
+);
 BillingKycCaseSchema.index({ stationCode: 1, customerCode: 1, status: 1 });
 BillingKycCaseSchema.index({ stationCode: 1, updatedAt: -1 });
 BillingKycCaseSchema.index(

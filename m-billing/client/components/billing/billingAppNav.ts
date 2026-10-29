@@ -29,6 +29,9 @@ export const BILLING_SOURCES_NAV: readonly BillingAppNavLink[] = [
   { href: '/billing/scheduled-flights', label: 'BHS' },
   { href: '/billing/ads', label: 'ADS' },
   { href: '/billing/raf', label: 'RAF' },
+  { href: '/billing/uld', label: 'ULD' },
+  { href: '/billing/ebc', label: 'EBC' },
+  { href: '/billing/oth', label: 'OTH' },
 ];
 
 /** Hidden from the billing chrome. Pages stay reachable by URL. */
