@@ -98,6 +98,8 @@ import {
   fortnightExchangeRateForBillingPeriod,
   resolveFortnightPartForFlights,
   resolveFortnightPartRangeForMonth,
+  adsFortnightRangeForPeriodStart,
+  formatAdsFortnightPeriodLabel,
 } from '../utils/contract-fortnight-billing.util';
 
 const DRAFT_STATUSES = ['draft', 'pending_approval', 'approved', 'generated'];
@@ -348,7 +350,45 @@ export class BillingInvoiceDraftsService {
       this.invoiceModel.find(filter).sort({ updatedAt: -1 }).skip(skip).limit(limit).lean(),
       this.invoiceModel.countDocuments(filter),
     ]);
+    await this.attachAdsFortnightPeriodLabels(
+      ctx,
+      items as unknown as Array<Record<string, unknown>>,
+    );
     return paginatedResponse(items, total, page, limit);
+  }
+
+  /** ADS fortnight drafts show the contract part, e.g. `16-09-26 - 31-09-26`. */
+  private async attachAdsFortnightPeriodLabels(
+    ctx: StationScopeContext,
+    items: Array<Record<string, unknown>>,
+  ) {
+    const ads = items.filter(
+      (row) => String(row.invoiceCategory ?? '').trim().toUpperCase() === 'ADS' && row.contractId,
+    );
+    if (ads.length === 0) return;
+    const contractIds = [...new Set(ads.map((row) => String(row.contractId)))];
+    const contracts = await this.contractModel
+      .find({
+        _id: { $in: contractIds.map((id) => new Types.ObjectId(id)) },
+        ...StationScope.filter({}, ctx),
+      })
+      .select('fortnightBillingEnabled fortnightBillingRanges')
+      .lean();
+    const byId = new Map(contracts.map((contract) => [String(contract._id), contract]));
+    for (const row of ads) {
+      const contract = byId.get(String(row.contractId));
+      if (!contract?.fortnightBillingEnabled) continue;
+      const part = adsFortnightRangeForPeriodStart(
+        contract.fortnightBillingRanges,
+        row.billingPeriodStart as Date | string | undefined,
+      );
+      if (!part) continue;
+      row.billingPeriodLabel = formatAdsFortnightPeriodLabel(
+        part.monthKey,
+        part.startDay,
+        part.endDay,
+      );
+    }
   }
 
   async findOne(ctx: StationScopeContext, id: string) {
@@ -3224,6 +3264,9 @@ export class BillingInvoiceDraftsService {
       previousCurrency === currencyCode
         ? options.volumeOptions
         : await this.bhsVolumeComposeOptions(ctx, contract, currencyCode, records);
+    if (contract?.fortnightBillingEnabled) {
+      await this.invoiceEngine.ensureFortnightArrivalDates(ctx, records);
+    }
     const ataYmds = records
       .map((row) => extractPreparationFlightYmd(row))
       .filter((ymd): ymd is string => Boolean(ymd));
@@ -3253,7 +3296,9 @@ export class BillingInvoiceDraftsService {
     if (partWindow) {
       composed.billingPeriodStart = partWindow.start;
       composed.billingPeriodEnd = partWindow.end;
-      composed.currencyFactor = partWindow.exchangeRatePerUsd;
+      if (partWindow.exchangeRatePerUsd > 0) {
+        composed.currencyFactor = partWindow.exchangeRatePerUsd;
+      }
     }
     const customer = await this.customerModel
       .findOne(StationScope.filter({ customerCode: composed.customerCode }, ctx))

@@ -976,6 +976,8 @@ export class BillingInvoicesService {
       serviceCatalog,
       contractCategory: contract?.category,
       fortnightBilling: contract?.fortnightBillingEnabled === true,
+      fortnightRanges: contract?.fortnightBillingRanges,
+      invoiceCategory: header.invoiceCategory,
       inrUsdInvoiceCategories:
         contract?.inrUsdInvoiceEnabled === true ? contract.inrUsdInvoiceCategories ?? [] : [],
       hasAnnexures: lines.length > 0,
