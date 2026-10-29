@@ -323,10 +323,21 @@ export function resolveFortnightPartForFlights(
     return null;
   }
   if (!config.enabled || !config.ranges?.length) return null;
-  const assigned = assignFortnightAta(config, dates[0]);
+  const tallies = new Map<
+    string,
+    { monthKey: string; range: ContractFortnightBillingRange; count: number }
+  >();
+  for (const ymd of dates) {
+    const assigned = assignFortnightAta(config, ymd);
+    if (!assigned) continue;
+    const key = `${assigned.monthKey}|${assigned.range.startDay}`;
+    const row = tallies.get(key);
+    if (row) row.count += 1;
+    else tallies.set(key, { monthKey: assigned.monthKey, range: assigned.range, count: 1 });
+  }
+  const assigned = [...tallies.values()].sort((left, right) => right.count - left.count)[0];
   if (!assigned) return null;
   const rate = fortnightExchangeRateForPart(config, assigned.monthKey, assigned.range.startDay);
-  if (rate == null) return null;
   const monthLastDay = daysInFortnightMonth(assigned.monthKey) ?? 31;
   const closingEnd = Math.max(...config.ranges.map((item) => item.endDay));
   const monthWindow = resolveFortnightPartRangeForMonth(`${assigned.monthKey}-01`, {
@@ -336,7 +347,33 @@ export function resolveFortnightPartForFlights(
         ? monthLastDay
         : assigned.range.endDay,
   });
-  return { ...monthWindow, exchangeRatePerUsd: rate };
+  return { ...monthWindow, exchangeRatePerUsd: rate ?? 0 };
+}
+
+/** `16-09-26 - 31-09-26`. Uses the contract day numbers, including 31 in a 30-day month. */
+export function formatAdsFortnightPeriodLabel(
+  monthKey: string,
+  startDay: number,
+  endDay: number,
+): string {
+  const match = /^(\d{4})-(\d{2})$/.exec(monthKey);
+  if (!match || !(startDay > 0) || !(endDay > 0)) return '';
+  const day = (value: number) => String(Math.trunc(value)).padStart(2, '0');
+  return `${day(startDay)}-${match[2]}-${match[1].slice(2)} - ${day(endDay)}-${match[2]}-${match[1].slice(2)}`;
+}
+
+/** Contract part whose start day is the invoice period start. */
+export function adsFortnightRangeForPeriodStart(
+  ranges: Array<{ startDay: number; endDay: number }> | null | undefined,
+  billingPeriodStart: Date | string | null | undefined,
+): { monthKey: string; startDay: number; endDay: number } | null {
+  if (!ranges?.length || billingPeriodStart == null) return null;
+  const ymd = readDateString(billingPeriodStart);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(ymd)) return null;
+  const startDay = Number(ymd.slice(8, 10));
+  const range = ranges.find((item) => item.startDay === startDay);
+  if (!range) return null;
+  return { monthKey: ymd.slice(0, 7), startDay: range.startDay, endDay: range.endDay };
 }
 
 /** Part rate for an invoice whose period starts on that part's day. */

@@ -1360,6 +1360,7 @@ export function InvoiceDraftsPage({ api }: Props) {
                 key: 'period',
                 header: 'Period',
                 render: (r) =>
+                  r.billingPeriodLabel ||
                   formatBillingDateRange(r.billingPeriodStart, r.billingPeriodEnd),
               },
               {

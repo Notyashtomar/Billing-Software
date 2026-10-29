@@ -19,6 +19,10 @@ import {
   resolveInvoiceFlightCategory,
 } from '../utils/invoice-flight-category.util';
 import { toBillingYearMonth } from './currency-engine.service';
+import {
+  adsFortnightRangeForPeriodStart,
+  formatAdsFortnightPeriodLabel,
+} from '../utils/contract-fortnight-billing.util';
 
 type InvoiceHeaderLike = {
   invoiceNumber?: string;
@@ -203,6 +207,23 @@ export function formatBillingPeriodLabel(
   const endLabel = formatYm(endYm);
   if (!endLabel) return startLabel;
   return `${startLabel.replace(/ \d{4}$/, '')} - ${endLabel}`;
+}
+
+function adsFortnightPdfPeriodLabel(
+  header: InvoiceHeaderLike,
+  params: {
+    fortnightBilling?: boolean;
+    fortnightRanges?: Array<{ startDay: number; endDay: number }>;
+    invoiceCategory?: string;
+  },
+): string {
+  if (String(params.invoiceCategory ?? header.invoiceCategory ?? '').trim().toUpperCase() !== 'ADS') {
+    return '';
+  }
+  if (params.fortnightBilling !== true) return '';
+  const part = adsFortnightRangeForPeriodStart(params.fortnightRanges, header.billingPeriodStart);
+  if (!part) return '';
+  return formatAdsFortnightPeriodLabel(part.monthKey, part.startDay, part.endDay);
 }
 
 function splitAddress(address?: string): string[] {
@@ -445,6 +466,9 @@ export type BuildInvoicePdfInputParams = {
   serviceTableTitle?: string;
   /** Fortnight contract — "For the Period" prints the billed day range. */
   fortnightBilling?: boolean;
+  /** Contract part days. ADS fortnight labels use these, including day 31. */
+  fortnightRanges?: Array<{ startDay: number; endDay: number }>;
+  invoiceCategory?: string;
   /** Contract categories that print USD and INR together. */
   inrUsdInvoiceCategories?: string[];
 };
@@ -686,11 +710,13 @@ export function buildInvoicePdfInput(params: BuildInvoicePdfInputParams): Invoic
     serviceDescription: airport.serviceDescription,
     serviceTableTitle: serviceTableTitleResolved,
     flightCategory: flightCategory || undefined,
-    billingPeriodLabel: formatBillingPeriodLabel(
-      header.billingPeriodStart,
-      header.billingPeriodEnd,
-      { fortnight: params.fortnightBilling === true },
-    ),
+    billingPeriodLabel:
+      adsFortnightPdfPeriodLabel(header, params) ||
+      formatBillingPeriodLabel(
+        header.billingPeriodStart,
+        header.billingPeriodEnd,
+        { fortnight: params.fortnightBilling === true },
+      ),
     serviceStation: serviceStationResolved,
     placeOfSupply: placeOfSupplyResolved,
     state: airport.state,

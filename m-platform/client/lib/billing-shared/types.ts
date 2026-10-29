@@ -672,6 +672,8 @@ export interface BillingInvoiceHeader {
   totalInclTax: number;
   billingPeriodStart: string;
   billingPeriodEnd: string;
+  /** ADS fortnight display, e.g. `16-09-26 - 31-09-26`. */
+  billingPeriodLabel?: string;
   /** Invoice family: BHS | ADS | RAF | MAAS | CUSTOM | OTHER */
   invoiceCategory?: string;
   /** Present when an ADS draft was separated into line combinations. */
