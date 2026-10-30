@@ -453,10 +453,12 @@ export class AuthService {
   async switchFrisStation(
     principal: AuthenticatedPrincipal,
     rawStationCode: string,
+    options?: { handoff?: boolean },
   ) {
     const role = String(principal.role ?? '').trim().toLowerCase();
     const universal = isUniversalSuperadminUserid(principal.userid);
-    if (role !== 'superadmin' && !universal) {
+    const handoff = options?.handoff === true;
+    if (!handoff && role !== 'superadmin' && !universal) {
       throw new ForbiddenException(
         'Only a superadmin can change station without signing out.',
       );
@@ -465,6 +467,12 @@ export class AuthService {
     const requested = String(rawStationCode ?? '').trim().toUpperCase();
     if (!requested) {
       throw new BadRequestException('Station code is required.');
+    }
+    if (handoff && role !== 'superadmin' && !universal) {
+      const own = String(principal.stationCode ?? '').trim().toUpperCase();
+      if (own && requested !== own) {
+        throw new ForbiddenException('This sign-in link is for a different station.');
+      }
     }
 
     let stationId: string | undefined;
@@ -548,6 +556,60 @@ export class AuthService {
       stationId: stationId ?? '',
       stationCode,
     };
+  }
+
+  /** Short-lived token so billing on another host can open live FRIS already signed in. */
+  async createFrisHandoff(
+    principal: AuthenticatedPrincipal,
+  ): Promise<{ code: string }> {
+    let tokenVersion = 0;
+    if (principal.accountType === 'admin') {
+      const admin = await this.adminService.findById(principal.userId);
+      tokenVersion = normalizeTokenVersion(admin?.tokenVersion);
+    } else {
+      const user = await this.userService.findById(principal.userId);
+      tokenVersion = normalizeTokenVersion(user?.tokenVersion);
+    }
+    const code = this.jwtService.sign(
+      {
+        sub: principal.userId,
+        email: principal.email,
+        accountType: principal.accountType,
+        role: principal.role,
+        purpose: 'fris-handoff',
+        stationId: principal.stationId,
+        stationCode: principal.stationCode,
+        tokenVersion,
+      },
+      { expiresIn: '90s' },
+    );
+    return { code };
+  }
+
+  /** Verify a billing handoff and issue the normal FRIS session cookie. */
+  async redeemFrisHandoff(rawCode: string) {
+    let payload: JwtPayload;
+    try {
+      payload = this.jwtService.verify<JwtPayload>(String(rawCode ?? '').trim());
+    } catch {
+      throw new UnauthorizedException(
+        'Sign-in link expired. Open Flights again from billing.',
+      );
+    }
+    if (payload.purpose !== 'fris-handoff') {
+      throw new UnauthorizedException('Invalid sign-in link.');
+    }
+    const principal = await this.identityService.resolveActivePrincipal({
+      ...payload,
+      purpose: 'access',
+    });
+    const stationCode = String(
+      payload.stationCode || principal.stationCode || '',
+    ).trim();
+    if (!stationCode) {
+      throw new UnauthorizedException('Sign-in link has no station.');
+    }
+    return this.switchFrisStation(principal, stationCode, { handoff: true });
   }
 
   private async resolveEffectiveUserFlags(

@@ -1106,8 +1106,8 @@ export function ContractFormDialog({
 
       const clausePayload = clauses.map((c) => ({
         clauseType: c.clauseType,
-        label: c.label?.trim() || undefined,
-        body: c.body,
+        label: String(c.label ?? '').trim() || undefined,
+        body: String(c.body ?? ''),
         appliesTo: c.appliesTo,
       }));
 
@@ -1136,12 +1136,12 @@ export function ContractFormDialog({
               rule.unitPriceUSD == null
                 ? undefined
                 : roundBillingAmount(Number(rule.unitPriceUSD)),
-            uom: rule.uom?.trim() || 'EA',
+            uom: String(rule.uom ?? '').trim() || 'EA',
             aircraftTypes: selectedAircraft,
             aircraftType: selectedAircraft.length === 1 ? selectedAircraft[0] : undefined,
             effectiveMonth: undefined,
-            category: rule.category?.trim() || form.category,
-            remarks: rule.remarks?.trim() || undefined,
+            category: String(rule.category ?? '').trim() || form.category,
+            remarks: String(rule.remarks ?? '').trim() || undefined,
           };
         })
         .filter((rule) => rule.serviceCode);

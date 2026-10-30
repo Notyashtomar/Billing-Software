@@ -92,6 +92,8 @@ import { isBillingNavbarChrome } from '@/lib/bwms-app-tools';
 import {
   DEPLOYED_SCHEDULED_AIRLINES_PATH,
   billingFrisHref,
+  DEPLOYED_FRIS_ORIGIN,
+  openDeployedFris,
 } from '@/lib/deployed-fris';
 import {
   billingPageIdFromHref,
@@ -127,7 +129,13 @@ function AppNavLink({
         rel="noopener noreferrer"
         className={className}
         role={role}
-        onClick={onClick}
+        onClick={(event) => {
+          onClick?.();
+          if (href.startsWith(DEPLOYED_FRIS_ORIGIN)) {
+            event.preventDefault();
+            openDeployedFris(href);
+          }
+        }}
       >
         {children}
       </a>

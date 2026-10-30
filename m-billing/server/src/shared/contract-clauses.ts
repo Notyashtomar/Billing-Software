@@ -11,6 +11,7 @@ export const CONTRACT_CLAUSE_TYPES = [
   'cpi',
   'free_inclusions',
   'custom',
+  'sgha',
 ] as const;
 
 export type ContractClauseType = (typeof CONTRACT_CLAUSE_TYPES)[number];
@@ -28,6 +29,8 @@ export const CONTRACT_CLAUSE_APPLIES_TO = [
   'delay',
   'xxld',
   'cargo',
+  'BHS',
+  'ADS',
 ] as const;
 
 export type ContractClauseAppliesTo = (typeof CONTRACT_CLAUSE_APPLIES_TO)[number];

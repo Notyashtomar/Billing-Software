@@ -12,7 +12,7 @@ import {
 import { isUniversalSuperadminUserid } from '../../user/utils/universal-superadmin.util';
 
 export type AuthAccountType = 'admin' | 'user';
-export type AuthTokenPurpose = 'access' | 'password-reset';
+export type AuthTokenPurpose = 'access' | 'password-reset' | 'fris-handoff';
 
 export interface JwtPayload {
   sub: string;
