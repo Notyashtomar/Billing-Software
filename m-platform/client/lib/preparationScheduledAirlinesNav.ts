@@ -1,5 +1,5 @@
 import type { PreparationStatus } from '@/lib/billing-shared/enums';
-import { deployedFrisUrl } from '@/lib/deployed-fris';
+import { billingFrisHref } from '@/lib/deployed-fris';
 import {
   flightScheduleYmdRangeFromLabels,
   type ScheduledAirlinesFlightDateRange,
@@ -138,6 +138,14 @@ function appendBillingSerialNavParams(
   if (aircraftType) p.set('aircraft', aircraftType);
 
   p.set('returnTo', opts.returnTo);
+  if (typeof window !== 'undefined') {
+    const stationCode = (
+      localStorage.getItem('userStationCode') || ''
+    )
+      .trim()
+      .toUpperCase();
+    if (stationCode) p.set('stationCode', stationCode);
+  }
   for (const [key, value] of Object.entries(opts.extraParams ?? {})) {
     if (value) p.set(key, value);
   }
@@ -150,7 +158,7 @@ export function buildScheduledAirlinesHrefFromBillingSerial(
 ): string {
   const p = new URLSearchParams();
   appendBillingSerialNavParams(p, serial, opts);
-  return deployedFrisUrl(`/fris/flights/scheduledairlines?${p.toString()}`);
+  return billingFrisHref(`/fris/flights/scheduledairlines?${p.toString()}`);
 }
 
 /**
@@ -164,7 +172,7 @@ export function buildRafFormsHrefFromBillingSerial(
   const p = new URLSearchParams();
   appendBillingSerialNavParams(p, serial, opts);
   p.set('openSidebar', '1');
-  return deployedFrisUrl(`${RAF_FORMS_PATH}?${p.toString()}`);
+  return billingFrisHref(`${RAF_FORMS_PATH}?${p.toString()}`);
 }
 
 export function buildRafFormsHrefFromPreparation(
