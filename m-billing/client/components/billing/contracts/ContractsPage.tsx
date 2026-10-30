@@ -67,11 +67,23 @@ import {
 import { defaultContractForCustomer } from '@/lib/billing-shared/price-card-airline-rows';
 import { formatConditionalChargeCell } from '@/lib/billing-shared/contract-concessions';
 import { formatBillingDate, formatBillingDateRange } from '@/lib/billing-shared/billing-date-format';
+import { useBillingWorkspaceIdentity } from '@/lib/billing-workspace';
 import { cn } from '@/lib/utils';
 
 type Props = { api: BillingApi };
 
 type EndingTone = 'ok' | 'warn' | 'danger' | 'muted';
+
+function stationCodeOf(value: unknown): string {
+  return String(value ?? '').trim().toUpperCase();
+}
+
+/** A row belongs on this screen only when its station is the one the user logged into. */
+function isCurrentStation(docStation: unknown, activeStation: string | undefined): boolean {
+  const active = stationCodeOf(activeStation);
+  if (!active) return false;
+  return stationCodeOf(docStation) === active;
+}
 
 function parseContractEndDate(priceValidTo: string): Date | null {
   const raw = String(priceValidTo ?? '').trim();
@@ -408,6 +420,7 @@ function mergeRateCardList(
 export function ContractsPage({ api }: Props) {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const activeStation = useBillingWorkspaceIdentity()?.stationCode;
   const [rows, setRows] = useState<BillingContract[]>([]);
   const [customerNameByCode, setCustomerNameByCode] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
@@ -491,6 +504,7 @@ export function ContractsPage({ api }: Props) {
     const aircraft = aircraftFilter.trim().toUpperCase();
 
     return rows.filter((row) => {
+      if (!isCurrentStation(row.stationCode, activeStation)) return false;
       if (airline && String(row.customerCode ?? '').trim().toUpperCase() !== airline) {
         return false;
       }
@@ -537,6 +551,7 @@ export function ContractsPage({ api }: Props) {
       return airlineNamePrefixMatch || haystack.includes(query);
     });
   }, [
+    activeStation,
     aircraftFilter,
     airlineFilter,
     categoryFilter,
@@ -556,8 +571,12 @@ export function ContractsPage({ api }: Props) {
         api.listCustomers({ limit: 5000, active: 'all' }).catch(() => null),
       ]);
       const data = contractsRes.data as { items?: BillingContract[] };
-      setRows(data.items ?? []);
-      const customers = ((customersRes?.data as BillingCustomer[]) ?? []).filter(Boolean);
+      setRows(
+        (data.items ?? []).filter((row) => isCurrentStation(row.stationCode, activeStation)),
+      );
+      const customers = ((customersRes?.data as BillingCustomer[]) ?? []).filter((customer) =>
+        isCurrentStation(customer.stationCode, activeStation),
+      );
       const names = customers.reduce<Record<string, string>>((acc, customer) => {
         const code = String(customer.customerCode ?? '').trim().toUpperCase();
         const name = String(customer.name ?? '').trim();
@@ -571,7 +590,7 @@ export function ContractsPage({ api }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [api]);
+  }, [activeStation, api]);
 
   useEffect(() => {
     void load();
@@ -667,12 +686,16 @@ export function ContractsPage({ api }: Props) {
           | { items?: BillingPriceCardAirline[] }
           | undefined;
         packageCards = selectBhsPackageCardsForContract(
-          airlineData?.items ?? [],
+          (airlineData?.items ?? []).filter((row) =>
+            isCurrentStation(row.stationCode, source.stationCode),
+          ),
           source,
         );
 
         const rateData = rateRes?.data as { items?: BillingRateCard[] } | undefined;
-        rateCards = rateData?.items ?? [];
+        rateCards = (rateData?.items ?? []).filter((row) =>
+          isCurrentStation(row.stationCode, source.stationCode),
+        );
 
         const catalogData = catalogRes?.data as
           | { items?: BillingServiceCatalogItem[] }
@@ -1065,6 +1088,7 @@ export function ContractsPage({ api }: Props) {
                       <p className={contractUi.identitySecondary}>
                         {customerNameByCode[String(r.customerCode ?? '').trim().toUpperCase()] ??
                           r.customerCode}
+                        {r.stationCode ? ` · ${stationCodeOf(r.stationCode)}` : ''}
                       </p>
                       <ContractCoverageBadge contract={r} />
                     </div>
@@ -1230,6 +1254,7 @@ export function ContractsPage({ api }: Props) {
 }
 
 export function RateCardsPage({ api }: Props) {
+  const activeStation = useBillingWorkspaceIdentity()?.stationCode;
   const searchParams = useSearchParams();
   const deepLinkAppliedRef = useRef(false);
   const [rows, setRows] = useState<BillingRateCard[]>([]);
@@ -1276,11 +1301,19 @@ export function RateCardsPage({ api }: Props) {
         api.listServiceCatalog(),
         api.listContracts(),
       ]);
-      setCustomers((customerRes.data as BillingCustomer[]) ?? []);
+      setCustomers(
+        ((customerRes.data as BillingCustomer[]) ?? []).filter((customer) =>
+          isCurrentStation(customer.stationCode, activeStation),
+        ),
+      );
       const catalogData = catalogRes.data as { items?: BillingServiceCatalogItem[] };
       setServices(catalogData.items ?? []);
       const contractData = contractRes.data as { items?: BillingContract[] };
-      setContracts(contractData.items ?? []);
+      setContracts(
+        (contractData.items ?? []).filter((row) =>
+          isCurrentStation(row.stationCode, activeStation),
+        ),
+      );
     } catch {
       setCustomers([]);
       setServices([]);
@@ -1290,25 +1323,32 @@ export function RateCardsPage({ api }: Props) {
     try {
       const airlineRes = await api.listPriceCardAirlines();
       const airlineData = airlineRes.data as { items?: BillingPriceCardAirline[] };
-      setAllPriceCardAirlines(airlineData.items ?? []);
+      setAllPriceCardAirlines(
+        (airlineData.items ?? []).filter((row) =>
+          isCurrentStation(row.stationCode, activeStation),
+        ),
+      );
     } catch {
       setAllPriceCardAirlines([]);
     } finally {
       setLoadingRefs(false);
     }
-  }, [api]);
+  }, [activeStation, api]);
 
   const loadAllRateCards = useCallback(async () => {
     try {
       const res = await api.listRateCards();
       const data = res.data as { items?: BillingRateCard[] };
-      setAllRateCards(data.items ?? []);
-      return data.items ?? [];
+      const items = (data.items ?? []).filter((row) =>
+        isCurrentStation(row.stationCode, activeStation),
+      );
+      setAllRateCards(items);
+      return items;
     } catch {
       setAllRateCards([]);
       return [];
     }
-  }, [api]);
+  }, [activeStation, api]);
 
   useEffect(() => {
     void loadRefs();
@@ -1324,24 +1364,26 @@ export function RateCardsPage({ api }: Props) {
         serviceCode: appliedService || undefined,
       });
       const data = res.data as { items?: BillingRateCard[] };
-      setRows(data.items ?? []);
+      setRows(
+        (data.items ?? []).filter((row) => isCurrentStation(row.stationCode, activeStation)),
+      );
       if (!options?.silent) setSelected(new Set());
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load rate cards');
     } finally {
       if (!options?.silent) setLoading(false);
     }
-  }, [api, appliedCustomer, appliedService]);
+  }, [activeStation, api, appliedCustomer, appliedService]);
 
   const refreshRateCards = useCallback(
     async (saved?: BillingRateCard) => {
-      if (saved) {
+      if (saved && isCurrentStation(saved.stationCode, activeStation)) {
         setRows((prev) => mergeRateCardList(prev, saved));
         setAllRateCards((prev) => mergeRateCardList(prev, saved));
       }
       await Promise.all([load({ silent: Boolean(saved) }), loadAllRateCards()]);
     },
-    [load, loadAllRateCards],
+    [activeStation, load, loadAllRateCards],
   );
 
   const openManualAdd = () => {

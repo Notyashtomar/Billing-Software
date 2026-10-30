@@ -1,4 +1,5 @@
 import { Suspense } from 'react';
+import { ApplyStationFromQuery } from '@/components/fris/layout/ApplyStationFromQuery';
 import { FrisNavbarLazy } from '@/components/fris/layout/FrisNavbarLazy';
 import { FrisPermissionGuard } from '@/components/fris/layout/FrisPermissionGuard';
 import { FrisRouteGuard } from '@/components/fris/layout/FrisRouteGuard';
@@ -29,6 +30,7 @@ export default function FrisLayout({
                 </div>
               }
             >
+              <ApplyStationFromQuery />
               <FrisPermissionGuard>{children}</FrisPermissionGuard>
             </Suspense>
           </main>

@@ -91,7 +91,7 @@ import {
 import { isBillingNavbarChrome } from '@/lib/bwms-app-tools';
 import {
   DEPLOYED_SCHEDULED_AIRLINES_PATH,
-  deployedFrisUrl,
+  billingFrisHref,
 } from '@/lib/deployed-fris';
 import {
   billingPageIdFromHref,
@@ -894,7 +894,20 @@ const Navbar: React.FC = () => {
     }
 
     if (billingNavbarChrome) {
-      const scheduledAirlines = deployedFrisUrl(DEPLOYED_SCHEDULED_AIRLINES_PATH);
+      const loginStation =
+        typeof window === 'undefined'
+          ? ''
+          : String(
+              getStoredLoginStationContext().stationCode ||
+                localStorage.getItem('userStationCode') ||
+                '',
+            )
+              .trim()
+              .toUpperCase();
+      const scheduledAirlines = billingFrisHref(
+        DEPLOYED_SCHEDULED_AIRLINES_PATH,
+        loginStation,
+      );
       const openScheduledAirlines = (label: 'Advance' | 'Flights'): NavItem => {
         const source = ALL_NAV_ITEMS.find((item) => item.label === label)!;
         return {
