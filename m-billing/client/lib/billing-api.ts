@@ -29,8 +29,8 @@ function resolveBillingTimeoutMs(path: string, init?: FrisFetchInit): number | n
   return DEFAULT_API_TIMEOUT_MS;
 }
 
-function sanitizeBillingErrorMessage(input: string): string {
-  const msg = input.trim();
+function sanitizeBillingErrorMessage(input: unknown): string {
+  const msg = (Array.isArray(input) ? input.map((part) => String(part ?? '')).join(' ') : String(input ?? '')).trim();
   if (!msg) return 'Billing service is temporarily unavailable. Please retry.';
   if (/timeout|timed out|request timeout/i.test(msg)) {
     return 'Billing service is taking longer than usual. Refresh to confirm status before retrying — the first request may still complete.';

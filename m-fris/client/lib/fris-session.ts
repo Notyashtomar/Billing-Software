@@ -10,6 +10,52 @@ import {
 /** Dispatched after login/session refresh writes flags to localStorage. */
 export const FRIS_SESSION_UPDATED_EVENT = 'fris-session-updated';
 
+/**
+ * Rebind the FRIS cookie and local station keys to the station named on the
+ * billing Flights link (`?stationCode=`). Caller reloads after this resolves.
+ */
+export async function switchFrisStation(input: {
+  stationCode: string;
+  stationId?: string;
+  stationName?: string;
+  stationCity?: string;
+}): Promise<void> {
+  const stationCode = input.stationCode.trim().toUpperCase();
+  if (!stationCode) throw new Error('Choose a station.');
+
+  const base = getApiBase().replace(/\/$/, '');
+  const res = await fetch(`${base}/auth/switch-station`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ stationCode }),
+  });
+  const data = (await res.json().catch(() => ({}))) as {
+    message?: string | string[];
+    stationId?: string;
+    stationCode?: string;
+  };
+  if (!res.ok) {
+    const msg = Array.isArray(data.message)
+      ? data.message.join(', ')
+      : data.message;
+    throw new Error(msg || `Could not change station (${res.status}).`);
+  }
+
+  const nextCode = String(data.stationCode || stationCode).trim().toUpperCase();
+  const nextId = String(data.stationId || input.stationId || '').trim();
+  if (nextId) localStorage.setItem('userStationId', nextId);
+  localStorage.setItem('userStationCode', nextCode);
+  if (input.stationCity?.trim()) {
+    localStorage.setItem('userStationCity', input.stationCity.trim());
+  }
+  if (input.stationName?.trim()) {
+    localStorage.setItem('userStationName', input.stationName.trim());
+  }
+  localStorage.setItem('fris_selected_station', nextCode);
+  window.dispatchEvent(new Event(FRIS_SESSION_UPDATED_EVENT));
+}
+
 const LEGACY_TOKEN_KEYS = [
   'access_token',
   'accessToken',
@@ -361,6 +407,24 @@ export function isFrisAdminLikeSession(): boolean {
   // Legacy elevated logins without panel-assigned flags stay unrestricted.
   if (hasAssignedFrisFlags()) return false;
   return role === 'manager';
+}
+
+/** Exchange a billing handoff (URL hash) for the FRIS cookie on this host. */
+export async function redeemFrisHandoffFromHash(): Promise<boolean> {
+  if (typeof window === 'undefined') return false;
+  const match = /(?:^#|&)handoff=([^&]+)/.exec(window.location.hash);
+  if (!match?.[1]) return false;
+  const code = decodeURIComponent(match[1]);
+  const base = getApiBase().replace(/\/$/, '');
+  const res = await fetch(`${base}/auth/fris-handoff/redeem`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json', 'X-Auth-Scope': 'fris' },
+    body: JSON.stringify({ code }),
+  }).catch(() => null);
+  const path = `${window.location.pathname}${window.location.search}`;
+  window.history.replaceState(null, '', path);
+  return Boolean(res?.ok);
 }
 
 export async function validateFrisSession(): Promise<FrisSessionValidation> {

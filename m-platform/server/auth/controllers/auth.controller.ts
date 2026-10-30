@@ -219,6 +219,27 @@ export class AuthController {
     return body;
   }
 
+  /** Billing (other host) asks for a 90s code, then live FRIS exchanges it for a cookie. */
+  @ThrottleCategoryDecorator('AUTH')
+  @Roles(...FRIS_PANEL_ROLES, ...ADMIN_ROLES)
+  @Post('fris-handoff')
+  createFrisHandoff(@CurrentUser() user: AuthenticatedPrincipal) {
+    return this.authService.createFrisHandoff(user);
+  }
+
+  @Public()
+  @ThrottleCategoryDecorator('AUTH')
+  @Post('fris-handoff/redeem')
+  async redeemFrisHandoff(
+    @Body('code') code: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.authService.redeemFrisHandoff(code);
+    setFrisLoginCookie(res, String(result.access_token ?? ''));
+    const { access_token: _accessToken, ...body } = result;
+    return body;
+  }
+
   /** FRIS session check — validates the FRIS httpOnly cookie only (not admin panel). */
   @Public()
   @Get('fris-session')

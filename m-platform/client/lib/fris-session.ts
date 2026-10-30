@@ -429,6 +429,24 @@ export function isFrisAdminLikeSession(): boolean {
   return role === 'manager';
 }
 
+/** Exchange a billing handoff (URL hash) for the FRIS cookie on this host. */
+export async function redeemFrisHandoffFromHash(): Promise<boolean> {
+  if (typeof window === 'undefined') return false;
+  const match = /(?:^#|&)handoff=([^&]+)/.exec(window.location.hash);
+  if (!match?.[1]) return false;
+  const code = decodeURIComponent(match[1]);
+  const base = getApiBase().replace(/\/$/, '');
+  const res = await fetch(`${base}/auth/fris-handoff/redeem`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json', 'X-Auth-Scope': 'fris' },
+    body: JSON.stringify({ code }),
+  }).catch(() => null);
+  const path = `${window.location.pathname}${window.location.search}`;
+  window.history.replaceState(null, '', path);
+  return Boolean(res?.ok);
+}
+
 export async function validateFrisSession(): Promise<FrisSessionValidation> {
   const base = getApiBase().replace(/\/$/, '');
   try {

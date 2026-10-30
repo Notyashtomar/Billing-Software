@@ -7,6 +7,7 @@ import { getApiBase } from '@/lib/api';
 import {
   clearFrisSession,
   hasCachedFrisSession,
+  redeemFrisHandoffFromHash,
   validateFrisSession,
   type FrisSessionValidation,
 } from '@/lib/fris-session';
@@ -93,6 +94,12 @@ export function FrisRouteGuard({ children }: Props) {
     }
 
     const run = async () => {
+      const handedOff = await redeemFrisHandoffFromHash().catch(() => false);
+      if (cancelled) return;
+      if (handedOff) {
+        window.location.reload();
+        return;
+      }
       const result = await validateWithRetry();
       if (cancelled) return;
 
