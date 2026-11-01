@@ -241,42 +241,51 @@ describe('InvoiceEngineService', () => {
     expect(composed.lines[0].sourceRef?.concessionFeePercent).toBe(3);
   });
 
-  it('applies contracts conditional delay % to BHS unit price', async () => {
+  it('adds the delay percent only when the flight is more than six hours late', async () => {
     const contract = {
       _id: new Types.ObjectId(),
       concessionRates: { int: 3, dom: 15 },
-      conditionalCharges: { delayChargesPercent: 50 },
+      conditionalCharges: { delayChargesPercent: 10 },
     } as never;
-    const records = [
-      {
-        customerCode: 'SG',
-        customerName: 'Spicejet',
-        billingPeriodStart: new Date('2026-05-01'),
-        billingPeriodEnd: new Date('2026-05-31'),
+    const row = (delayOnSta: string) =>
+      ({
+        customerCode: 'IX',
+        customerName: 'Air India Express',
+        billingPeriodStart: new Date('2026-09-01'),
+        billingPeriodEnd: new Date('2026-09-30'),
         sourceType: 'scheduled_flight',
         sourceRef: { serialNo: '3' },
         operationalSnapshot: {
           categoryOfFlight: 'Dom',
-          typeOfHandling: 'Normal',
-          delayOnSta: '00:25:00',
+          typeOfHandling: 'Scheduled',
+          typeOfFlight: 'Turnaround',
+          delayOnSta,
           aircraftType: 'B737-800',
         },
-        rateMatch: { serviceCode: 'BHS', unitPrice: 23500 },
-      },
-    ] as never;
+        rateMatch: { serviceCode: 'BHS', unitPrice: 18153 },
+      }) as never;
 
-    const composed = await service.composeFromPreparation(
+    const shortDelay = await service.composeFromPreparation(
       {} as never,
-      records,
-      new Date('2026-07-13'),
+      [row('00:19')],
+      new Date('2026-09-30'),
       'INR',
       contract,
     );
+    expect(shortDelay.lines[0].unitPrice).toBe(18153);
+    expect(shortDelay.lines[0].sourceRef?.concessionAppliedToUnitPrice).toBeUndefined();
+    expect(shortDelay.lines[0].sourceRef?.additionalChargePercent).toBeFalsy();
 
-    expect(composed.lines[0].unitPrice).toBe(11750);
-    expect(composed.lines[0].sourceRef?.concessionPercent).toBe(50);
-    expect(composed.lines[0].sourceRef?.concessionAppliedToUnitPrice).toBe(true);
-    expect(composed.lines[0].sourceRef?.concessionFeePercent).toBe(15);
+    const sixHoursLate = await service.composeFromPreparation(
+      {} as never,
+      [row('06:01')],
+      new Date('2026-09-30'),
+      'INR',
+      contract,
+    );
+    expect(sixHoursLate.lines[0].unitPrice).toBe(19968.3);
+    expect(sixHoursLate.lines[0].sourceRef?.additionalChargePercent).toBe(10);
+    expect(sixHoursLate.lines[0].sourceRef?.concessionAppliedToUnitPrice).toBeUndefined();
   });
 
   it('charges FILO and LIFO handling at the saved SGHA percent', async () => {

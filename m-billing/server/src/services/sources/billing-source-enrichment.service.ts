@@ -19,6 +19,12 @@ import {
 } from '../../schemas/billing.schemas';
 import { reportDateYmd } from '../../utils/invoicing-flight-report.mapper';
 import {
+  bakedAnnualSteps,
+  basePriceBeforeIncrease,
+  pickAnnualIncrease,
+  priceWithAnnualIncrease,
+} from '../../utils/clause-annual-increase.util';
+import {
   normalizeBillingCustomerCode,
   resolveKnownBillingCustomerCode,
 } from '../../utils/billing-customer-code.util';
@@ -281,7 +287,6 @@ export class BillingSourceEnrichmentService {
                   customerCode: { $in: customerCodes },
                   active: true,
                   validFrom: { $lte: maxDate },
-                  validTo: { $gte: minDate },
                 },
                 ctx,
               ),
@@ -336,7 +341,6 @@ export class BillingSourceEnrichmentService {
                     customerCode: { $in: ownerCodes },
                     active: true,
                     validFrom: { $lte: maxDate },
-                    validTo: { $gte: minDate },
                   },
                   ctx,
                 ),
@@ -768,7 +772,26 @@ export class BillingSourceEnrichmentService {
             input.operationalData,
           )
         : null;
-    const bhsPackagePrice = packagePriceFromEntry(bhsPackage);
+    const bhsPackagePriceRaw = packagePriceFromEntry(bhsPackage);
+    const clauseRows = (rulesContract as { clauses?: Parameters<typeof pickAnnualIncrease>[0] } | null)
+      ?.clauses;
+    const annual = pickAnnualIncrease(clauseRows, 'BHS');
+    const bhsBase = annual
+      ? basePriceBeforeIncrease(
+          cache.bhsEntriesByCustomer.get(rulesOwner) ?? [],
+          bhsPackage,
+          annual.validFrom,
+        )
+      : null;
+    const bhsPackagePrice =
+      bhsPackagePriceRaw == null
+        ? null
+        : priceWithAnnualIncrease(bhsPackagePriceRaw, clauseRows, billingDate, 'BHS', {
+            basePrice: bhsBase,
+            bakedSteps: annual
+              ? bakedAnnualSteps(bhsPackage?.remarks ?? undefined, annual.percent, annual.validFrom)
+              : 0,
+          });
 
     const unitPriceFromRateCard = unitPriceForBillingCurrency(
       rateCard,
@@ -921,7 +944,22 @@ export class BillingSourceEnrichmentService {
           usedUnits = this.resolveAdsUsedUnits(input.operationalData, null, adsUom);
 
           if (rulePricing.unitPrice != null && rulePricing.unitPrice > 0) {
-            unitPrice = rulePricing.unitPrice;
+            const adsAnnual = pickAnnualIncrease(clauseRows, 'ADS');
+            unitPrice = priceWithAnnualIncrease(
+              rulePricing.unitPrice,
+              clauseRows,
+              billingDate,
+              'ADS',
+              {
+                bakedSteps: adsAnnual
+                  ? bakedAnnualSteps(
+                      rulePricing.remarks,
+                      adsAnnual.percent,
+                      adsAnnual.validFrom,
+                    )
+                  : 0,
+              },
+            );
             pricingBasis = 'rate_card';
             // Free-of-charge is applied once per flight on the invoice, not on
             // this single FHR line. A line inside the free count still has to

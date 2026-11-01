@@ -25,6 +25,7 @@ export type AdsEquipmentInclusionRule = {
   /** Dom or Int when this free allowance applies to one sector only. */
   category?: string;
   effectiveMonth?: string;
+  remarks?: string;
 };
 
 export type AdsEquipmentInclusionContract = {
@@ -597,6 +598,7 @@ export type AdsContractRulePricing = {
   unitPrice: number | null;
   uom: string;
   serviceCode: string;
+  remarks?: string;
 };
 
 /**
@@ -626,6 +628,7 @@ export function resolveAdsPricingFromContractRule(
       unitPrice: null,
       uom: 'Per Service',
       serviceCode: String(opts.serviceCode ?? opts.particular ?? '').trim(),
+      remarks: '',
     };
   }
 
@@ -668,6 +671,7 @@ export function resolveAdsPricingFromContractRule(
     freePerFlight,
     unitPrice: match.excluded ? 0 : unitPrice,
     uom,
+    remarks: String(rule.remarks ?? ''),
     serviceCode: isWchrSCombinedAdsService(
       rule.serviceCode,
       opts.serviceCode,

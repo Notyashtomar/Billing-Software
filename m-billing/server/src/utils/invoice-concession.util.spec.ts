@@ -24,6 +24,30 @@ describe('exclusive BHS invoice concession', () => {
     },
   };
 
+  it('charges the station domestic concession on an exclusive BHS invoice', () => {
+    const totals = calculateInvoiceConcessionFromLines(
+      18153,
+      [
+        {
+          serviceCode: 'Scheduled Flight',
+          quantity: 1,
+          lineAmountExclTax: 18153,
+          sourceType: 'scheduled_flight',
+          sourceRef: { categoryOfFlight: 'Domestic' },
+        },
+      ],
+      {
+        bhsConcessionCoverage: 'non_comprehensive',
+        concessionRates: {},
+        stationFlightConcession: { dom: 5, int: 0, ga: 0 },
+      },
+      { currencyCode: 'INR', scheduledFlightCount: 1 },
+    );
+    expect(totals.concessionFeePercent).toBe(5);
+    expect(totals.concessionFeeAmount).toBe(907.65);
+    expect(totals.grossAmount).toBe(19060.65);
+  });
+
   it('converts INR ceiling to USD per flight using invoice currency factor', () => {
     const factor = 95.4509;
     const perFlightUsd = resolveCeilingRatePerFlightInBillingCurrency(

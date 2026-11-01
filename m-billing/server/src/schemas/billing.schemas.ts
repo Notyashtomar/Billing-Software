@@ -495,6 +495,10 @@ export class BillingContract {
         label: { type: String },
         body: { type: String, required: true },
         appliesTo: { type: [String], default: [] },
+        percent: { type: Number },
+        amount: { type: Number },
+        validFrom: { type: String },
+        validTo: { type: String },
       },
     ],
     default: [],
@@ -504,6 +508,10 @@ export class BillingContract {
     label?: string;
     body: string;
     appliesTo: string[];
+    percent?: number;
+    amount?: number;
+    validFrom?: string;
+    validTo?: string;
   }>;
 
   /** When true, ADS equipment rules on this contract drive per-flight ADS billing. */

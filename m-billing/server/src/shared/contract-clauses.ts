@@ -40,6 +40,14 @@ export type BillingContractClause = {
   label?: string;
   body: string;
   appliesTo: string[];
+  /** Yearly percent. CPI clauses compound this on the annex price. */
+  percent?: number;
+  /** Flat amount added after the percent, in the annex currency. */
+  amount?: number;
+  /** First day the metric applies (yyyy-mm-dd). */
+  validFrom?: string;
+  /** Last day the metric applies. Empty means it continues. */
+  validTo?: string;
 };
 
 export function normalizeContractClauses(
@@ -47,15 +55,25 @@ export function normalizeContractClauses(
   legacy?: { xxlnClause?: string; delayClause?: string },
 ): BillingContractClause[] {
   const rows = (clauses ?? [])
-    .map((c) => ({
-      clauseType: c.clauseType?.trim() || 'custom',
-      label: c.label?.trim() || undefined,
-      body: c.body?.trim() || '',
-      appliesTo: Array.isArray(c.appliesTo)
-        ? [...new Set(c.appliesTo.map((a) => a.trim()).filter(Boolean))]
-        : [],
-    }))
-    .filter((c) => c.body.length > 0);
+    .map((c) => {
+      const percent = finiteMetric(c.percent);
+      const amount = finiteMetric(c.amount);
+      const validFrom = metricDate(c.validFrom);
+      const validTo = metricDate(c.validTo);
+      return {
+        clauseType: c.clauseType?.trim() || 'custom',
+        label: c.label?.trim() || undefined,
+        body: c.body?.trim() || '',
+        appliesTo: Array.isArray(c.appliesTo)
+          ? [...new Set(c.appliesTo.map((a) => a.trim()).filter(Boolean))]
+          : [],
+        ...(percent != null ? { percent } : {}),
+        ...(amount != null ? { amount } : {}),
+        ...(validFrom ? { validFrom } : {}),
+        ...(validTo ? { validTo } : {}),
+      };
+    })
+    .filter((c) => c.body.length > 0 || c.percent != null || c.amount != null);
 
   if (rows.length > 0) return rows;
 
@@ -77,6 +95,16 @@ export function normalizeContractClauses(
     });
   }
   return fromLegacy;
+}
+
+function finiteMetric(value: unknown): number | undefined {
+  const n = Number(value);
+  return Number.isFinite(n) && n >= 0 ? n : undefined;
+}
+
+function metricDate(value: unknown): string | undefined {
+  const text = String(value ?? '').trim();
+  return /^\d{4}-\d{2}-\d{2}/.test(text) ? text.slice(0, 10) : undefined;
 }
 
 /** Keep legacy single-field columns in sync for older readers. */

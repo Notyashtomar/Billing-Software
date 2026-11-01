@@ -1109,6 +1109,16 @@ export function ContractFormDialog({
         label: String(c.label ?? '').trim() || undefined,
         body: String(c.body ?? ''),
         appliesTo: c.appliesTo,
+        percent:
+          c.percent == null || !Number.isFinite(Number(c.percent))
+            ? undefined
+            : Number(c.percent),
+        amount:
+          c.amount == null || !Number.isFinite(Number(c.amount))
+            ? undefined
+            : Number(c.amount),
+        validFrom: c.validFrom ? String(c.validFrom).slice(0, 10) : undefined,
+        validTo: c.validTo ? String(c.validTo).slice(0, 10) : undefined,
       }));
 
       const adsRulesPayload = expandAdsEquipmentRulesAcrossValidity(
@@ -2777,7 +2787,7 @@ export function ContractFormDialog({
 
                   <ContractSection
                     title="Contract clauses"
-                    description="SGHA clause pack for this agreement."
+                    description="Each clause can carry a percent, an amount, and the dates it applies. Annual rate increase uses those figures on the annex price."
                   >
                     <ContractClausesEditor
                       clauses={clauses}

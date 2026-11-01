@@ -128,6 +128,14 @@ export interface BillingContractClause {
   label?: string;
   body: string;
   appliesTo: string[];
+  /** Yearly percent. An annual-increase clause compounds this on the annex price. */
+  percent?: number;
+  /** Flat amount added after the percent, in the annex currency. */
+  amount?: number;
+  /** First day this metric applies (yyyy-mm-dd). */
+  validFrom?: string;
+  /** Last day this metric applies. Empty means it continues. */
+  validTo?: string;
 }
 
 /** ADS equipment rule on a contract — free units per flight + charge rates. */
