@@ -106,6 +106,26 @@ export class ContractClauseDto {
   @IsString({ each: true })
   @IsIn([...CONTRACT_CLAUSE_APPLIES_TO], { each: true })
   appliesTo: string[];
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  percent?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  amount?: number;
+
+  @IsOptional()
+  @IsString()
+  validFrom?: string;
+
+  @IsOptional()
+  @IsString()
+  validTo?: string;
 }
 
 /** Per-equipment ADS rule on a contract (free per flight + rates). */

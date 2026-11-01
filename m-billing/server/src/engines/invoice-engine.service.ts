@@ -1720,7 +1720,7 @@ function groundTimePhrase(bucket: AggregateBucket): string {
 function buildAggregatedDescription(bucket: AggregateBucket): string {
   const code = String(bucket.serviceCode ?? '').trim();
   const band = volumeBandPhrase(bucket.volumeHit);
-  const ground = groundTimePhrase(bucket);
+  const ground = /divert/i.test(bucket.handlingPhrase) ? '' : groundTimePhrase(bucket);
   // BHS package rate stays in the amount columns; the particular does not repeat "@ price".
   if (
     bucket.volumeHit ||

@@ -45,6 +45,10 @@ export function clausesFromContract(record: {
         label: c.label,
         body: c.body ?? '',
         appliesTo: c.appliesTo?.length ? [...c.appliesTo] : ['all'],
+        percent: c.percent,
+        amount: c.amount,
+        validFrom: c.validFrom ? String(c.validFrom).slice(0, 10) : undefined,
+        validTo: c.validTo ? String(c.validTo).slice(0, 10) : undefined,
       }));
   }
   return [];

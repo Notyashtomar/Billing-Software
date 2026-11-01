@@ -606,6 +606,41 @@ function lateArrivalMinutes(line: InvoiceLineConcessionInput): number | null {
   return durationMinutes(snap.delayOnSta ?? snap.arrivalDelay ?? snap.ActualDelay);
 }
 
+/** ATD later than STD, in minutes. */
+function lateDepartureMinutes(line: InvoiceLineConcessionInput): number | null {
+  const { snap, ref } = flightSnapshotBlob(line);
+  const std = snapshotDateTime(
+    snap,
+    ref,
+    ['stdDate', 'STDDate'],
+    ['stdTime', 'STDTime'],
+  );
+  const atd = snapshotDateTime(
+    snap,
+    ref,
+    ['atdDate', 'ATDDate'],
+    ['atdTime', 'ATDTime'],
+  );
+  if (std && atd) {
+    let end = atd.getTime();
+    if (end < std.getTime()) end += 24 * 60 * 60 * 1000;
+    const minutes = (end - std.getTime()) / 60000;
+    if (Number.isFinite(minutes) && minutes >= 0) return minutes;
+  }
+  return durationMinutes(snap.delayOnStd ?? snap.departureDelay);
+}
+
+/**
+ * Clause 1.2.9: 10% is added only when ATA passes STA, or ATD passes STD, by more than six hours.
+ * A few minutes of delay does not qualify.
+ */
+function scheduleExceedsBySixHours(line: InvoiceLineConcessionInput): boolean {
+  const arrival = lateArrivalMinutes(line);
+  const departure = lateDepartureMinutes(line);
+  const longest = Math.max(arrival ?? 0, departure ?? 0);
+  return longest > 6 * 60;
+}
+
 function isSplitSectorFlight(line: InvoiceLineConcessionInput): boolean {
   const { categoryRaw } = flightSnapshotBlob(line);
   const compact = categoryRaw.toLowerCase().replace(/[^a-z]/g, '');
@@ -694,40 +729,6 @@ function isReturnToRampFlightSnapshot(line: InvoiceLineConcessionInput): boolean
     /\breturn to ramp\b/.test(allText) ||
     /\brtr\b/.test(allText)
   );
-}
-
-function isNonZeroDelayValue(value: unknown): boolean {
-  if (value == null) return false;
-  if (typeof value === 'boolean') return value;
-  if (typeof value === 'number') return Number.isFinite(value) && value > 0;
-  const text = String(value).trim().toLowerCase();
-  if (!text || text === 'false' || text === 'no' || text === 'n' || text === 'nil') {
-    return false;
-  }
-  if (text === 'true' || text === 'yes' || text === 'y') return true;
-  const parts = text.split(':');
-  if (parts.length >= 2 && parts.every((part) => /^\d+(\.\d+)?$/.test(part))) {
-    return parts.some((part) => Number(part) > 0);
-  }
-  const n = Number(text);
-  return Number.isFinite(n) && n > 0;
-}
-
-function isDelayedFlightSnapshot(line: InvoiceLineConcessionInput): boolean {
-  const { snap, handlingRaw, categoryRaw } = flightSnapshotBlob(line);
-  if (Boolean(snap.isDelayed) || Boolean(snap.delayed)) return true;
-  const delayFields = [
-    snap.delayOnSta,
-    snap.delayOnStd,
-    snap.arrivalDelay,
-    snap.departureDelay,
-    snap.ActualDelay,
-    snap.actualDelay,
-    snap.delay,
-  ];
-  if (delayFields.some(isNonZeroDelayValue)) return true;
-  const categoryLower = categoryRaw.toLowerCase();
-  return /\bdelay/.test(handlingRaw) || /\bdelay/.test(categoryLower);
 }
 
 /** True when cancellation falls inside the contract hours window (STA − intimation). */
@@ -909,12 +910,16 @@ export function resolveLineAdditionalChargePercent(
   const returnToRamp = positiveRate(charges.returnToRamp);
   const rampExtra =
     returnToRamp > 0 && isReturnToRampFlightSnapshot(line) ? returnToRamp : 0;
-  if (ron <= 0 && late <= 0 && ground <= 0 && rampExtra <= 0) return 0;
+  const delayAdditional =
+    positiveRate(charges.delayChargesPercent) > 0 && scheduleExceedsBySixHours(line)
+      ? positiveRate(charges.delayChargesPercent)
+      : 0;
+  if (ron <= 0 && late <= 0 && ground <= 0 && rampExtra <= 0 && delayAdditional <= 0) return 0;
 
   const split = isSplitSectorFlight(line);
-  if (!split && ron > 0 && matchesRemainOvernight(line)) return ron + rampExtra;
+  if (!split && ron > 0 && matchesRemainOvernight(line)) return ron + rampExtra + delayAdditional;
 
-  let extra = rampExtra;
+  let extra = rampExtra + delayAdditional;
   const lateMinutes = lateArrivalMinutes(line);
   if (late > 0 && lateMinutes != null && lateMinutes > 75) extra += late;
   const groundMinutes = groundMinutesOf(line);
@@ -964,9 +969,6 @@ export function resolveLineConcessionPercent(
   if (isDiverted) return rates.DivInt;
   if (isTechnicalHandling) return rates.TechnicalHandlingChargesPercent;
   if (isStandby) return rates.StandbyChargesPercent;
-  if (isDelayedFlightSnapshot(line) && rates.DelayChargesPercent > 0) {
-    return rates.DelayChargesPercent;
-  }
   if (isOriginateOrTerminateFlight(line) && rates.OriginateTerminatePercent > 0) {
     return rates.OriginateTerminatePercent;
   }
@@ -989,10 +991,21 @@ export function resolveLineFeeConcessionPercent(
   const isCargo = /cargo/.test(categoryLower);
 
   const sector = flightConcessionSectorFromText(categoryRaw, handlingRaw);
+  const rawRates = contract?.concessionRates;
+  const explicitDiverted = isDiverted
+    ? isDom
+      ? rawRates?.divertedDom
+      : rawRates?.divertedInt
+    : undefined;
   const fromContract = (() => {
-    if (isDiverted && isDom) return resolveRateOrDefault(rates.DivDom, contract?.royaltyAtGross);
-    if (isDiverted) return resolveRateOrDefault(rates.DivInt, contract?.royaltyAtGross);
-    if (!isDiverted && !isCargo) {
+    if (
+      isDiverted &&
+      explicitDiverted != null &&
+      Number.isFinite(Number(explicitDiverted))
+    ) {
+      return Number(explicitDiverted);
+    }
+    if (!isCargo) {
       const stationPercent = stationPercentForSector(contract?.stationFlightConcession, sector);
       if (stationPercent != null && stationPercent > 0) return stationPercent;
     }
@@ -1078,12 +1091,6 @@ export function inferConcessionScenarioFromLine(
   if (isDiverted) return 'DivInt';
   if (isTechnicalHandling) return 'TechnicalHandlingChargesPercent';
   if (isStandby) return 'StandbyChargesPercent';
-  if (
-    isDelayedFlightSnapshot(line) &&
-    positiveRate(resolveConditionalCharges(contract).delayChargesPercent) > 0
-  ) {
-    return 'DelayChargesPercent';
-  }
   if (
     isOriginateOrTerminateFlight(line) &&
     positiveRate(resolveConditionalCharges(contract).originateTerminatePercent) > 0
@@ -1420,43 +1427,6 @@ function bhsScheduledFlightSubtotal(particulars: InvoiceLineConcessionInput[]): 
   );
 }
 
-function finiteSavedPercent(value: unknown): number | null {
-  if (value == null || value === '') return null;
-  const n = Number(value);
-  return Number.isFinite(n) && n >= 0 ? n : null;
-}
-
-/** Percent stored on this station's contract. Never a rate from another station. */
-function savedExclusiveConcessionPercent(
-  line: InvoiceLineConcessionInput,
-  contract?: InvoiceChargeContractShape | null,
-): number {
-  const rates = contract?.concessionRates ?? {};
-  const { categoryRaw } = flightSnapshotBlob(line);
-  const categoryLower = categoryRaw.toLowerCase();
-  const isDiverted = isDivertedFlightSnapshot(line);
-  const normalized = normalizeFlightCategory(categoryRaw);
-  const isDom =
-    normalized === 'Dom' ||
-    (/domestic/.test(categoryLower) && !/international/.test(categoryLower));
-  const isCargo = /cargo/.test(categoryLower);
-  const specific =
-    isDiverted && isDom
-      ? rates.divertedDom
-      : isDiverted
-        ? rates.divertedInt
-        : isCargo && isDom
-          ? rates.domesticCargo
-          : isCargo
-            ? rates.internationalCargo
-            : isDom
-              ? rates.dom
-              : rates.int;
-  const saved = finiteSavedPercent(specific);
-  if (saved != null) return saved;
-  return finiteSavedPercent(contract?.royaltyAtGross) ?? 0;
-}
-
 function adsLineFeePercent(
   line: InvoiceLineConcessionInput,
   contract?: InvoiceChargeContractShape | null,
@@ -1519,7 +1489,7 @@ function exclusivePercentConcession(
   let weightedPercent = 0;
   const labels = new Set<number>();
   for (const line of rows) {
-    const percent = savedExclusiveConcessionPercent(line, contract);
+    const percent = resolveLineFeeConcessionPercent(line, contract);
     const lineAmount = lineExclAmount(line);
     base += lineAmount;
     weightedPercent += lineAmount * percent;

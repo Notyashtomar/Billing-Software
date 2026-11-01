@@ -196,6 +196,82 @@ export function ContractClausesEditor({ clauses, onChange, disabled }: Props) {
                 </div>
               </fieldset>
 
+              <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="flex flex-col gap-1">
+                  <label htmlFor={`${rowId}-percent`} className={billingUi.label}>
+                    Percent
+                  </label>
+                  <input
+                    id={`${rowId}-percent`}
+                    type="number"
+                    min={0}
+                    step="0.1"
+                    value={clause.percent ?? ''}
+                    onChange={(event) => {
+                      const text = event.target.value;
+                      updateRow(index, {
+                        percent: text === '' ? undefined : Number(text),
+                      });
+                    }}
+                    disabled={disabled}
+                    placeholder="e.g. 4.5"
+                    className={selectClass}
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label htmlFor={`${rowId}-amount`} className={billingUi.label}>
+                    Amount
+                  </label>
+                  <input
+                    id={`${rowId}-amount`}
+                    type="number"
+                    min={0}
+                    step="1"
+                    value={clause.amount ?? ''}
+                    onChange={(event) => {
+                      const text = event.target.value;
+                      updateRow(index, {
+                        amount: text === '' ? undefined : Number(text),
+                      });
+                    }}
+                    disabled={disabled}
+                    placeholder="Optional"
+                    className={selectClass}
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label htmlFor={`${rowId}-from`} className={billingUi.label}>
+                    Valid from
+                  </label>
+                  <input
+                    id={`${rowId}-from`}
+                    type="date"
+                    value={clause.validFrom ?? ''}
+                    onChange={(event) => updateRow(index, { validFrom: event.target.value || undefined })}
+                    disabled={disabled}
+                    className={selectClass}
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label htmlFor={`${rowId}-to`} className={billingUi.label}>
+                    Valid to
+                  </label>
+                  <input
+                    id={`${rowId}-to`}
+                    type="date"
+                    value={clause.validTo ?? ''}
+                    onChange={(event) => updateRow(index, { validTo: event.target.value || undefined })}
+                    disabled={disabled}
+                    className={selectClass}
+                  />
+                </div>
+              </div>
+              <p className="mt-2 text-xs text-[color:var(--billing-text-muted)]">
+                {clause.clauseType === 'cpi'
+                  ? 'Annual rate increase: from Valid from, the annex price compounds by this percent once a year until Valid to. Leave Valid to empty to keep going. Amount, if set, is added to each unit after the percent.'
+                  : 'Percent, amount, and dates are saved with this clause. Ferry, delay, and ground-time charges still come from the concessions on this contract.'}
+              </p>
+
               <div className="mt-3 flex flex-col gap-1">
                 <label htmlFor={`${rowId}-body`} className={billingUi.label}>
                   Clause text
