@@ -1,4 +1,5 @@
 import type { BillingApi } from '@/lib/billing-api';
+import { SYSTEM_DEFAULT_BILLING_PERIOD } from '@/lib/billing-default-period';
 import { OperationalSourcePage, type OperationalSourceConfig } from './OperationalSourcePage';
 
 type Props = { api: BillingApi };
@@ -9,9 +10,8 @@ export function ScheduledFlightsSourcePage({ api }: Props) {
     description: '',
     fetchMethod: 'listScheduledFlights',
     bcAuditRef: 'BC_SCREEN_INVENTORY.md §B1',
-    // Delhi stays August 2026. Other stations are shifted to September in OperationalSourcePage.
-    defaultFrom: '2026-08-01',
-    defaultTo: '2026-08-31',
+    defaultFrom: SYSTEM_DEFAULT_BILLING_PERIOD.from,
+    defaultTo: SYSTEM_DEFAULT_BILLING_PERIOD.to,
   };
   return <OperationalSourcePage api={api} config={config} />;
 }
@@ -76,9 +76,8 @@ export function AdsSourcePage({ api }: Props) {
           'FHR equipment / wheelchair lines (same source as Scheduled data export). Contract ADS rules = billable; other usage is free / BHS package.',
         fetchMethod: 'listAds',
         bcAuditRef: 'BC_SCREEN_INVENTORY §B2',
-        // MAA Aug 2026 equipment seed → fhr_collection.equipmentDetails
-        defaultFrom: '2026-08-01',
-        defaultTo: '2026-08-31',
+        defaultFrom: SYSTEM_DEFAULT_BILLING_PERIOD.from,
+        defaultTo: SYSTEM_DEFAULT_BILLING_PERIOD.to,
       }}
     />
   );

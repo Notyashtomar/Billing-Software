@@ -1361,6 +1361,12 @@ function extractContractConditionalCharges(
   const keys = [
     'divertedDom',
     'divertedInt',
+    'divertedDomBme',
+    'divertedIntBme',
+    'divertedDomCargo',
+    'divertedIntCargo',
+    'divertedDomInt',
+    'divertedIntDom',
     'returnToRamp',
     'originateTerminatePercent',
     'cancellationWithinHoursPercent',

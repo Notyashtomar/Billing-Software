@@ -197,6 +197,12 @@ const CHARGE_FIELD_IDS: Partial<Record<ContractConcessionScenario, string>> = {
   dom: 'contract-charge-dom',
   divertedDom: 'divertedDomPercent',
   divertedInt: 'divertedIntPercent',
+  divertedDomBme: 'divertedDomBmePercent',
+  divertedIntBme: 'divertedIntBmePercent',
+  divertedDomCargo: 'divertedDomCargoPercent',
+  divertedIntCargo: 'divertedIntCargoPercent',
+  divertedDomInt: 'divertedDomIntPercent',
+  divertedIntDom: 'divertedIntDomPercent',
   returnToRamp: 'returnToRampPercent',
 };
 

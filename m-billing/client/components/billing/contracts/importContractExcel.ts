@@ -29,6 +29,12 @@ export const CONTRACT_SHEET_HEADERS = [
   'Cancellation Within Hours',
   'Diverted Dom %',
   'Diverted Int %',
+  'Diverted Dom BME %',
+  'Diverted Int BME %',
+  'Diverted Dom Cargo %',
+  'Diverted Int Cargo %',
+  'Diverted Dom-Int %',
+  'Diverted Int-Dom %',
   'Return To Ramp %',
   'Cancel Window %',
   'Technical Handling %',
@@ -647,6 +653,24 @@ export async function parseContractExcel(file: File): Promise<ContractExcelParse
         const divertedInt = parseOptionalPercent(
           sheetValue(contractsSheet, rowNumber, contractColumns, 'diverted int %'),
         );
+        const divertedDomBme = parseOptionalPercent(
+          sheetValue(contractsSheet, rowNumber, contractColumns, 'diverted dom bme %'),
+        );
+        const divertedIntBme = parseOptionalPercent(
+          sheetValue(contractsSheet, rowNumber, contractColumns, 'diverted int bme %'),
+        );
+        const divertedDomCargo = parseOptionalPercent(
+          sheetValue(contractsSheet, rowNumber, contractColumns, 'diverted dom cargo %'),
+        );
+        const divertedIntCargo = parseOptionalPercent(
+          sheetValue(contractsSheet, rowNumber, contractColumns, 'diverted int cargo %'),
+        );
+        const divertedDomInt = parseOptionalPercent(
+          sheetValue(contractsSheet, rowNumber, contractColumns, 'diverted dom int %'),
+        );
+        const divertedIntDom = parseOptionalPercent(
+          sheetValue(contractsSheet, rowNumber, contractColumns, 'diverted int dom %'),
+        );
         const returnToRamp = parseOptionalPercent(
           sheetValue(contractsSheet, rowNumber, contractColumns, 'return to ramp %'),
         );
@@ -665,6 +689,12 @@ export async function parseContractExcel(file: File): Promise<ContractExcelParse
 
         if (divertedDom != null) conditionalCharges.divertedDom = divertedDom;
         if (divertedInt != null) conditionalCharges.divertedInt = divertedInt;
+        if (divertedDomBme != null) conditionalCharges.divertedDomBme = divertedDomBme;
+        if (divertedIntBme != null) conditionalCharges.divertedIntBme = divertedIntBme;
+        if (divertedDomCargo != null) conditionalCharges.divertedDomCargo = divertedDomCargo;
+        if (divertedIntCargo != null) conditionalCharges.divertedIntCargo = divertedIntCargo;
+        if (divertedDomInt != null) conditionalCharges.divertedDomInt = divertedDomInt;
+        if (divertedIntDom != null) conditionalCharges.divertedIntDom = divertedIntDom;
         if (returnToRamp != null) conditionalCharges.returnToRamp = returnToRamp;
         if (cancellationWithinHoursPercent != null) {
           conditionalCharges.cancellationWithinHoursPercent = cancellationWithinHoursPercent;

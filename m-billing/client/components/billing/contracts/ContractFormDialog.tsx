@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Dialog,
@@ -10,7 +10,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
-import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { ChevronRight, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import {
   ContractAlert,
   ContractField,
@@ -52,7 +52,6 @@ import {
   conditionalChargesFromContract,
   contractChargeFieldId,
   emptyConcessionRatesForm,
-  listContractChargePercents,
   parseConditionalChargesForm,
   type ContractConcessionRatesForm,
 } from '@/lib/billing-shared/contract-concessions';
@@ -91,6 +90,135 @@ const emptyForm = {
 };
 
 type ContractFormState = typeof emptyForm;
+
+const DIVERTED_PERCENT_FIELDS = [
+  {
+    key: 'divertedDom',
+    id: 'divertedDomPercent',
+    label: 'Diverted domestic (%)',
+    hint: 'Applied when a domestic flight is diverted.',
+  },
+  {
+    key: 'divertedInt',
+    id: 'divertedIntPercent',
+    label: 'Diverted international (%)',
+    hint: 'Applied when an international flight is diverted.',
+  },
+  {
+    key: 'divertedDomBme',
+    id: 'divertedDomBmePercent',
+    label: 'Domestic BME (%)',
+    hint: 'Applied when a domestic BME flight is diverted.',
+  },
+  {
+    key: 'divertedIntBme',
+    id: 'divertedIntBmePercent',
+    label: 'International BME (%)',
+    hint: 'Applied when an international BME flight is diverted.',
+  },
+  {
+    key: 'divertedDomCargo',
+    id: 'divertedDomCargoPercent',
+    label: 'Domestic-Cargo (%)',
+    hint: 'Applied when a Domestic-Cargo flight is diverted.',
+  },
+  {
+    key: 'divertedIntCargo',
+    id: 'divertedIntCargoPercent',
+    label: 'International-Cargo (%)',
+    hint: 'Applied when an International-Cargo flight is diverted.',
+  },
+  {
+    key: 'divertedDomInt',
+    id: 'divertedDomIntPercent',
+    label: 'Domestic-International (%)',
+    hint: 'Applied when a Domestic-International flight is diverted.',
+  },
+  {
+    key: 'divertedIntDom',
+    id: 'divertedIntDomPercent',
+    label: 'International-Domestic (%)',
+    hint: 'Applied when an International-Domestic flight is diverted.',
+  },
+] as const;
+
+function SghaDisclosure({
+  open,
+  onToggle,
+  title,
+  description,
+  children,
+}: {
+  open: boolean;
+  onToggle: () => void;
+  title: string;
+  description: string;
+  children: ReactNode;
+}) {
+  return (
+    <>
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={onToggle}
+        className={cn(
+          'flex w-full cursor-pointer items-start gap-3 rounded-xl border p-3.5 text-left transition-colors',
+          open
+            ? 'border-[#1C0770] bg-[#1C0770] text-white hover:border-[#1C0770] hover:bg-[#16065a] hover:text-white'
+            : 'border-slate-200 bg-white text-slate-800 hover:border-[#1C0770] hover:bg-slate-50 hover:text-slate-800',
+        )}
+      >
+        <ChevronRight
+          className={cn('mt-0.5 h-4 w-4 shrink-0 transition-transform', open && 'rotate-90')}
+          aria-hidden
+        />
+        <span className="min-w-0">
+          <span className={cn('block text-sm font-bold', open ? 'text-white' : 'text-slate-800')}>
+            {title}
+          </span>
+          <span
+            className={cn(
+              'mt-0.5 block text-xs font-medium',
+              open ? 'text-white/80' : 'text-slate-500',
+            )}
+          >
+            {description}
+          </span>
+        </span>
+      </button>
+      {open ? children : null}
+    </>
+  );
+}
+
+function sghaPanelForFocus(focus: string | null | undefined): string | null {
+  if (!focus) return null;
+  if (DIVERTED_PERCENT_FIELDS.some((field) => field.key === focus)) return 'diverted';
+  if (focus === 'returnToRamp') return 'returnToRamp';
+  if (focus === 'originateTerminatePercent') return 'originate';
+  if (focus === 'cancellationWithinHoursPercent' || focus === 'cancellationWithinHours') {
+    return 'cancellation';
+  }
+  if (focus === 'technicalHandlingChargesPercent') return 'technical';
+  if (focus === 'standbyChargesPercent') return 'standby';
+  if (
+    focus === 'filoChargesPercent' ||
+    focus === 'lifoChargesPercent' ||
+    focus === 'filoLifoChargesPercent'
+  ) {
+    return 'ferry';
+  }
+  if (focus === 'ronAdditionalPercent') return 'ron';
+  if (focus === 'lateArrivalAdditionalPercent') return 'late';
+  if (focus === 'extraGroundTimeAdditionalPercent') return 'ground';
+  if (
+    focus === 'splitIntArrivalDomDeparturePercent' ||
+    focus === 'splitDomArrivalIntDeparturePercent'
+  ) {
+    return 'split';
+  }
+  return null;
+}
 
 type EditableSnapshotInput = {
   form: ContractFormState;
@@ -225,30 +353,6 @@ function validateWholeNumberField(value: string | undefined): string {
   return '';
 }
 
-function FlightFeeSummary({ record }: { record: BillingContract }) {
-  const fees = listContractChargePercents(record).filter(
-    (charge) => charge.key === 'int' || charge.key === 'dom',
-  );
-  if (fees.length === 0) return null;
-  return (
-    <div className="mb-4 grid gap-3 sm:grid-cols-2">
-      {fees.map((fee) => (
-        <div
-          key={fee.key}
-          id={fee.fieldId}
-          tabIndex={-1}
-          className="rounded-lg border border-[color:var(--billing-accent-border)] bg-[color:var(--billing-accent-soft)] px-3 py-2 outline-none focus:ring-2 focus:ring-[color:var(--billing-accent)]"
-        >
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-[color:var(--billing-accent-strong)]">
-            {fee.label}
-          </p>
-          <p className="mt-1 text-sm font-semibold text-gray-900">{fee.percent}%</p>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 function validateDateRange(from: string, to: string): string {
   const fromTrimmed = from.trim();
   const toTrimmed = to.trim();
@@ -324,6 +428,9 @@ export function ContractFormDialog({
   const [showRonCharges, setShowRonCharges] = useState(false);
   const [showLateArrivalCharges, setShowLateArrivalCharges] = useState(false);
   const [showExtraGroundCharges, setShowExtraGroundCharges] = useState(false);
+  const [showSplitTurnaround, setShowSplitTurnaround] = useState(false);
+  const [showVolumeRates, setShowVolumeRates] = useState(false);
+  const [showAdditionalTerms, setShowAdditionalTerms] = useState(false);
   const [adsEquipmentRules, setAdsEquipmentRules] = useState<BillingContractAdsEquipmentRule[]>(
     [],
   );
@@ -376,16 +483,16 @@ export function ContractFormDialog({
         bhsConcessionCoverage,
         clauses,
         flightConcessions,
-        showDivertedConcessions,
-        showReturnToRampConcession,
-        showOriginateTerminate,
-        showCancellationWindow,
-        showTechnicalHandlingCharges,
-        showStandbyCharges,
-        showFiloLifoCharges,
-        showRonCharges,
-        showLateArrivalCharges,
-        showExtraGroundCharges,
+        showDivertedConcessions: false,
+        showReturnToRampConcession: false,
+        showOriginateTerminate: false,
+        showCancellationWindow: false,
+        showTechnicalHandlingCharges: false,
+        showStandbyCharges: false,
+        showFiloLifoCharges: false,
+        showRonCharges: false,
+        showLateArrivalCharges: false,
+        showExtraGroundCharges: false,
         adsEquipmentRules,
         bhsVolumeSchedules,
         selectedAircraftTypes,
@@ -407,16 +514,6 @@ export function ContractFormDialog({
       bhsConcessionCoverage,
       clauses,
       flightConcessions,
-      showDivertedConcessions,
-      showReturnToRampConcession,
-      showOriginateTerminate,
-      showCancellationWindow,
-      showTechnicalHandlingCharges,
-      showStandbyCharges,
-      showFiloLifoCharges,
-      showRonCharges,
-      showLateArrivalCharges,
-      showExtraGroundCharges,
       adsEquipmentRules,
       bhsVolumeSchedules,
       selectedAircraftTypes,
@@ -441,6 +538,12 @@ export function ContractFormDialog({
     () => ({
       divertedDom: validatePercentageField(flightConcessions.divertedDom),
       divertedInt: validatePercentageField(flightConcessions.divertedInt),
+      divertedDomBme: validatePercentageField(flightConcessions.divertedDomBme),
+      divertedIntBme: validatePercentageField(flightConcessions.divertedIntBme),
+      divertedDomCargo: validatePercentageField(flightConcessions.divertedDomCargo),
+      divertedIntCargo: validatePercentageField(flightConcessions.divertedIntCargo),
+      divertedDomInt: validatePercentageField(flightConcessions.divertedDomInt),
+      divertedIntDom: validatePercentageField(flightConcessions.divertedIntDom),
       returnToRamp: validatePercentageField(flightConcessions.returnToRamp),
       originateTerminatePercent: validatePercentageField(
         flightConcessions.originateTerminatePercent,
@@ -553,6 +656,48 @@ export function ContractFormDialog({
     [validationErrors],
   );
 
+  useEffect(() => {
+    if (validationErrors.bhsVolumeSchedules) setShowVolumeRates(true);
+    const divertedError = DIVERTED_PERCENT_FIELDS.some((field) => validationErrors[field.key]);
+    const termError =
+      divertedError ||
+      Boolean(
+        validationErrors.returnToRamp ||
+          validationErrors.originateTerminatePercent ||
+          validationErrors.cancellationWithinHoursPercent ||
+          validationErrors.cancellationWithinHours ||
+          validationErrors.technicalHandlingChargesPercent ||
+          validationErrors.standbyChargesPercent ||
+          validationErrors.filoChargesPercent ||
+          validationErrors.lifoChargesPercent ||
+          validationErrors.ronAdditionalPercent ||
+          validationErrors.lateArrivalAdditionalPercent ||
+          validationErrors.extraGroundTimeAdditionalPercent,
+      );
+    if (
+      validationErrors.splitIntArrivalDomDeparturePercent ||
+      validationErrors.splitDomArrivalIntDeparturePercent
+    ) {
+      setShowSplitTurnaround(true);
+    }
+    if (!termError) return;
+    setShowAdditionalTerms(true);
+    if (divertedError) setShowDivertedConcessions(true);
+    if (validationErrors.returnToRamp) setShowReturnToRampConcession(true);
+    if (validationErrors.originateTerminatePercent) setShowOriginateTerminate(true);
+    if (validationErrors.cancellationWithinHoursPercent || validationErrors.cancellationWithinHours) {
+      setShowCancellationWindow(true);
+    }
+    if (validationErrors.technicalHandlingChargesPercent) setShowTechnicalHandlingCharges(true);
+    if (validationErrors.standbyChargesPercent) setShowStandbyCharges(true);
+    if (validationErrors.filoChargesPercent || validationErrors.lifoChargesPercent) {
+      setShowFiloLifoCharges(true);
+    }
+    if (validationErrors.ronAdditionalPercent) setShowRonCharges(true);
+    if (validationErrors.lateArrivalAdditionalPercent) setShowLateArrivalCharges(true);
+    if (validationErrors.extraGroundTimeAdditionalPercent) setShowExtraGroundCharges(true);
+  }, [validationErrors]);
+
   const resolvedRoeRate = useMemo(() => resolveRateToInr(roe?.rateToINR), [roe?.rateToINR]);
 
   const setFlightConcessionField = (key: keyof ContractConcessionRatesForm, value: string) => {
@@ -573,6 +718,8 @@ export function ContractFormDialog({
     setShowRonCharges(false);
     setShowLateArrivalCharges(false);
     setShowExtraGroundCharges(false);
+    setShowSplitTurnaround(false);
+    setShowAdditionalTerms(false);
   };
 
   const handleOpenChange = (nextOpen: boolean) => {
@@ -680,40 +827,7 @@ export function ContractFormDialog({
         nextFlightConcessions.lifoChargesPercent = nextFlightConcessions.filoLifoChargesPercent;
         nextFlightConcessions.filoLifoChargesPercent = '';
       }
-      const nextShowDiverted = Boolean(
-        String(nextFlightConcessions.divertedDom ?? '').trim() ||
-          String(nextFlightConcessions.divertedInt ?? '').trim(),
-      );
-      const nextShowReturnToRamp = Boolean(
-        String(nextFlightConcessions.returnToRamp ?? '').trim(),
-      );
-      const nextShowOriginateTerminate = Boolean(
-        String(nextFlightConcessions.originateTerminatePercent ?? '').trim(),
-      );
-      const nextShowCancellation = Boolean(
-        record.cancellationWithinHours ||
-          String(nextFlightConcessions.cancellationWithinHoursPercent ?? '').trim(),
-      );
-      const nextShowTechnical = Boolean(
-        String(nextFlightConcessions.technicalHandlingChargesPercent ?? '').trim(),
-      );
-      const nextShowStandby = Boolean(
-        String(nextFlightConcessions.standbyChargesPercent ?? '').trim(),
-      );
-      const nextShowFiloLifo = Boolean(
-        String(nextFlightConcessions.filoChargesPercent ?? '').trim() ||
-          String(nextFlightConcessions.lifoChargesPercent ?? '').trim() ||
-          String(nextFlightConcessions.filoLifoChargesPercent ?? '').trim(),
-      );
-      const nextShowRon = Boolean(
-        String(nextFlightConcessions.ronAdditionalPercent ?? '').trim(),
-      );
-      const nextShowLateArrival = Boolean(
-        String(nextFlightConcessions.lateArrivalAdditionalPercent ?? '').trim(),
-      );
-      const nextShowExtraGround = Boolean(
-        String(nextFlightConcessions.extraGroundTimeAdditionalPercent ?? '').trim(),
-      );
+      const focusedPanel = sghaPanelForFocus(focusCondition);
       const nextAdsEquipmentRules = collapseAdsEquipmentRules(
         (record.adsEquipmentRules ?? []).map((rule) => {
         const aircraftTypes = (rule.aircraftTypes ?? [])
@@ -783,16 +897,19 @@ export function ContractFormDialog({
       setSelectedAircraftTypes(nextSelectedAircraftTypes);
       setClauses(nextClauses);
       setFlightConcessions(nextFlightConcessions);
-      setShowDivertedConcessions(nextShowDiverted);
-      setShowReturnToRampConcession(nextShowReturnToRamp);
-      setShowOriginateTerminate(nextShowOriginateTerminate);
-      setShowCancellationWindow(nextShowCancellation);
-      setShowTechnicalHandlingCharges(nextShowTechnical);
-      setShowStandbyCharges(nextShowStandby);
-      setShowFiloLifoCharges(nextShowFiloLifo);
-      setShowRonCharges(nextShowRon);
-      setShowLateArrivalCharges(nextShowLateArrival);
-      setShowExtraGroundCharges(nextShowExtraGround);
+      setShowVolumeRates(false);
+      setShowAdditionalTerms(focusedPanel != null && focusedPanel !== 'split');
+      setShowDivertedConcessions(focusedPanel === 'diverted');
+      setShowReturnToRampConcession(focusedPanel === 'returnToRamp');
+      setShowOriginateTerminate(focusedPanel === 'originate');
+      setShowCancellationWindow(focusedPanel === 'cancellation');
+      setShowTechnicalHandlingCharges(focusedPanel === 'technical');
+      setShowStandbyCharges(focusedPanel === 'standby');
+      setShowFiloLifoCharges(focusedPanel === 'ferry');
+      setShowRonCharges(focusedPanel === 'ron');
+      setShowLateArrivalCharges(focusedPanel === 'late');
+      setShowExtraGroundCharges(focusedPanel === 'ground');
+      setShowSplitTurnaround(focusedPanel === 'split');
       setAdsEquipmentRules(nextAdsEquipmentRules);
       setBhsVolumeSchedules(record.bhsVolumeSchedules ?? []);
       setContractPdf(nextContractPdf);
@@ -838,16 +955,16 @@ export function ContractFormDialog({
           bhsConcessionCoverage: nextBhsCoverage,
           clauses: nextClauses,
           flightConcessions: nextFlightConcessions,
-          showDivertedConcessions: nextShowDiverted,
-          showReturnToRampConcession: nextShowReturnToRamp,
-          showOriginateTerminate: nextShowOriginateTerminate,
-          showCancellationWindow: nextShowCancellation,
-          showTechnicalHandlingCharges: nextShowTechnical,
-          showStandbyCharges: nextShowStandby,
-          showFiloLifoCharges: nextShowFiloLifo,
-          showRonCharges: nextShowRon,
-          showLateArrivalCharges: nextShowLateArrival,
-          showExtraGroundCharges: nextShowExtraGround,
+          showDivertedConcessions: false,
+          showReturnToRampConcession: false,
+          showOriginateTerminate: false,
+          showCancellationWindow: false,
+          showTechnicalHandlingCharges: false,
+          showStandbyCharges: false,
+          showFiloLifoCharges: false,
+          showRonCharges: false,
+          showLateArrivalCharges: false,
+          showExtraGroundCharges: false,
           adsEquipmentRules: nextAdsEquipmentRules,
           bhsVolumeSchedules: record.bhsVolumeSchedules ?? [],
           selectedAircraftTypes: nextSelectedAircraftTypes,
@@ -882,6 +999,7 @@ export function ContractFormDialog({
       setSelectedAircraftTypes([]);
       setClauses(nextClauses);
       resetFlightConcessions();
+      setShowVolumeRates(false);
       setAdsEquipmentRules([]);
       setBhsVolumeSchedules([]);
       setContractPdf(null);
@@ -2196,6 +2314,9 @@ export function ContractFormDialog({
                 <ContractSection
                   title="Comprehensive volume rates"
                   description="Optional. Use this when the BHS package rate changes with how many flights the airline operates in the month. Leave it empty to keep the saved price-card rate."
+                  collapsible
+                  open={showVolumeRates}
+                  onOpenChange={setShowVolumeRates}
                 >
                   <ContractBhsVolumeEditor
                     schedules={bhsVolumeSchedules}
@@ -2206,11 +2327,11 @@ export function ContractFormDialog({
                 <div className="h-4" />
                 <ContractSection
                   title="Additional SGHA terms"
-                  description="Enable only conditions that apply. Leave toggles off to keep the contract lean."
+                  description="Open a term to enter its percent. Closing it keeps the number already entered."
+                  collapsible
+                  open={showAdditionalTerms}
+                  onOpenChange={setShowAdditionalTerms}
                 >
-                  {record ? (
-                    <FlightFeeSummary record={record} />
-                  ) : null}
                   <div className="mb-3 flex justify-end">
                     <button
                       type="button"
@@ -2221,79 +2342,43 @@ export function ContractFormDialog({
                     </button>
                   </div>
                   <div className="grid gap-3">
-                    <ContractToggleCard
-                      checked={showDivertedConcessions}
-                      onChange={(checked) => {
-                        setShowDivertedConcessions(checked);
-                        if (!checked) {
-                          setFlightConcessions((prev) => ({
-                            ...prev,
-                            divertedDom: '',
-                            divertedInt: '',
-                          }));
-                        }
-                      }}
+                    <SghaDisclosure
+                      open={showDivertedConcessions}
+                      onToggle={() => setShowDivertedConcessions((open) => !open)}
                       title="Diverted flight percentages"
-                      description="Domestic and international diversion rates."
-                    />
-
-                    {showDivertedConcessions ? (
+                      description="Domestic, international, BME, cargo, and split-sector rates."
+                    >
                       <div className={cn(contractUi.nestedCard, 'grid gap-4 sm:grid-cols-2')}>
-                        <ContractField
-                          label="Diverted domestic (%)"
-                          htmlFor="divertedDomPercent"
-                          hint="Applied when a domestic flight is diverted."
-                          error={validationErrors.divertedDom || undefined}
-                        >
-                          <ContractInput
-                            id="divertedDomPercent"
-                            type="number"
-                            min={0}
-                            max={100}
-                            step={1}
-                            value={flightConcessions.divertedDom}
-                            onChange={(e) => setFlightConcessionField('divertedDom', e.target.value)}
-                            placeholder="Optional"
-                            aria-invalid={Boolean(validationErrors.divertedDom)}
-                          />
-                        </ContractField>
-                        <ContractField
-                          label="Diverted international (%)"
-                          htmlFor="divertedIntPercent"
-                          hint={!validationErrors.divertedInt ? 'Applied when an international flight is diverted.' : undefined}
-                          error={validationErrors.divertedInt || undefined}
-                        >
-                          <ContractInput
-                            id="divertedIntPercent"
-                            type="number"
-                            min={0}
-                            max={100}
-                            step={1}
-                            value={flightConcessions.divertedInt}
-                            onChange={(e) => setFlightConcessionField('divertedInt', e.target.value)}
-                            placeholder="Optional"
-                            aria-invalid={Boolean(validationErrors.divertedInt)}
-                          />
-                        </ContractField>
+                        {DIVERTED_PERCENT_FIELDS.map((field) => (
+                          <ContractField
+                            key={field.key}
+                            label={field.label}
+                            htmlFor={field.id}
+                            hint={validationErrors[field.key] ? undefined : field.hint}
+                            error={validationErrors[field.key] || undefined}
+                          >
+                            <ContractInput
+                              id={field.id}
+                              type="number"
+                              min={0}
+                              max={100}
+                              step={1}
+                              value={flightConcessions[field.key]}
+                              onChange={(e) => setFlightConcessionField(field.key, e.target.value)}
+                              placeholder="Optional"
+                              aria-invalid={Boolean(validationErrors[field.key])}
+                            />
+                          </ContractField>
+                        ))}
                       </div>
-                    ) : null}
+                    </SghaDisclosure>
 
-                    <ContractToggleCard
-                      checked={showReturnToRampConcession}
-                      onChange={(checked) => {
-                        setShowReturnToRampConcession(checked);
-                        if (!checked) {
-                          setFlightConcessions((prev) => ({
-                            ...prev,
-                            returnToRamp: '',
-                          }));
-                        }
-                      }}
+                    <SghaDisclosure
+                      open={showReturnToRampConcession}
+                      onToggle={() => setShowReturnToRampConcession((open) => !open)}
                       title="Return to ramp percentage"
                       description="Applied additionally when the flight returns to ramp."
-                    />
-
-                    {showReturnToRampConcession ? (
+                    >
                       <div className={cn(contractUi.nestedCard, 'grid gap-4 sm:grid-cols-2')}>
                         <ContractField
                           label="Return to ramp (%)"
@@ -2313,24 +2398,14 @@ export function ContractFormDialog({
                           />
                         </ContractField>
                       </div>
-                    ) : null}
+                    </SghaDisclosure>
 
-                    <ContractToggleCard
-                      checked={showOriginateTerminate}
-                      onChange={(checked) => {
-                        setShowOriginateTerminate(checked);
-                        if (!checked) {
-                          setFlightConcessions((prev) => ({
-                            ...prev,
-                            originateTerminatePercent: '',
-                          }));
-                        }
-                      }}
+                    <SghaDisclosure
+                      open={showOriginateTerminate}
+                      onToggle={() => setShowOriginateTerminate((open) => !open)}
                       title="Originate / terminate percentage"
                       description="Flights with only an ATA time (originate) or only an ATD time (terminate) are charged this percent of the BHS package rate."
-                    />
-
-                    {showOriginateTerminate ? (
+                    >
                       <div className={cn(contractUi.nestedCard, 'grid gap-4 sm:grid-cols-2')}>
                         <ContractField
                           label="Originate / terminate (%)"
@@ -2353,25 +2428,14 @@ export function ContractFormDialog({
                           />
                         </ContractField>
                       </div>
-                    ) : null}
+                    </SghaDisclosure>
 
-                    <ContractToggleCard
-                      checked={showCancellationWindow}
-                      onChange={(checked) => {
-                        setShowCancellationWindow(checked);
-                        if (!checked) {
-                          setFlightConcessions((prev) => ({
-                            ...prev,
-                            cancellationWithinHoursPercent: '',
-                          }));
-                          setForm((prev) => ({ ...prev, cancellationWithinHours: '' }));
-                        }
-                      }}
+                    <SghaDisclosure
+                      open={showCancellationWindow}
+                      onToggle={() => setShowCancellationWindow((open) => !open)}
                       title="Cancellation within hours"
                       description="Percentage charged when cancelled inside the window."
-                    />
-
-                    {showCancellationWindow ? (
+                    >
                       <div className={cn(contractUi.nestedCard, 'grid gap-4 sm:grid-cols-2')}>
                         <ContractField
                           label="Cancellation percentage (%)"
@@ -2416,24 +2480,14 @@ export function ContractFormDialog({
                           />
                         </ContractField>
                       </div>
-                    ) : null}
+                    </SghaDisclosure>
 
-                    <ContractToggleCard
-                      checked={showTechnicalHandlingCharges}
-                      onChange={(checked) => {
-                        setShowTechnicalHandlingCharges(checked);
-                        if (!checked) {
-                          setFlightConcessions((prev) => ({
-                            ...prev,
-                            technicalHandlingChargesPercent: '',
-                          }));
-                        }
-                      }}
+                    <SghaDisclosure
+                      open={showTechnicalHandlingCharges}
+                      onToggle={() => setShowTechnicalHandlingCharges((open) => !open)}
                       title="Technical handling charges"
                       description="Percentage applied on technical handling."
-                    />
-
-                    {showTechnicalHandlingCharges ? (
+                    >
                       <div className={cn(contractUi.nestedCard, 'grid gap-4 sm:grid-cols-2')}>
                         <ContractField
                           label="Technical handling charges (%)"
@@ -2455,24 +2509,14 @@ export function ContractFormDialog({
                           />
                         </ContractField>
                       </div>
-                    ) : null}
+                    </SghaDisclosure>
 
-                    <ContractToggleCard
-                      checked={showStandbyCharges}
-                      onChange={(checked) => {
-                        setShowStandbyCharges(checked);
-                        if (!checked) {
-                          setFlightConcessions((prev) => ({
-                            ...prev,
-                            standbyChargesPercent: '',
-                          }));
-                        }
-                      }}
+                    <SghaDisclosure
+                      open={showStandbyCharges}
+                      onToggle={() => setShowStandbyCharges((open) => !open)}
                       title="Standby charges"
                       description="Percentage applied on standby."
-                    />
-
-                    {showStandbyCharges ? (
+                    >
                       <div className={cn(contractUi.nestedCard, 'grid gap-4 sm:grid-cols-2')}>
                         <ContractField
                           label="Standby charges (%)"
@@ -2494,26 +2538,14 @@ export function ContractFormDialog({
                           />
                         </ContractField>
                       </div>
-                    ) : null}
+                    </SghaDisclosure>
 
-                    <ContractToggleCard
-                      checked={showFiloLifoCharges}
-                      onChange={(checked) => {
-                        setShowFiloLifoCharges(checked);
-                        if (!checked) {
-                          setFlightConcessions((prev) => ({
-                            ...prev,
-                            filoLifoChargesPercent: '',
-                            filoChargesPercent: '',
-                            lifoChargesPercent: '',
-                          }));
-                        }
-                      }}
+                    <SghaDisclosure
+                      open={showFiloLifoCharges}
+                      onToggle={() => setShowFiloLifoCharges((open) => !open)}
                       title="Ferry in / ferry out"
                       description="Replacement percent of the BHS package. Ferry in load out and load in ferry out can differ."
-                    />
-
-                    {showFiloLifoCharges ? (
+                    >
                       <div className={cn(contractUi.nestedCard, 'grid gap-4 sm:grid-cols-2')}>
                         <ContractField
                           label="Ferry in / load out (%)"
@@ -2556,23 +2588,14 @@ export function ContractFormDialog({
                           />
                         </ContractField>
                       </div>
-                    ) : null}
+                    </SghaDisclosure>
 
-                    <ContractToggleCard
-                      checked={showRonCharges}
-                      onChange={(checked) => {
-                        setShowRonCharges(checked);
-                        if (!checked) {
-                          setFlightConcessions((prev) => ({
-                            ...prev,
-                            ronAdditionalPercent: '',
-                          }));
-                        }
-                      }}
+                    <SghaDisclosure
+                      open={showRonCharges}
+                      onToggle={() => setShowRonCharges((open) => !open)}
                       title="Remain overnight additional"
                       description="Added on top of the handling rate. Arrive 22:00–04:00, depart by 06:00, ground time at least 75 minutes. Not on split-sector flights."
-                    />
-                    {showRonCharges ? (
+                    >
                       <div className={cn(contractUi.nestedCard, 'grid gap-4 sm:grid-cols-2')}>
                         <ContractField
                           label="RON additional (%)"
@@ -2594,23 +2617,14 @@ export function ContractFormDialog({
                           />
                         </ContractField>
                       </div>
-                    ) : null}
+                    </SghaDisclosure>
 
-                    <ContractToggleCard
-                      checked={showLateArrivalCharges}
-                      onChange={(checked) => {
-                        setShowLateArrivalCharges(checked);
-                        if (!checked) {
-                          setFlightConcessions((prev) => ({
-                            ...prev,
-                            lateArrivalAdditionalPercent: '',
-                          }));
-                        }
-                      }}
+                    <SghaDisclosure
+                      open={showLateArrivalCharges}
+                      onToggle={() => setShowLateArrivalCharges((open) => !open)}
                       title="Late arrival additional"
                       description="Added when the flight arrives more than 75 minutes after STA. Not added on a RON flight."
-                    />
-                    {showLateArrivalCharges ? (
+                    >
                       <div className={cn(contractUi.nestedCard, 'grid gap-4 sm:grid-cols-2')}>
                         <ContractField
                           label="Late arrival additional (%)"
@@ -2633,23 +2647,14 @@ export function ContractFormDialog({
                           />
                         </ContractField>
                       </div>
-                    ) : null}
+                    </SghaDisclosure>
 
-                    <ContractToggleCard
-                      checked={showExtraGroundCharges}
-                      onChange={(checked) => {
-                        setShowExtraGroundCharges(checked);
-                        if (!checked) {
-                          setFlightConcessions((prev) => ({
-                            ...prev,
-                            extraGroundTimeAdditionalPercent: '',
-                          }));
-                        }
-                      }}
+                    <SghaDisclosure
+                      open={showExtraGroundCharges}
+                      onToggle={() => setShowExtraGroundCharges((open) => !open)}
                       title="Extra ground time additional"
                       description="Added when a domestic-to-domestic or international-to-international flight is on the ground more than 75 minutes. Not on split-sector or RON flights."
-                    />
-                    {showExtraGroundCharges ? (
+                    >
                       <div className={cn(contractUi.nestedCard, 'grid gap-4 sm:grid-cols-2')}>
                         <ContractField
                           label="Extra ground time additional (%)"
@@ -2674,70 +2679,68 @@ export function ContractFormDialog({
                           />
                         </ContractField>
                       </div>
-                    ) : null}
-
-                    <div className={cn(contractUi.nestedCard, 'grid gap-4 sm:grid-cols-2')}>
-                      <div className="sm:col-span-2">
-                        <p className="text-sm font-medium text-gray-900">
-                          Split turnaround at Delhi
-                        </p>
-                        <p className="mt-1 text-xs text-gray-500">
-                          International arrival and domestic departure is this percent over the
-                          domestic comprehensive rate. Domestic arrival and international departure
-                          is this percent over the international comprehensive rate.
-                        </p>
-                      </div>
-                      <ContractField
-                        label="Int arrival / Dom departure (%)"
-                        htmlFor="splitIntArrivalDomDeparturePercent"
-                        hint="20% over the domestic comprehensive rate."
-                        error={validationErrors.splitIntArrivalDomDeparturePercent || undefined}
-                      >
-                        <ContractInput
-                          id="splitIntArrivalDomDeparturePercent"
-                          type="number"
-                          min={0}
-                          max={100}
-                          step={1}
-                          value={flightConcessions.splitIntArrivalDomDeparturePercent}
-                          onChange={(e) =>
-                            setFlightConcessionField(
-                              'splitIntArrivalDomDeparturePercent',
-                              e.target.value,
-                            )
-                          }
-                          placeholder="Optional"
-                          aria-invalid={Boolean(
-                            validationErrors.splitIntArrivalDomDeparturePercent,
-                          )}
-                        />
-                      </ContractField>
-                      <ContractField
-                        label="Dom arrival / Int departure (%)"
-                        htmlFor="splitDomArrivalIntDeparturePercent"
-                        hint="25% over the international comprehensive rate."
-                        error={validationErrors.splitDomArrivalIntDeparturePercent || undefined}
-                      >
-                        <ContractInput
-                          id="splitDomArrivalIntDeparturePercent"
-                          type="number"
-                          min={0}
-                          max={100}
-                          step={1}
-                          value={flightConcessions.splitDomArrivalIntDeparturePercent}
-                          onChange={(e) =>
-                            setFlightConcessionField(
-                              'splitDomArrivalIntDeparturePercent',
-                              e.target.value,
-                            )
-                          }
-                          placeholder="Optional"
-                          aria-invalid={Boolean(
-                            validationErrors.splitDomArrivalIntDeparturePercent,
-                          )}
-                        />
-                      </ContractField>
-                    </div>
+                    </SghaDisclosure>
+                  </div>
+                </ContractSection>
+                <div className="h-4" />
+                <ContractSection
+                  title="Split turnaround at Delhi"
+                  description="International arrival and domestic departure is this percent over the domestic comprehensive rate. Domestic arrival and international departure is this percent over the international comprehensive rate."
+                  collapsible
+                  open={showSplitTurnaround}
+                  onOpenChange={setShowSplitTurnaround}
+                >
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <ContractField
+                      label="Int arrival / Dom departure (%)"
+                      htmlFor="splitIntArrivalDomDeparturePercent"
+                      hint="20% over the domestic comprehensive rate."
+                      error={validationErrors.splitIntArrivalDomDeparturePercent || undefined}
+                    >
+                      <ContractInput
+                        id="splitIntArrivalDomDeparturePercent"
+                        type="number"
+                        min={0}
+                        max={100}
+                        step={1}
+                        value={flightConcessions.splitIntArrivalDomDeparturePercent}
+                        onChange={(e) =>
+                          setFlightConcessionField(
+                            'splitIntArrivalDomDeparturePercent',
+                            e.target.value,
+                          )
+                        }
+                        placeholder="Optional"
+                        aria-invalid={Boolean(
+                          validationErrors.splitIntArrivalDomDeparturePercent,
+                        )}
+                      />
+                    </ContractField>
+                    <ContractField
+                      label="Dom arrival / Int departure (%)"
+                      htmlFor="splitDomArrivalIntDeparturePercent"
+                      hint="25% over the international comprehensive rate."
+                      error={validationErrors.splitDomArrivalIntDeparturePercent || undefined}
+                    >
+                      <ContractInput
+                        id="splitDomArrivalIntDeparturePercent"
+                        type="number"
+                        min={0}
+                        max={100}
+                        step={1}
+                        value={flightConcessions.splitDomArrivalIntDeparturePercent}
+                        onChange={(e) =>
+                          setFlightConcessionField(
+                            'splitDomArrivalIntDeparturePercent',
+                            e.target.value,
+                          )
+                        }
+                        placeholder="Optional"
+                        aria-invalid={Boolean(
+                          validationErrors.splitDomArrivalIntDeparturePercent,
+                        )}
+                      />
+                    </ContractField>
                   </div>
                 </ContractSection>
               </TabsContent>

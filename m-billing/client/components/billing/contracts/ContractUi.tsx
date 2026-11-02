@@ -1,6 +1,7 @@
 'use client';
 
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from 'react';
+import { ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { billingUi } from '../billingUi';
 
@@ -264,19 +265,54 @@ export function ContractSection({
   description,
   children,
   className,
+  collapsible = false,
+  open = true,
+  onOpenChange,
 }: {
   title: string;
   description?: string;
   children: ReactNode;
   className?: string;
+  collapsible?: boolean;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
-  return (
-    <div className={cn(contractUi.section, className)}>
-      <header className="border-b border-[#1C0770] bg-[#1C0770] px-4 py-3 sm:px-5">
+  const bodyOpen = !collapsible || open;
+  const heading = (
+    <>
+      {collapsible ? (
+        <ChevronRight
+          className={cn(
+            'mt-0.5 h-4 w-4 shrink-0 text-[#F1FF5E] transition-transform',
+            open && 'rotate-90',
+          )}
+          aria-hidden
+        />
+      ) : null}
+      <div className="min-w-0">
         <h3 className={contractUi.sectionTitle}>{title}</h3>
         {description ? <p className={contractUi.sectionDesc}>{description}</p> : null}
-      </header>
-      <div className="p-4 sm:p-5">{children}</div>
+      </div>
+    </>
+  );
+  return (
+    <div className={cn(contractUi.section, className)}>
+      {collapsible ? (
+        <button
+          type="button"
+          aria-expanded={open}
+          onClick={() => onOpenChange?.(!open)}
+          className={cn(
+            'flex w-full items-start gap-2 bg-[#1C0770] px-4 py-3 text-left sm:px-5',
+            bodyOpen && 'border-b border-[#1C0770]',
+          )}
+        >
+          {heading}
+        </button>
+      ) : (
+        <header className="border-b border-[#1C0770] bg-[#1C0770] px-4 py-3 sm:px-5">{heading}</header>
+      )}
+      {bodyOpen ? <div className="p-4 sm:p-5">{children}</div> : null}
     </div>
   );
 }

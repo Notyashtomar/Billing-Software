@@ -7,6 +7,8 @@ import {
   resolveCeilingRatePerFlightInBillingCurrency,
   resolveLineAdditionalChargePercent,
   ferryKindFromFhrDocument,
+  divertedChargeKeyForCategory,
+  divertedUnitPricePercent,
   resolveLineConcessionPercent,
   concessionTotalsFromSavedHeader,
   roundBillingMoney,
@@ -713,6 +715,56 @@ describe('ferryKindFromFhrDocument', () => {
       { concessionRates: { filoChargesPercent: 90, dom: 100 } },
     );
     expect(percent).toBe(90);
+  });
+});
+
+describe('diverted flight percentages by category', () => {
+  const contract = {
+    conditionalCharges: {
+      divertedDom: 30,
+      divertedInt: 40,
+      divertedDomBme: 15,
+      divertedIntBme: 16,
+      divertedDomCargo: 21,
+      divertedIntCargo: 22,
+      divertedDomInt: 25,
+      divertedIntDom: 35,
+    },
+  };
+
+  function line(categoryOfFlight: string) {
+    return {
+      sourceRef: {
+        operationalSnapshot: {
+          categoryOfFlight,
+          ops: 'Diverted Flight',
+        },
+      },
+    };
+  }
+
+  it('maps each flight type to its own percent', () => {
+    expect(divertedChargeKeyForCategory('Domestic')).toBe('divertedDom');
+    expect(divertedChargeKeyForCategory('International')).toBe('divertedInt');
+    expect(divertedChargeKeyForCategory('Domestic BME')).toBe('divertedDomBme');
+    expect(divertedChargeKeyForCategory('International-BME')).toBe('divertedIntBme');
+    expect(divertedChargeKeyForCategory('Domestic-Cargo')).toBe('divertedDomCargo');
+    expect(divertedChargeKeyForCategory('International-Cargo')).toBe('divertedIntCargo');
+    expect(divertedChargeKeyForCategory('Domestic-International')).toBe('divertedDomInt');
+    expect(divertedChargeKeyForCategory('International-Domestic')).toBe('divertedIntDom');
+  });
+
+  it('replaces the package only with the percent saved for that type', () => {
+    expect(resolveLineConcessionPercent(line('Domestic'), contract)).toBe(30);
+    expect(resolveLineConcessionPercent(line('Domestic BME'), contract)).toBe(15);
+    expect(resolveLineConcessionPercent(line('Domestic-International'), contract)).toBe(25);
+    expect(resolveLineConcessionPercent(line('International-Domestic'), contract)).toBe(35);
+    expect(
+      divertedUnitPricePercent(line('Domestic BME'), {
+        conditionalCharges: { divertedDom: 30 },
+      }),
+    ).toEqual({ diverted: true, percent: null });
+    expect(resolveLineConcessionPercent(line('Domestic'), { conditionalCharges: {} })).toBe(0);
   });
 });
 

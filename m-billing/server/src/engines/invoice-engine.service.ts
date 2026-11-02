@@ -21,6 +21,7 @@ import {
   inferConcessionScenarioFromLine,
   actualGroundMinutes,
   resolveLineAdditionalChargePercent,
+  divertedUnitPricePercent,
   resolveLineConcessionPercent,
   resolveLineFeeConcessionPercent,
   shouldApplyConcessionToBhsUnitPrice,
@@ -1534,7 +1535,10 @@ function aggregateBuckets(
       sourceType: rec.sourceType,
     } satisfies Record<string, unknown>;
     const recordLevelContract = contractFromPreparationRecord(rec, contract);
-    const chargePercent = resolveLineConcessionPercent({ sourceRef }, recordLevelContract);
+    const divertedUnit = divertedUnitPricePercent({ sourceRef }, recordLevelContract);
+    const chargePercent = divertedUnit.diverted
+      ? divertedUnit.percent ?? 0
+      : resolveLineConcessionPercent({ sourceRef }, recordLevelContract);
     const additionalChargePercent = resolveLineAdditionalChargePercent(
       { sourceRef },
       recordLevelContract,
@@ -1556,10 +1560,11 @@ function aggregateBuckets(
       { sourceRef },
       recordLevelContract,
     );
-    const concessionAppliedToUnitPrice =
-      shouldApplyConcessionToBhsUnitPrice(concessionScenario, recordLevelContract) &&
-      Number.isFinite(chargePercent) &&
-      chargePercent >= 0;
+    const concessionAppliedToUnitPrice = divertedUnit.diverted
+      ? divertedUnit.percent != null
+      : shouldApplyConcessionToBhsUnitPrice(concessionScenario, recordLevelContract) &&
+        Number.isFinite(chargePercent) &&
+        chargePercent >= 0;
     const concessionAdjustedUnitPrice = concessionAppliedToUnitPrice
       ? round2((unitPrice * chargePercent) / 100)
       : round2(unitPrice);

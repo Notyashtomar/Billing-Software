@@ -270,6 +270,12 @@ function ContractValidityCell({
 const SGHA_TABLE_LABELS: Record<(typeof CONTRACT_CONDITIONAL_CHARGE_SCENARIOS)[number], string> = {
   divertedDom: 'Div. domestic',
   divertedInt: 'Div. international',
+  divertedDomBme: 'Div. dom BME',
+  divertedIntBme: 'Div. int BME',
+  divertedDomCargo: 'Div. dom cargo',
+  divertedIntCargo: 'Div. int cargo',
+  divertedDomInt: 'Div. dom-int',
+  divertedIntDom: 'Div. int-dom',
   returnToRamp: 'Return to ramp',
   originateTerminatePercent: 'Originate / terminate',
   cancellationWithinHoursPercent: 'Cancellation',
