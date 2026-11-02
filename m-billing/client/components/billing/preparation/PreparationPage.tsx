@@ -4,13 +4,18 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'rea
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import {
-  OTHER_STATION_BILLING_PERIOD,
-  isDelhiStation,
-  readLoginStationCode,
+  SYSTEM_DEFAULT_BILLING_MONTH,
+  builtinDefaultBillingPeriod,
+  isLegacyAutomaticBillingPeriod,
+  legacyPeriodUpgradePending,
+  markLegacyPeriodUpgraded,
+  readDefaultMonthAppliedStamp,
+  readStoredDefaultBillingMonth,
+  readStoredDefaultBillingPeriod,
+  writeDefaultMonthAppliedStamp,
 } from '@/lib/billing-default-period';
 import {
   AlertCircle,
-  Calendar,
   CheckCheck,
   ChevronRight,
   FilePlus2,
@@ -22,6 +27,7 @@ import {
   Search,
   Trash2,
 } from 'lucide-react';
+import { SetDefaultBillingMonthButton } from '../SetDefaultBillingMonthButton';
 import { BillingPageHeader } from '../BillingLayout';
 import { billingUi } from '../billingUi';
 import { StatusBadge } from '../StatusBadge';
@@ -144,51 +150,42 @@ function draftCreationMessage(data?: {
   return skipLabel.trim() || 'Draft updated.';
 }
 
-const PREPARATION_DEFAULT_FROM = '2026-08-01';
-const PREPARATION_DEFAULT_TO = '2026-08-31';
+const PREPARATION_PAGE_KEY = 'preparation';
 /** Max rows loaded per list request (server caps at 10000). */
 const PREPARATION_LIST_LIMIT = 10000;
 /** Chunk size for id-based bulk ready / delete when not using filter select-all. */
 const BULK_READY_CHUNK = 500;
 
 const PREPARATION_PERIOD_KEY = 'preparation.period';
-const DEFAULT_FLIGHT_MONTH_KEY = 'billing.preparation.defaultFlightMonth';
 
-function defaultFlightMonthStorageKey(): string {
-  const station = readLoginStationCode()?.trim().toUpperCase() || 'station';
-  return `${DEFAULT_FLIGHT_MONTH_KEY}:${station}`;
-}
-
-function readStoredDefaultFlightMonth(): string | null {
-  if (typeof window === 'undefined') return null;
-  try {
-    const raw = localStorage.getItem(defaultFlightMonthStorageKey())?.trim() ?? '';
-    return /^\d{4}-\d{2}$/.test(raw) ? raw : null;
-  } catch {
-    return null;
+function openingPreparationPeriod(searchParams: { get(name: string): string | null }): {
+  from: string;
+  to: string;
+} {
+  const builtin = builtinDefaultBillingPeriod();
+  const stored = readStoredDefaultBillingPeriod();
+  const storedMonth = readStoredDefaultBillingMonth();
+  const urlFrom = searchParams.get('from')?.trim() || '';
+  const urlTo = searchParams.get('to')?.trim() || '';
+  if (
+    stored &&
+    storedMonth &&
+    readDefaultMonthAppliedStamp(PREPARATION_PAGE_KEY) !== storedMonth
+  ) {
+    return stored;
   }
-}
-
-function writeStoredDefaultFlightMonth(month: string): void {
-  try {
-    localStorage.setItem(defaultFlightMonthStorageKey(), month);
-  } catch {
-    /* private mode — the current page range still updates */
+  if (urlFrom && urlTo && !isLegacyAutomaticBillingPeriod(urlFrom, urlTo)) {
+    return { from: urlFrom, to: urlTo };
   }
-}
-
-function monthBounds(month: string): { from: string; to: string } | null {
-  const match = /^(\d{4})-(\d{2})$/.exec(month);
-  if (!match) return null;
-  const year = Number(match[1]);
-  const monthIndex = Number(match[2]);
-  if (monthIndex < 1 || monthIndex > 12) return null;
-  const lastDay = new Date(year, monthIndex, 0).getDate();
-  const mm = String(monthIndex).padStart(2, '0');
-  return {
-    from: `${year}-${mm}-01`,
-    to: `${year}-${mm}-${String(lastDay).padStart(2, '0')}`,
-  };
+  if (
+    urlFrom &&
+    urlTo &&
+    isLegacyAutomaticBillingPeriod(urlFrom, urlTo) &&
+    !legacyPeriodUpgradePending(PREPARATION_PAGE_KEY)
+  ) {
+    return { from: urlFrom, to: urlTo };
+  }
+  return stored ?? builtin;
 }
 
 /* ── Page-scoped presentation tokens (styling only) ── */
@@ -221,16 +218,13 @@ export function PreparationPage({ api }: Props) {
     tab === 'custom' || TABS.some((t) => t.id === tab) ? tab : 'eligible';
   const isCustomTab = resolvedTab === 'custom';
 
-  const [from, setFrom] = useState(
-    () => searchParams.get('from')?.trim() || PREPARATION_DEFAULT_FROM,
-  );
-  const [to, setTo] = useState(
-    () => searchParams.get('to')?.trim() || PREPARATION_DEFAULT_TO,
-  );
+  const [from, setFrom] = useState(() => openingPreparationPeriod(searchParams).from);
+  const [to, setTo] = useState(() => openingPreparationPeriod(searchParams).to);
   const [customerCode, setCustomerCode] = useState(
     () => searchParams.get('customer')?.trim() || '',
   );
   const [periodReady, setPeriodReady] = useState(false);
+  const ignoreNextUrlPeriod = useRef(false);
   const [flightKind, setFlightKind] = useState<PreparationFlightKindFilter>('all');
   const [rows, setRows] = useState<BillingPreparationRecord[]>([]);
   const [tabCounts, setTabCounts] = useState<Record<string, number>>({});
@@ -373,31 +367,59 @@ export function PreparationPage({ api }: Props) {
     const saved = getBillingWorkspacePageSlice<PreparationPeriodSlice>(
       PREPARATION_PERIOD_KEY,
     );
-    const storedMonth = readStoredDefaultFlightMonth();
-    const storedRange = storedMonth ? monthBounds(storedMonth) : null;
-    if (!searchParams.get('from')?.trim()) {
-      if (storedRange) setFrom(storedRange.from);
-      else if (saved?.from) setFrom(saved.from);
+    const builtin = builtinDefaultBillingPeriod();
+    const stored = readStoredDefaultBillingPeriod();
+    const storedMonth = readStoredDefaultBillingMonth();
+    const urlFrom = searchParams.get('from')?.trim() || '';
+    const urlTo = searchParams.get('to')?.trim() || '';
+    const urlLegacy = isLegacyAutomaticBillingPeriod(urlFrom, urlTo);
+    const savedLegacy =
+      !saved?.from || !saved?.to || isLegacyAutomaticBillingPeriod(saved.from, saved.to);
+    const stamp = readDefaultMonthAppliedStamp(PREPARATION_PAGE_KEY);
+    let nextFrom = builtin.from;
+    let nextTo = builtin.to;
+
+    if (stored && storedMonth && stamp !== storedMonth) {
+      nextFrom = stored.from;
+      nextTo = stored.to;
+      writeDefaultMonthAppliedStamp(PREPARATION_PAGE_KEY, storedMonth);
+    } else if (urlFrom && urlTo && !(legacyPeriodUpgradePending(PREPARATION_PAGE_KEY) && urlLegacy)) {
+      nextFrom = urlFrom;
+      nextTo = urlTo;
+    } else if (legacyPeriodUpgradePending(PREPARATION_PAGE_KEY) && (urlLegacy || savedLegacy)) {
+      nextFrom = builtin.from;
+      nextTo = builtin.to;
+      markLegacyPeriodUpgraded(PREPARATION_PAGE_KEY);
+    } else if (saved?.from && saved?.to) {
+      nextFrom = saved.from;
+      nextTo = saved.to;
+      if (legacyPeriodUpgradePending(PREPARATION_PAGE_KEY)) {
+        markLegacyPeriodUpgraded(PREPARATION_PAGE_KEY);
+      }
+    } else {
+      nextFrom = builtin.from;
+      nextTo = builtin.to;
+      if (legacyPeriodUpgradePending(PREPARATION_PAGE_KEY)) {
+        markLegacyPeriodUpgraded(PREPARATION_PAGE_KEY);
+      }
     }
-    if (!searchParams.get('to')?.trim()) {
-      if (storedRange) setTo(storedRange.to);
-      else if (saved?.to) setTo(saved.to);
-    }
+
+    setFrom(nextFrom);
+    setTo(nextTo);
     if (!searchParams.get('customer')?.trim() && saved?.customerCode) {
       setCustomerCode(saved.customerCode);
     }
     if (!searchParams.get('tab')?.trim() && saved?.tab) setRestoredTab(saved.tab);
-    if (
-      !storedRange &&
-      !saved?.from &&
-      !searchParams.get('from')?.trim() &&
-      !isDelhiStation(readLoginStationCode())
-    ) {
-      setFrom(OTHER_STATION_BILLING_PERIOD.from);
-      setTo(OTHER_STATION_BILLING_PERIOD.to);
+    if (urlFrom !== nextFrom || urlTo !== nextTo) {
+      ignoreNextUrlPeriod.current = true;
+      const params = new URLSearchParams(searchParams.toString());
+      params.set('tab', resolvedTab);
+      params.set('from', nextFrom);
+      params.set('to', nextTo);
+      router.replace(`/billing/preparation?${params.toString()}`);
     }
     setPeriodReady(true);
-  }, [workspaceIdentity, periodReady, searchParams]);
+  }, [workspaceIdentity, periodReady, searchParams, resolvedTab, router]);
 
   useEffect(() => {
     if (tab === resolvedTab) return;
@@ -423,8 +445,12 @@ export function PreparationPage({ api }: Props) {
     const fromParam = searchParams.get('from')?.trim();
     const toParam = searchParams.get('to')?.trim();
     const customerParam = searchParams.get('customer')?.trim();
-    if (fromParam) setFrom(fromParam);
-    if (toParam) setTo(toParam);
+    if (ignoreNextUrlPeriod.current) {
+      ignoreNextUrlPeriod.current = false;
+    } else {
+      if (fromParam) setFrom(fromParam);
+      if (toParam) setTo(toParam);
+    }
     if (customerParam !== null && customerParam !== undefined) {
       setCustomerCode(customerParam);
     }
@@ -468,10 +494,7 @@ export function PreparationPage({ api }: Props) {
     router.replace(`/billing/preparation?${params.toString()}`);
   };
 
-  const applyDefaultFlightMonth = (month: string) => {
-    const range = monthBounds(month);
-    if (!range) return;
-    writeStoredDefaultFlightMonth(month);
+  const applySavedDefaultMonth = (range: { from: string; to: string }) => {
     setFrom(range.from);
     setTo(range.to);
     const params = new URLSearchParams(searchParams.toString());
@@ -483,19 +506,9 @@ export function PreparationPage({ api }: Props) {
     router.replace(`/billing/preparation?${params.toString()}`);
   };
 
-  const defaultFlightMonthValue = /^\d{4}-\d{2}/.test(from) ? from.slice(0, 7) : '';
-  const defaultMonthInputRef = useRef<HTMLInputElement>(null);
-
-  const openDefaultMonthPicker = () => {
-    const input = defaultMonthInputRef.current;
-    if (!input) return;
-    input.focus();
-    try {
-      input.showPicker();
-    } catch {
-      input.click();
-    }
-  };
+  const defaultFlightMonthValue = /^\d{4}-\d{2}/.test(from)
+    ? from.slice(0, 7)
+    : (readStoredDefaultBillingMonth() ?? SYSTEM_DEFAULT_BILLING_MONTH);
 
   const syncPeriodToUrl = useCallback(() => {
     const params = new URLSearchParams(searchParams.toString());
@@ -1017,30 +1030,10 @@ export function PreparationPage({ api }: Props) {
                 )}
               </button>
             ) : null}
-            <div className="relative">
-              <button
-                type="button"
-                onClick={openDefaultMonthPicker}
-                className={billingUi.btnSecondary}
-              >
-                <Calendar className="h-4 w-4" aria-hidden />
-                Set default month for flights
-              </button>
-              <input
-                ref={defaultMonthInputRef}
-                type="month"
-                aria-label="Set default month for flights"
-                min="2000-01"
-                max="2100-12"
-                value={defaultFlightMonthValue}
-                onChange={(event) => {
-                  const month = event.target.value;
-                  if (/^\d{4}-\d{2}$/.test(month)) applyDefaultFlightMonth(month);
-                }}
-                tabIndex={-1}
-                className="pointer-events-none absolute h-px w-px opacity-0"
-              />
-            </div>
+            <SetDefaultBillingMonthButton
+              monthValue={defaultFlightMonthValue}
+              onApplied={applySavedDefaultMonth}
+            />
           </div>
         }
       />

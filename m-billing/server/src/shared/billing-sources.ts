@@ -32,6 +32,12 @@ export interface BillingSourceRow {
     conditionalCharges?: {
       divertedDom?: number;
       divertedInt?: number;
+      divertedDomBme?: number;
+      divertedIntBme?: number;
+      divertedDomCargo?: number;
+      divertedIntCargo?: number;
+      divertedDomInt?: number;
+      divertedIntDom?: number;
       returnToRamp?: number;
       cancellationWithinHoursPercent?: number;
       technicalHandlingChargesPercent?: number;

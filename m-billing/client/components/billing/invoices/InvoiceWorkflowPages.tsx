@@ -4,9 +4,11 @@ import { Fragment, useCallback, useEffect, useMemo, useState, type ReactNode } f
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
+  SYSTEM_DEFAULT_BILLING_MONTH,
   billingPeriodOverlaps,
   isDelhiStation,
-  previousMonthBillingPeriod,
+  readStoredDefaultBillingMonth,
+  resolveDefaultBillingPeriod,
   readLoginStationCode,
 } from '@/lib/billing-default-period';
 import {
@@ -31,6 +33,7 @@ import {
   Wrench,
   X,
 } from 'lucide-react';
+import { SetDefaultBillingMonthButton } from '../SetDefaultBillingMonthButton';
 import { BillingPageHeader } from '../BillingLayout';
 import { billingUi } from '../billingUi';
 import { BillingDataTable } from '../BillingDataTable';
@@ -788,14 +791,8 @@ export function InvoiceDraftsPage({ api }: Props) {
   /** Month key (`YYYY-MM`) while bulk PDF download runs for that card. */
   const [downloadingMonthKey, setDownloadingMonthKey] = useState<string | null>(null);
   const [airlineSearch, setAirlineSearch] = useState('');
-  const [periodFrom, setPeriodFrom] = useState('');
-  const [periodTo, setPeriodTo] = useState('');
-
-  useEffect(() => {
-    const previous = previousMonthBillingPeriod();
-    setPeriodFrom(previous.from);
-    setPeriodTo(previous.to);
-  }, []);
+  const [periodFrom, setPeriodFrom] = useState(() => resolveDefaultBillingPeriod().from);
+  const [periodTo, setPeriodTo] = useState(() => resolveDefaultBillingPeriod().to);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -1234,6 +1231,17 @@ export function InvoiceDraftsPage({ api }: Props) {
                 className={`${billingUi.input} min-h-10 sm:w-40`}
               />
             </label>
+            <SetDefaultBillingMonthButton
+              monthValue={
+                /^\d{4}-\d{2}/.test(periodFrom)
+                  ? periodFrom.slice(0, 7)
+                  : (readStoredDefaultBillingMonth() ?? SYSTEM_DEFAULT_BILLING_MONTH)
+              }
+              onApplied={(range) => {
+                setPeriodFrom(range.from);
+                setPeriodTo(range.to);
+              }}
+            />
             {periodFiltered ? (
               <button
                 type="button"

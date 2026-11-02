@@ -314,6 +314,42 @@ export class ContractConditionalChargesDto {
   @IsNumber()
   @Min(0)
   @Max(100)
+  divertedDomBme?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  divertedIntBme?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  divertedDomCargo?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  divertedIntCargo?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  divertedDomInt?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  divertedIntDom?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(100)
   returnToRamp?: number;
 
   @IsOptional()

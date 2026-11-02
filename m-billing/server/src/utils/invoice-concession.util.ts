@@ -90,6 +90,12 @@ export type ContractConcessionRatesShape = {
 export type ContractConditionalChargesShape = {
   divertedDom?: number | null;
   divertedInt?: number | null;
+  divertedDomBme?: number | null;
+  divertedIntBme?: number | null;
+  divertedDomCargo?: number | null;
+  divertedIntCargo?: number | null;
+  divertedDomInt?: number | null;
+  divertedIntDom?: number | null;
   returnToRamp?: number | null;
   originateTerminatePercent?: number | null;
   cancellationWithinHoursPercent?: number | null;
@@ -318,6 +324,55 @@ function flightSnapshotBlob(line: InvoiceLineConcessionInput): {
 function isDivertedFlightSnapshot(line: InvoiceLineConcessionInput): boolean {
   const { allText } = flightSnapshotBlob(line);
   return /\bdivert/.test(allText) || /\bdiversion\b/.test(allText);
+}
+
+type DivertedUnitChargeKey =
+  | 'divertedDom'
+  | 'divertedInt'
+  | 'divertedDomBme'
+  | 'divertedIntBme'
+  | 'divertedDomCargo'
+  | 'divertedIntCargo'
+  | 'divertedDomInt'
+  | 'divertedIntDom';
+
+/** Most specific diverted percent for the flight's category of flight. */
+export function divertedChargeKeyForCategory(categoryRaw: string): DivertedUnitChargeKey {
+  const text = categoryRaw
+    .toLowerCase()
+    .replace(/[_/]+/g, ' ')
+    .replace(/-/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const domAt = text.search(/\b(?:domestic|dom)\b/);
+  const intAt = text.search(/\b(?:international|int)\b/);
+  const cargo = /\bcargo\b/.test(text);
+  const bme = /\bbme\b/.test(text);
+  if (domAt >= 0 && intAt >= 0) {
+    return domAt < intAt ? 'divertedDomInt' : 'divertedIntDom';
+  }
+  if (bme && domAt >= 0) return 'divertedDomBme';
+  if (bme && intAt >= 0) return 'divertedIntBme';
+  if (cargo && domAt >= 0) return 'divertedDomCargo';
+  if (cargo && intAt >= 0) return 'divertedIntCargo';
+  if (domAt >= 0) return 'divertedDom';
+  return 'divertedInt';
+}
+
+/**
+ * Percent that replaces the BHS package on a diverted flight.
+ * `diverted` with a null percent means the flight is diverted and its type has no saved rate.
+ */
+export function divertedUnitPricePercent(
+  line: InvoiceLineConcessionInput,
+  contract?: InvoiceChargeContractShape | null,
+): { diverted: boolean; percent: number | null } {
+  if (!isDivertedFlightSnapshot(line)) return { diverted: false, percent: null };
+  const { categoryRaw } = flightSnapshotBlob(line);
+  const key = divertedChargeKeyForCategory(categoryRaw);
+  const value = resolveConditionalCharges(contract)[key];
+  if (!hasExplicitConcessionRate(value)) return { diverted: true, percent: null };
+  return { diverted: true, percent: Number(value) };
 }
 
 function isCancelledFlightSnapshot(
@@ -953,20 +1008,15 @@ export function resolveLineConcessionPercent(
   const ferryPercent = ferryReplacementPercent(line, contract);
   if (ferryPercent != null) return ferryPercent;
 
-  const isDiverted = isDivertedFlightSnapshot(line);
+  const divertedUnit = divertedUnitPricePercent(line, contract);
   const isTechnicalHandling =
     /technical/.test(handlingCorpus) ||
     /\btech\b/.test(handlingCorpus) ||
     /technical/.test(categoryLower);
   const isStandby =
     /stand[\s-]?by/.test(handlingCorpus) || /stand[\s-]?by/.test(categoryLower);
-  const normalized = normalizeFlightCategory(categoryRaw);
-  const isDom =
-    normalized === 'Dom' ||
-    (/domestic/.test(categoryLower) && !/international/.test(categoryLower));
 
-  if (isDiverted && isDom) return rates.DivDom;
-  if (isDiverted) return rates.DivInt;
+  if (divertedUnit.diverted) return divertedUnit.percent ?? 0;
   if (isTechnicalHandling) return rates.TechnicalHandlingChargesPercent;
   if (isStandby) return rates.StandbyChargesPercent;
   if (isOriginateOrTerminateFlight(line) && rates.OriginateTerminatePercent > 0) {

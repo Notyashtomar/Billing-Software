@@ -14,10 +14,10 @@ import {
   sumMisCheckerAggRows,
   type MisCheckerAggRow,
 } from './misCheckerAggregate';
+import { resolveDefaultBillingPeriod } from '@/lib/billing-default-period';
 import {
   getCurrentMonthDateRange,
   getMonthDateRange,
-  getPreviousMonthDateRange,
   shiftMonthDateRange,
   toYearMonth,
 } from './misCheckerDateRange';
@@ -48,7 +48,7 @@ function readStationCode(): string {
  * reviews airline×rate aggregation in Excel-styled preview, downloads workbook.
  */
 export function MisCheckerPage({ api }: Props) {
-  const initialRange = useMemo(() => getPreviousMonthDateRange(), []);
+  const initialRange = useMemo(() => resolveDefaultBillingPeriod(), []);
   const [from, setFrom] = useState(initialRange.from);
   const [to, setTo] = useState(initialRange.to);
   const [monthValue, setMonthValue] = useState(() => toYearMonth(initialRange.from));

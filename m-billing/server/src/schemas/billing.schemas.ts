@@ -349,6 +349,12 @@ export class BillingContract {
     type: {
       divertedDom: { type: Number },
       divertedInt: { type: Number },
+      divertedDomBme: { type: Number },
+      divertedIntBme: { type: Number },
+      divertedDomCargo: { type: Number },
+      divertedIntCargo: { type: Number },
+      divertedDomInt: { type: Number },
+      divertedIntDom: { type: Number },
       returnToRamp: { type: Number },
       originateTerminatePercent: { type: Number },
       cancellationWithinHoursPercent: { type: Number },
@@ -369,6 +375,12 @@ export class BillingContract {
   conditionalCharges?: {
     divertedDom?: number;
     divertedInt?: number;
+    divertedDomBme?: number;
+    divertedIntBme?: number;
+    divertedDomCargo?: number;
+    divertedIntCargo?: number;
+    divertedDomInt?: number;
+    divertedIntDom?: number;
     returnToRamp?: number;
     originateTerminatePercent?: number;
     cancellationWithinHoursPercent?: number;

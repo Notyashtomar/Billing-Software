@@ -188,6 +188,12 @@ export interface BillingContractConcessionRates {
 export interface BillingContractConditionalCharges {
   divertedDom?: number;
   divertedInt?: number;
+  divertedDomBme?: number;
+  divertedIntBme?: number;
+  divertedDomCargo?: number;
+  divertedIntCargo?: number;
+  divertedDomInt?: number;
+  divertedIntDom?: number;
   returnToRamp?: number;
   /** ATA-only originate or ATD-only terminate: percent of the BHS package rate. */
   originateTerminatePercent?: number;

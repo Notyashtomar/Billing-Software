@@ -4,10 +4,18 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { BillingPageHeader } from '../BillingLayout';
 import {
-  OTHER_STATION_BILLING_PERIOD,
-  isDelhiStation,
-  readLoginStationCode,
+  SYSTEM_DEFAULT_BILLING_MONTH,
+  SYSTEM_DEFAULT_BILLING_PERIOD,
+  isLegacyAutomaticBillingPeriod,
+  legacyPeriodUpgradePending,
+  markLegacyPeriodUpgraded,
+  monthBoundsFromYearMonth,
+  readDefaultMonthAppliedStamp,
+  readStoredDefaultBillingMonth,
+  readStoredDefaultBillingPeriod,
+  writeDefaultMonthAppliedStamp,
 } from '@/lib/billing-default-period';
+import { SetDefaultBillingMonthButton } from '../SetDefaultBillingMonthButton';
 import { BillingDataTable } from '../BillingDataTable';
 import { BillingTableHeaderFilter } from '../BillingTableHeaderFilter';
 import { BillingAdsBriefStatsBar } from './BillingAdsBriefStatsBar';
@@ -703,9 +711,19 @@ type Props = {
  * Shared operational billing source page — Phase 2
  * Shows: Operational Data, Billing Eligibility, Contract Match, Rate Match, Validation Status
  */
+function isNamedBillingSource(fetchMethod: OperationalSourceConfig['fetchMethod']): boolean {
+  return fetchMethod === 'listAds' || fetchMethod === 'listScheduledFlights';
+}
+
 export function OperationalSourcePage({ api, config }: Props) {
-  const initialFrom = config.defaultFrom ?? DEFAULT_FROM;
-  const initialTo = config.defaultTo ?? DEFAULT_TO;
+  const storedPeriod = readStoredDefaultBillingPeriod();
+  const namedSource = isNamedBillingSource(config.fetchMethod);
+  const initialFrom =
+    storedPeriod?.from ??
+    (namedSource ? SYSTEM_DEFAULT_BILLING_PERIOD.from : (config.defaultFrom ?? DEFAULT_FROM));
+  const initialTo =
+    storedPeriod?.to ??
+    (namedSource ? SYSTEM_DEFAULT_BILLING_PERIOD.to : (config.defaultTo ?? DEFAULT_TO));
   const initialDateBasis = defaultDateBasisForSource(config.fetchMethod);
   const sourceWorkspace = useSourcePageWorkspace({
     fetchMethod: config.fetchMethod,
@@ -769,28 +787,6 @@ export function OperationalSourcePage({ api, config }: Props) {
   useEffect(() => {
     lastSearchKeyRef.current = '';
   }, [config.fetchMethod]);
-
-  useEffect(() => {
-    if (!workspaceIdentity) return;
-    if (config.title !== 'BHS') return;
-    if (isDelhiStation(readLoginStationCode())) return;
-    const saved = getBillingWorkspacePageSlice(
-      BILLING_WORKSPACE_PAGE_KEYS.source(config.fetchMethod),
-    );
-    if (saved) return;
-    setDraftFrom(OTHER_STATION_BILLING_PERIOD.from);
-    setDraftTo(OTHER_STATION_BILLING_PERIOD.to);
-    setQueryFrom(OTHER_STATION_BILLING_PERIOD.from);
-    setQueryTo(OTHER_STATION_BILLING_PERIOD.to);
-  }, [
-    workspaceIdentity,
-    config.title,
-    config.fetchMethod,
-    setDraftFrom,
-    setDraftTo,
-    setQueryFrom,
-    setQueryTo,
-  ]);
 
   useEffect(() => {
     if (!usesCustomerDropdown(config.fetchMethod)) return;
@@ -896,6 +892,68 @@ export function OperationalSourcePage({ api, config }: Props) {
     },
     [api, config.fetchMethod, queryFrom, queryTo, queryDateBasis, queryCustomerCode],
   );
+
+  useEffect(() => {
+    if (!workspaceIdentity) return;
+    const pageKey = BILLING_WORKSPACE_PAGE_KEYS.source(config.fetchMethod);
+    const storedMonth = readStoredDefaultBillingMonth();
+    const stored = storedMonth ? monthBoundsFromYearMonth(storedMonth) : null;
+    if (stored && storedMonth) {
+      if (readDefaultMonthAppliedStamp(pageKey) !== storedMonth) {
+        setDraftFrom(stored.from);
+        setDraftTo(stored.to);
+        setQueryFrom(stored.from);
+        setQueryTo(stored.to);
+        writeDefaultMonthAppliedStamp(pageKey, storedMonth);
+        if (searchSubmitted) {
+          void load({ from: stored.from, to: stored.to, preserveFilters: true });
+        }
+      }
+      return;
+    }
+    if (!namedSource || !legacyPeriodUpgradePending(pageKey)) return;
+    const saved = getBillingWorkspacePageSlice<{
+      draftFrom?: string;
+      draftTo?: string;
+      queryFrom?: string;
+      queryTo?: string;
+    }>(pageKey);
+    const legacy =
+      !saved ||
+      isLegacyAutomaticBillingPeriod(saved.draftFrom, saved.draftTo) ||
+      isLegacyAutomaticBillingPeriod(saved.queryFrom, saved.queryTo);
+    markLegacyPeriodUpgraded(pageKey);
+    if (!legacy) return;
+    if (
+      saved?.draftFrom === SYSTEM_DEFAULT_BILLING_PERIOD.from &&
+      saved?.draftTo === SYSTEM_DEFAULT_BILLING_PERIOD.to &&
+      saved?.queryFrom === SYSTEM_DEFAULT_BILLING_PERIOD.from &&
+      saved?.queryTo === SYSTEM_DEFAULT_BILLING_PERIOD.to
+    ) {
+      return;
+    }
+    setDraftFrom(SYSTEM_DEFAULT_BILLING_PERIOD.from);
+    setDraftTo(SYSTEM_DEFAULT_BILLING_PERIOD.to);
+    setQueryFrom(SYSTEM_DEFAULT_BILLING_PERIOD.from);
+    setQueryTo(SYSTEM_DEFAULT_BILLING_PERIOD.to);
+    if (searchSubmitted) {
+      void load({
+        from: SYSTEM_DEFAULT_BILLING_PERIOD.from,
+        to: SYSTEM_DEFAULT_BILLING_PERIOD.to,
+        preserveFilters: true,
+      });
+    }
+  }, [
+    workspaceIdentity,
+    config.fetchMethod,
+    namedSource,
+    searchSubmitted,
+    load,
+    setDraftFrom,
+    setDraftTo,
+    setQueryFrom,
+    setQueryTo,
+  ]);
 
   useEffect(() => {
     if (requiresManualSearch(config.fetchMethod)) return;
@@ -2243,6 +2301,27 @@ export function OperationalSourcePage({ api, config }: Props) {
         >
           {loading ? 'Searching…' : 'Search'}
         </button>
+        {namedSource ? (
+          <SetDefaultBillingMonthButton
+            monthValue={
+              /^\d{4}-\d{2}/.test(draftFrom)
+                ? draftFrom.slice(0, 7)
+                : (readStoredDefaultBillingMonth() ?? SYSTEM_DEFAULT_BILLING_MONTH)
+            }
+            onApplied={(range) => {
+              setDraftFrom(range.from);
+              setDraftTo(range.to);
+              setQueryFrom(range.from);
+              setQueryTo(range.to);
+              if (!searchSubmitted) return;
+              void load({
+                from: range.from,
+                to: range.to,
+                preserveFilters: true,
+              });
+            }}
+          />
+        ) : null}
       </div>
 
       {requiresManualSearch(config.fetchMethod) && !searchSubmitted ? (

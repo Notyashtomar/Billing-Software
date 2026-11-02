@@ -23,10 +23,10 @@ import {
   type MisCheckerAdsAirlineRow,
 } from './misCheckerAdsAggregate';
 import { downloadAdsMisCheckerExcel } from './misCheckerAdsExport';
+import { resolveDefaultBillingPeriod } from '@/lib/billing-default-period';
 import {
   getCurrentMonthDateRange,
   getMonthDateRange,
-  getPreviousMonthDateRange,
   shiftMonthDateRange,
   toYearMonth,
 } from './misCheckerDateRange';
@@ -47,7 +47,7 @@ function readStationCode(): string {
  * matching the classic MIS bill-check spreadsheet layout.
  */
 export function MisCheckerAdsPage({ api }: Props) {
-  const initialRange = useMemo(() => getPreviousMonthDateRange(), []);
+  const initialRange = useMemo(() => resolveDefaultBillingPeriod(), []);
   const [from, setFrom] = useState(initialRange.from);
   const [to, setTo] = useState(initialRange.to);
   const [monthValue, setMonthValue] = useState(() => toYearMonth(initialRange.from));
