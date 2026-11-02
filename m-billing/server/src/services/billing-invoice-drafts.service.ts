@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  HttpException,
   Inject,
   Injectable,
   NotFoundException,
@@ -105,7 +106,7 @@ import {
 const DRAFT_STATUSES = ['draft', 'pending_approval', 'approved', 'generated'];
 
 function extractHttpExceptionMessage(err: unknown): string {
-  if (err instanceof BadRequestException) {
+  if (err instanceof HttpException) {
     const res = err.getResponse();
     if (typeof res === 'string') return res;
     if (res && typeof res === 'object' && 'message' in res) {
@@ -116,6 +117,11 @@ function extractHttpExceptionMessage(err: unknown): string {
   }
   if (err instanceof Error && err.message.trim()) return err.message;
   return 'Failed to compose invoice draft';
+}
+
+/** Missing station conversion rate is a per-airline skip, not a 404 for the whole run. */
+function isMissingExchangeRateError(err: unknown): boolean {
+  return /exchange rate|conversion rate/i.test(extractHttpExceptionMessage(err));
 }
 
 function normalizedInvoiceLineToken(value: unknown): string {
@@ -741,6 +747,7 @@ export class BillingInvoiceDraftsService {
             const skipPart =
               /no billable/i.test(reason) ||
               /fortnight billing/i.test(reason) ||
+              isMissingExchangeRateError(partErr) ||
               partErr instanceof BadRequestException;
             if (!skipPart) throw partErr;
             skippedGroups.push({
@@ -752,12 +759,13 @@ export class BillingInvoiceDraftsService {
         }
       } catch (err) {
         const reason = extractHttpExceptionMessage(err);
-        // One airline must not 500 the whole Ready-for-invoice run.
-        // ADS with nothing billable, and contracts whose fortnight parts lack a
-        // USD rate (or ATA outside the parts), are skipped; other customers continue.
+        // One airline must not fail the whole Ready-for-invoice run.
+        // ADS with nothing billable, a missing station conversion rate, and
+        // fortnight parts without a USD rate are skipped; other customers continue.
         const skipGroup =
           /no billable/i.test(reason) ||
           /fortnight billing/i.test(reason) ||
+          isMissingExchangeRateError(err) ||
           err instanceof BadRequestException;
         if (skipGroup) {
           skippedGroups.push({

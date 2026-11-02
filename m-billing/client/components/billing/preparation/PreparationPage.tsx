@@ -962,7 +962,9 @@ export function PreparationPage({ api }: Props) {
                         } catch (err) {
                           const message = err instanceof Error ? err.message : 'Create draft failed';
                           const skippable =
-                            /no ready preparation|no billable|fortnight billing/i.test(message);
+                            /no ready preparation|no billable|fortnight billing|exchange rate|conversion rate/i.test(
+                              message,
+                            );
                           if (skippable && code) {
                             skippedGroups.push({
                               customerCode: code,
@@ -1007,8 +1009,9 @@ export function PreparationPage({ api }: Props) {
                         await load();
                       }
                     } catch (e) {
-                      setError(e instanceof Error ? e.message : 'Create draft failed');
+                      const message = e instanceof Error ? e.message : 'Create draft failed';
                       await load();
+                      setError(message);
                     } finally {
                       setCreatingDrafts(false);
                       setDraftProgress('');
