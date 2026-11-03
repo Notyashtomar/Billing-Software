@@ -1,0 +1,10 @@
+status: DRAFT
+month: 2026-09
+station: DEL
+service: BHS
+airline: MK
+airlineName: AIR MAURITIS LIMITED
+contracts: MK-DEL-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/DEL/20261001/23926114 | draft | 2026-09-01 to 2026-09-30 | USD 13,81,321.11

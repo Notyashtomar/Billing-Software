@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-02
+station: COK
+service: ADS
+airline: J9
+airlineName: Jazeera Airways
+contracts: J9-COK-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

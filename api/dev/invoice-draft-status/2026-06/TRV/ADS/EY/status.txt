@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-06
+station: TRV
+service: ADS
+airline: EY
+airlineName: Etihad Airways
+contracts: EY-TRV-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

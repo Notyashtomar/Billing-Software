@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-06
+station: CJB
+service: ADS
+airline: UK
+airlineName: Vistara Airline
+contracts: UK-CJB-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

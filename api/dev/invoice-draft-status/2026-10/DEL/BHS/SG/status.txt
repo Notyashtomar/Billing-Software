@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-10
+station: DEL
+service: BHS
+airline: SG
+airlineName: SPICEJET LIMITED
+contracts: SG-DEL-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

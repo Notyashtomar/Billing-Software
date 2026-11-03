@@ -1,0 +1,10 @@
+status: DRAFT
+month: 2026-08
+station: HYD
+service: ADS
+airline: QRF
+airlineName: Qatar Cargo Airways
+contracts: QRF-HYD-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/HYD/20260921/20039524 | draft | 2026-08-01 to 2026-08-31 | INR 12,07,023.18

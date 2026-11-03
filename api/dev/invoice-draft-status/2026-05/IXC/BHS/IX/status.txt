@@ -1,0 +1,10 @@
+status: DRAFT
+month: 2026-05
+station: IXC
+service: BHS
+airline: IX
+airlineName: Air India Express
+contracts: IXC-IX-SGHA, IXC-IX-SGHAA, IX-IXC-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/IXC/20260729/60150734 | draft | 2026-05-01 to 2026-05-31 | INR 25,25,788.38

@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-10
+station: HYD
+service: ADS
+airline: QP
+airlineName: Akasa Air
+contracts: QP-HYD-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

@@ -1,0 +1,10 @@
+status: DRAFT
+month: 2026-10
+station: IMF
+service: ADS
+airline: IX
+airlineName: Air India Express Pvt Ltd.
+contracts: IX-IMF-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/IMF/20261102/84970243 | draft | 2026-10-01 to 2026-10-31 | INR 594.72

@@ -1,0 +1,10 @@
+status: DRAFT
+month: 2026-09
+station: COK
+service: BHS
+airline: FD
+airlineName: Thai Air Asia
+contracts: FD-COK-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/COK/20261007/60096007 | draft | 2026-09-01 to 2026-09-30 | USD 52,71,180.5

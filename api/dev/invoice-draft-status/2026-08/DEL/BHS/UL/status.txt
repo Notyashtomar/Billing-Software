@@ -1,0 +1,10 @@
+status: DRAFT
+month: 2026-08
+station: DEL
+service: BHS
+airline: UL
+airlineName: Srilankan Airlines Limited
+contracts: UL-DEL-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/DEL/20261005/45920058 | draft | 2026-08-01 to 2026-08-31 | INR 86,75,728.16

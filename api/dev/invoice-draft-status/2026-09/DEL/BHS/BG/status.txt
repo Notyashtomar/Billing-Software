@@ -1,0 +1,10 @@
+status: DRAFT
+month: 2026-09
+station: DEL
+service: BHS
+airline: BG
+airlineName: BIMAN BANGLADESH AIRLINES LIMITED
+contracts: BG-DEL-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/DEL/20261001/23850644 | draft | 2026-09-01 to 2026-09-30 | USD 14,31,835.13

@@ -13,6 +13,8 @@ export type AdsEquipmentInclusionRule = {
   includedForAds?: boolean;
   alwaysChargeable?: boolean;
   freePerFlight?: number;
+  /** FOC × airline flights in the ADS billing month. */
+  cumulativeMonthlyBasis?: boolean;
   /** Wheelchair FOC for narrow-body flights (from advance aircraft body). */
   freePerFlightNb?: number;
   /** Wheelchair FOC for wide-body flights (from advance aircraft body). */
@@ -439,6 +441,45 @@ export function resolveAdsFreePerFlightForRule(
   return nonNegInt(rule.freePerFlight) ?? 0;
 }
 
+export type AirlineFlightCensus = {
+  total: number;
+  nb: number;
+  wb: number;
+};
+
+/**
+ * Monthly free pool for one equipment line.
+ * Real FOC = per-flight FOC × the airline’s flights in the billing month.
+ * Wheelchair NB and WB allowances are weighted by body when both are set.
+ */
+export function cumulativeMonthlyFreeUnits(
+  rule: {
+    serviceCode?: string;
+    freePerFlight?: number | null;
+    freePerFlightNb?: number | null;
+    freePerFlightWb?: number | null;
+  },
+  census: AirlineFlightCensus,
+): number {
+  const total = Math.max(0, Math.floor(Number(census.total) || 0));
+  if (total <= 0) return 0;
+  const nbFlights = Math.min(total, Math.max(0, Math.floor(Number(census.nb) || 0)));
+  const wbFlights = Math.min(total - nbFlights, Math.max(0, Math.floor(Number(census.wb) || 0)));
+  const unknownFlights = Math.max(0, total - nbFlights - wbFlights);
+  const single = nonNegInt(rule.freePerFlight) ?? 0;
+  const nb = nonNegInt(rule.freePerFlightNb);
+  const wb = nonNegInt(rule.freePerFlightWb);
+  const wheelchair = isWheelchairAdsServiceCode(rule.serviceCode);
+  if (wheelchair && (nb != null || wb != null) && nbFlights + wbFlights > 0) {
+    const nbFoc = nb ?? single;
+    const wbFoc = wb ?? single;
+    const unknownFoc = single || nbFoc || wbFoc;
+    return nbFoc * nbFlights + wbFoc * wbFlights + unknownFoc * unknownFlights;
+  }
+  const foc = single || nb || wb || 0;
+  return foc * total;
+}
+
 function aircraftMatchesRule(ruleAircraft: string[], flightAircraft: string): boolean {
   if (ruleAircraft.length === 0) return true;
   const flight = normalizeToken(flightAircraft);
@@ -595,6 +636,12 @@ export type AdsContractRulePricing = {
   excluded: boolean;
   alwaysChargeable: boolean;
   freePerFlight: number;
+  /** Rule FOC before the flight’s aircraft body is applied. */
+  ruleFreePerFlight: number;
+  ruleFreePerFlightNb: number | null;
+  ruleFreePerFlightWb: number | null;
+  /** Pool this FOC across the airline’s flights in the billing month. */
+  cumulativeMonthlyBasis: boolean;
   unitPrice: number | null;
   uom: string;
   serviceCode: string;
@@ -625,6 +672,10 @@ export function resolveAdsPricingFromContractRule(
       excluded: false,
       alwaysChargeable: false,
       freePerFlight: 0,
+      ruleFreePerFlight: 0,
+      ruleFreePerFlightNb: null,
+      ruleFreePerFlightWb: null,
+      cumulativeMonthlyBasis: false,
       unitPrice: null,
       uom: 'Per Service',
       serviceCode: String(opts.serviceCode ?? opts.particular ?? '').trim(),
@@ -647,6 +698,15 @@ export function resolveAdsPricingFromContractRule(
     equipmentName: opts.equipmentName,
   });
   const freePerFlight = alwaysChargeable || match.excluded ? 0 : freeRaw;
+  const ruleFreePerFlight = nonNegInt(rule.freePerFlight) ?? 0;
+  const ruleFreePerFlightNb = nonNegInt(rule.freePerFlightNb);
+  const ruleFreePerFlightWb = nonNegInt(rule.freePerFlightWb);
+  const hasFree =
+    ruleFreePerFlight > 0 ||
+    (ruleFreePerFlightNb != null && ruleFreePerFlightNb > 0) ||
+    (ruleFreePerFlightWb != null && ruleFreePerFlightWb > 0);
+  const cumulativeMonthlyBasis =
+    Boolean(rule.cumulativeMonthlyBasis) && !alwaysChargeable && !match.excluded && hasFree;
 
   const currency = String(opts.billingCurrency ?? 'INR').toUpperCase();
   const inr =
@@ -669,6 +729,10 @@ export function resolveAdsPricingFromContractRule(
     excluded: match.excluded,
     alwaysChargeable,
     freePerFlight,
+    ruleFreePerFlight,
+    ruleFreePerFlightNb,
+    ruleFreePerFlightWb,
+    cumulativeMonthlyBasis,
     unitPrice: match.excluded ? 0 : unitPrice,
     uom,
     remarks: String(rule.remarks ?? ''),

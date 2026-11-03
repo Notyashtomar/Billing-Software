@@ -1,0 +1,10 @@
+status: DRAFT
+month: 2026-09
+station: HYD
+service: BHS
+airline: G9
+airlineName: AirArabia
+contracts: G9-HYD-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/HYD/20261001/60941780 | draft | 2026-09-01 to 2026-09-30 | INR 30,231.6

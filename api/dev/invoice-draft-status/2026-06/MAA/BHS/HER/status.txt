@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-06
+station: MAA
+service: BHS
+airline: HER
+airlineName: HER
+contracts: HER-MAA-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

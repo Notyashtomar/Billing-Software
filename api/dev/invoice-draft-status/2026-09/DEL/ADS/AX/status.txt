@@ -1,0 +1,10 @@
+status: DRAFT
+month: 2026-09
+station: DEL
+service: ADS
+airline: AX
+airlineName: AIR ASIA GROUP BERHAD
+contracts: AX-DEL-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/DEL/20261020/63809630 | draft | 2026-09-01 to 2026-09-30 | USD 17,73,914.43

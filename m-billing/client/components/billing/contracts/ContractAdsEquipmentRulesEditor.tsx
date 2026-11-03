@@ -65,6 +65,32 @@ function emptyRule(aircraftTypes: string[] = []): BillingContractAdsEquipmentRul
   };
 }
 
+/** Equipment with a free quantity can be pooled across the billing month. */
+export function adsRuleHasFreeAllowance(rule: {
+  freePerFlight?: number;
+  freePerFlightNb?: number;
+  freePerFlightWb?: number;
+  alwaysChargeable?: boolean;
+}): boolean {
+  if (rule.alwaysChargeable) return false;
+  return [rule.freePerFlight, rule.freePerFlightNb, rule.freePerFlightWb].some(
+    (value) => Number.isFinite(Number(value)) && Number(value) > 0,
+  );
+}
+
+function focMenuLabel(rule: BillingContractAdsEquipmentRule): string {
+  if (
+    isWheelchairAdsService(rule.serviceCode) &&
+    (rule.freePerFlightNb != null || rule.freePerFlightWb != null)
+  ) {
+    const nb = rule.freePerFlightNb ?? rule.freePerFlight ?? 0;
+    const wb = rule.freePerFlightWb ?? rule.freePerFlight ?? 0;
+    if (nb === wb) return `FOC ${nb}`;
+    return `NB ${nb} / WB ${wb}`;
+  }
+  return `FOC ${rule.freePerFlight ?? 0}`;
+}
+
 export function isWheelchairAdsService(code: string | undefined | null): boolean {
   const raw = String(code ?? '')
     .trim()
@@ -290,6 +316,107 @@ function CompactAircraftDropdown({
   );
 }
 
+function CumulativeMonthlyBasisMenu({
+  rules,
+  disabled,
+  onToggle,
+}: {
+  rules: BillingContractAdsEquipmentRule[];
+  disabled?: boolean;
+  onToggle: (serviceCode: string, cumulative: boolean) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const eligible = useMemo(
+    () =>
+      rules.filter(
+        (rule) =>
+          adsRuleHasFreeAllowance(rule) && String(rule.serviceCode ?? '').trim().length > 0,
+      ),
+    [rules],
+  );
+  const selectedCount = eligible.filter((rule) => rule.cumulativeMonthlyBasis).length;
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointer = (event: MouseEvent) => {
+      if (wrapperRef.current?.contains(event.target as Node)) return;
+      setOpen(false);
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('mousedown', onPointer);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onPointer);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  return (
+    <div ref={wrapperRef} className="relative">
+      <button
+        type="button"
+        disabled={disabled}
+        aria-expanded={open}
+        aria-haspopup="listbox"
+        onClick={() => setOpen((value) => !value)}
+        className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+      >
+        Cumulative monthly basis{selectedCount > 0 ? ` (${selectedCount})` : ''}
+        <ChevronDown className="h-4 w-4 text-gray-500" aria-hidden />
+      </button>
+      {open ? (
+        <div
+          role="listbox"
+          aria-label="Cumulative monthly basis"
+          aria-multiselectable="true"
+          className="absolute right-0 z-[80] mt-1 w-80 rounded-lg border border-gray-200 bg-white p-2 shadow-lg"
+        >
+          <p className="px-1.5 pb-2 text-xs leading-5 text-gray-600">
+            Tick equipment to pool its FOC for the ADS month: free quantity × that airline’s
+            flights. Unticked equipment keeps its FOC on each flight. Only equipment with an FOC
+            is listed.
+          </p>
+          {eligible.length === 0 ? (
+            <p className="rounded-md bg-gray-50 px-2 py-2 text-xs text-gray-600">
+              Enter an FOC on an equipment row to list it here.
+            </p>
+          ) : (
+            eligible.map((rule) => {
+              const code = String(rule.serviceCode ?? '').trim();
+              const checked = Boolean(rule.cumulativeMonthlyBasis);
+              const label = adsCatalogServiceDisplayName(code) || code;
+              return (
+                <button
+                  key={code}
+                  type="button"
+                  role="option"
+                  aria-selected={checked}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => onToggle(code, !checked)}
+                  className="flex w-full items-center gap-2 rounded px-1.5 py-1.5 text-left text-sm hover:bg-gray-100"
+                >
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    readOnly
+                    tabIndex={-1}
+                    className="pointer-events-none h-3.5 w-3.5 rounded border-gray-300"
+                  />
+                  <span className="min-w-0 flex-1 truncate">{label}</span>
+                  <span className="shrink-0 text-xs text-gray-500">{focMenuLabel(rule)}</span>
+                </button>
+              );
+            })
+          )}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export function ContractAdsEquipmentRulesEditor({
   rules,
   onChange,
@@ -403,7 +530,27 @@ export function ContractAdsEquipmentRulesEditor({
   const resolvedRate = resolveRateToInr(rateToInr);
 
   const emitRules = (next: BillingContractAdsEquipmentRule[]) => {
-    onChange(sortAdsEquipmentRules(collapseAdsEquipmentRules(next)));
+    onChange(
+      sortAdsEquipmentRules(
+        collapseAdsEquipmentRules(next).map((rule) => ({
+          ...rule,
+          cumulativeMonthlyBasis: adsRuleHasFreeAllowance(rule)
+            ? Boolean(rule.cumulativeMonthlyBasis)
+            : false,
+        })),
+      ),
+    );
+  };
+
+  const setCumulativeMonthly = (serviceCode: string, cumulative: boolean) => {
+    const identity = adsEquipmentIdentity(serviceCode);
+    emitRules(
+      displayRules.map((rule) =>
+        adsEquipmentIdentity(rule.serviceCode) === identity
+          ? { ...rule, cumulativeMonthlyBasis: cumulative }
+          : rule,
+      ),
+    );
   };
 
   const updateRule = (index: number, patch: Partial<BillingContractAdsEquipmentRule>) => {
@@ -555,7 +702,20 @@ export function ContractAdsEquipmentRulesEditor({
           label: service.label,
         })),
       );
-      emitRules(imported);
+      const cumulativeByEquipment = new Map(
+        displayRules.map((rule) => [
+          adsEquipmentIdentity(rule.serviceCode),
+          Boolean(rule.cumulativeMonthlyBasis),
+        ]),
+      );
+      emitRules(
+        imported.map((rule) => ({
+          ...rule,
+          cumulativeMonthlyBasis: cumulativeByEquipment.get(adsEquipmentIdentity(rule.serviceCode))
+            ? true
+            : false,
+        })),
+      );
     } catch (error) {
       setExcelError(
         error instanceof Error ? error.message : ADS_EQUIPMENT_RULES_INVALID_EXCEL_MESSAGE,
@@ -579,7 +739,9 @@ export function ContractAdsEquipmentRulesEditor({
           <p className="mt-0.5 text-xs text-gray-600">
             Equipment lines apply for the whole contract window{' '}
             <strong>{validityLabel}</strong>. Charge uses the UOM saved on each line.
-            ADS invoices use FOC, Always bill, UOM, and price. Equipment with no priced row is left off the invoice.
+            ADS invoices use FOC, Always bill, UOM, and price. Equipment ticked under Cumulative
+            monthly basis bills FOC × the airline’s flights in that month. Equipment with no priced
+            row is left off the invoice.
           </p>
           {roeHint ? (
             <p
@@ -609,6 +771,11 @@ export function ContractAdsEquipmentRulesEditor({
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm font-semibold text-gray-900">Equipment rules</p>
             <div className="flex flex-wrap items-center gap-2">
+              <CumulativeMonthlyBasisMenu
+                rules={displayRules}
+                disabled={disabled}
+                onToggle={setCumulativeMonthly}
+              />
               <button
                 type="button"
                 disabled={disabled || excelBusy !== ''}

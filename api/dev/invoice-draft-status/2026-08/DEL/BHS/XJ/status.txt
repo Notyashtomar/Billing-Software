@@ -1,0 +1,10 @@
+status: DRAFT
+month: 2026-08
+station: DEL
+service: BHS
+airline: XJ
+airlineName: Thai Air Asia X Co Ltd
+contracts: XJ-DEL-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/DEL/20261006/00733985 | draft | 2026-08-01 to 2026-08-31 | USD 47,59,391.68

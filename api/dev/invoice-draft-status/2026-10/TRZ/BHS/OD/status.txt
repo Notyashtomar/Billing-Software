@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-10
+station: TRZ
+service: BHS
+airline: OD
+airlineName: Malindo Airways
+contracts: OD-TRZ-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

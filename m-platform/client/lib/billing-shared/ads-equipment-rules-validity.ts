@@ -127,6 +127,7 @@ function collapseSameEquipment(
   }
   return {
     ...chosen,
+    cumulativeMonthlyBasis: rules.some((rule) => Boolean(rule.cumulativeMonthlyBasis)),
     serviceCode: canonicalizeWchrSServiceCode(chosen.serviceCode) || chosen.serviceCode,
     aircraftTypes: mergeAircraft(rules),
     aircraftType: undefined,

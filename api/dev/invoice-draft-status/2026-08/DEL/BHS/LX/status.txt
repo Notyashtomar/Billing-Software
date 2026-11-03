@@ -1,0 +1,10 @@
+status: DRAFT
+month: 2026-08
+station: DEL
+service: BHS
+airline: LX
+airlineName: Swiss International Airlines Limited
+contracts: LX-DEL-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/DEL/20261005/45741820 | draft | 2026-08-01 to 2026-08-31 | INR 1,19,88,948.68

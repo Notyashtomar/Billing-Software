@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-06
+station: DEL
+service: ADS
+airline: AX
+airlineName: AIR ASIA GROUP BERHAD
+contracts: AX-DEL-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

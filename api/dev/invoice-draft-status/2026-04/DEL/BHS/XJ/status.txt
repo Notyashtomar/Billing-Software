@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-04
+station: DEL
+service: BHS
+airline: XJ
+airlineName: Thai Air Asia X Co Ltd
+contracts: XJ-DEL-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

@@ -1,0 +1,10 @@
+status: DRAFT
+month: 2026-09
+station: COK
+service: BHS
+airline: SG
+airlineName: Spice Jet
+contracts: SG-COK-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/COK/20261007/59981203 | draft | 2026-09-01 to 2026-09-30 | INR 18,14,099.22

@@ -1,0 +1,10 @@
+status: DRAFT
+month: 2026-09
+station: HYD
+service: BHS
+airline: F3
+airlineName: Flyadeal
+contracts: F3-HYD-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/HYD/20261001/59706384 | draft | 2026-09-01 to 2026-09-30 | INR 17,841.6

@@ -39,7 +39,7 @@ describe('formatServiceCatalogDisplayCode', () => {
       'Manpower - Customer Service Agent',
     );
     expect(formatServiceCatalogDisplayCode('RAF - Equipment - GPU-90KV')).toBe(
-      'Equipment - Ground Power Unit - Narrow Body',
+      'Equipment - Ground Power Unit - 90KV',
     );
     expect(formatServiceCatalogDisplayCode('Cancel Scheduled Flight')).toBe('Flight');
     expect(formatServiceCatalogDisplayCode('Non Scheduled Flight - WCHR')).toBe(

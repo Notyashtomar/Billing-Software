@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-04
+station: HYD
+service: BHS
+airline: FL
+airlineName: Fly Deal
+contracts: FL-HYD-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-02
+station: HYD
+service: BHS
+airline: AIS
+airlineName: AISATS
+contracts: AIS-HYD-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

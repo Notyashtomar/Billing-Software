@@ -1,0 +1,10 @@
+status: DRAFT
+month: 2026-09
+station: HYD
+service: BHS
+airline: QR
+airlineName: Qatar Airways
+contracts: QR-HYD-SGHA, QR-HYD-CARGO
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/HYD/20261001/61783032 | draft | 2026-09-01 to 2026-09-30 | INR 74,08,384.56

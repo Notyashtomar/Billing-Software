@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-02
+station: MAA
+service: ADS
+airline: BS
+airlineName: Us-bangla Airlines
+contracts: US-BAS-MAA-SGHA, BS-MAA-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

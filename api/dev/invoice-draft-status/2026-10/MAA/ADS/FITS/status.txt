@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-10
+station: MAA
+service: ADS
+airline: FITS
+airlineName: FITS
+contracts: FITS-MAA-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-03
+station: GOI
+service: BHS
+airline: ZF
+airlineName: Azur Air
+contracts: ZF-GOI-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

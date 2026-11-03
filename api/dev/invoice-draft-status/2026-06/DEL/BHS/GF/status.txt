@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-06
+station: DEL
+service: BHS
+airline: GF
+airlineName: GULF AIR B.S.C (C)
+contracts: GF-DEL-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

@@ -1,0 +1,10 @@
+status: DRAFT
+month: 2026-08
+station: HYD
+service: ADS
+airline: S5
+airlineName: Star Air
+contracts: S5-HYD-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/HYD/20260921/18585042 | draft | 2026-08-01 to 2026-08-31 | INR 9,98,999.8

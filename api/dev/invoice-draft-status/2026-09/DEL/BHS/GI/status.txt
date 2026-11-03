@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-09
+station: DEL
+service: BHS
+airline: GI
+airlineName: China Central Longhao Airlines Co.Ltd
+contracts: GI-DEL-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

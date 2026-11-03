@@ -1,0 +1,10 @@
+status: DRAFT
+month: 2026-06
+station: MAA
+service: ADS
+airline: EK
+airlineName: Emirates
+contracts: EK-MAA-BAS-SGHA, EK-MAA-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/MAA/20260722/15016906 | draft | 2026-06-01 to 2026-06-30 | INR 36,765.21

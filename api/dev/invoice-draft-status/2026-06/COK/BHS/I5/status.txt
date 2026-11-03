@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-06
+station: COK
+service: BHS
+airline: I5
+airlineName: Air Asia India
+contracts: I5-COK-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

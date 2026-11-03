@@ -1,0 +1,10 @@
+status: DRAFT
+month: 2026-08
+station: DEL
+service: BHS
+airline: 3S
+airlineName: Aerologic Gmbh
+contracts: 3S-DEL-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/DEL/20260925/64386812 | draft | 2026-08-01 to 2026-08-31 | INR 62,89,215.92

@@ -1,0 +1,10 @@
+status: DRAFT
+month: 2026-09
+station: COK
+service: BHS
+airline: QP
+airlineName: Akasa Air
+contracts: QP-COK-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/COK/20261006/46148164 | draft | 2026-09-01 to 2026-09-30 | INR 43,76,849.28

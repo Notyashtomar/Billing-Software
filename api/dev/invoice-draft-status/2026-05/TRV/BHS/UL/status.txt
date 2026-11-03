@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-05
+station: TRV
+service: BHS
+airline: UL
+airlineName: SriLankan Airlines
+contracts: UL-TRV-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

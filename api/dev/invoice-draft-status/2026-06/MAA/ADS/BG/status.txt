@@ -1,0 +1,10 @@
+status: DRAFT
+month: 2026-06
+station: MAA
+service: ADS
+airline: BG
+airlineName: Biman Bangladesh
+contracts: BG-BAS-MAA-SGHA, BG-MAA-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/MAA/20260723/63463404 | draft | 2026-06-01 to 2026-06-30 | USD 1,72,012.49

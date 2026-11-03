@@ -1,0 +1,10 @@
+status: DRAFT
+month: 2026-06
+station: MAA
+service: BHS
+airline: SL
+airlineName: Thai Lion
+contracts: SL-MAA-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/MAA/20260713/51403344 | draft | 2026-06-01 to 2026-06-30 | USD 4,26,241.54

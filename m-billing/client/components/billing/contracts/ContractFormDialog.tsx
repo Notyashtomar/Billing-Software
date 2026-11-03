@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Dialog,
@@ -59,7 +59,7 @@ import {
   fetchAdvanceAircraftMasterTypes,
   fetchContractAircraftTypeOptions,
 } from '@/lib/billing-shared/contract-aircraft-types';
-import { ContractAdsEquipmentRulesEditor, isWheelchairAdsService } from './ContractAdsEquipmentRulesEditor';
+import { ContractAdsEquipmentRulesEditor, adsRuleHasFreeAllowance, isWheelchairAdsService } from './ContractAdsEquipmentRulesEditor';
 import { ContractBhsVolumeEditor } from './ContractBhsVolumeEditor';
 import {
   validateBhsVolumeSchedules,
@@ -398,6 +398,16 @@ type Props = {
   focusCondition?: string | null;
 };
 
+async function blobToBase64(blob: Blob): Promise<string> {
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  let binary = '';
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  return btoa(binary);
+}
+
 export function ContractFormDialog({
   api,
   open,
@@ -436,6 +446,7 @@ export function ContractFormDialog({
   );
   const [bhsVolumeSchedules, setBhsVolumeSchedules] = useState<BillingBhsVolumeSchedule[]>([]);
   const [contractPdf, setContractPdf] = useState<ContractPdfState | null>(null);
+  const pdfTouchedRef = useRef(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [fortnightBillingEnabled, setFortnightBillingEnabled] = useState(false);
   const [fortnightEdgeDayCap, setFortnightEdgeDayCap] = useState(false);
@@ -844,6 +855,7 @@ export function ContractFormDialog({
             rule.freePerFlightWb ??
             (isWheelchairAdsService(rule.serviceCode) ? rule.freePerFlight : undefined),
           alwaysChargeable: Boolean(rule.alwaysChargeable),
+          cumulativeMonthlyBasis: Boolean(rule.cumulativeMonthlyBasis),
           includedForAds: rule.includedForAds !== false,
           unitPriceINR:
             rule.unitPriceINR != null && Number.isFinite(Number(rule.unitPriceINR))
@@ -868,6 +880,7 @@ export function ContractFormDialog({
         };
       }),
       );
+      pdfTouchedRef.current = false;
       const nextContractPdf =
         record.contractPdfBase64 && record.contractPdfFileName
           ? {
@@ -1002,6 +1015,7 @@ export function ContractFormDialog({
       setShowVolumeRates(false);
       setAdsEquipmentRules([]);
       setBhsVolumeSchedules([]);
+      pdfTouchedRef.current = false;
       setContractPdf(null);
       setFortnightBillingEnabled(false);
       setFortnightEdgeDayCap(false);
@@ -1255,6 +1269,10 @@ export function ContractFormDialog({
             freePerFlightNb: rule.alwaysChargeable ? 0 : rule.freePerFlightNb,
             freePerFlightWb: rule.alwaysChargeable ? 0 : rule.freePerFlightWb,
             alwaysChargeable: Boolean(rule.alwaysChargeable),
+            cumulativeMonthlyBasis:
+              !rule.alwaysChargeable &&
+              adsRuleHasFreeAllowance(rule) &&
+              Boolean(rule.cumulativeMonthlyBasis),
             includedForAds: rule.includedForAds !== false,
             unitPriceINR:
               rule.unitPriceINR == null
@@ -1274,19 +1292,21 @@ export function ContractFormDialog({
         })
         .filter((rule) => rule.serviceCode);
 
-      const pdfPayload = contractPdf
-        ? {
-            contractPdfFileName: contractPdf.fileName,
-            contractPdfContentType: contractPdf.contentType || 'application/pdf',
-            contractPdfBase64: contractPdf.base64,
-            contractPdfUploadedAt: contractPdf.uploadedAt || new Date().toISOString(),
-          }
-        : {
-            contractPdfFileName: '',
-            contractPdfContentType: '',
-            contractPdfBase64: '',
-            contractPdfUploadedAt: undefined as string | undefined,
-          };
+      const pdfPayload = !pdfTouchedRef.current
+        ? {}
+        : contractPdf
+          ? {
+              contractPdfFileName: contractPdf.fileName,
+              contractPdfContentType: contractPdf.contentType || 'application/pdf',
+              contractPdfBase64: contractPdf.base64,
+              contractPdfUploadedAt: contractPdf.uploadedAt || new Date().toISOString(),
+            }
+          : {
+              contractPdfFileName: '',
+              contractPdfContentType: '',
+              contractPdfBase64: '',
+              contractPdfUploadedAt: undefined as string | undefined,
+            };
       if (adsRulesPayload.some((rule) => (rule.aircraftTypes?.length ?? 0) === 0)) {
         setError('Select at least one aircraft for each ADS equipment rule.');
         setSaving(false);
@@ -1468,6 +1488,30 @@ export function ContractFormDialog({
       short: 'P',
     },
   ] as const;
+
+  useEffect(() => {
+    if (!open || !record?._id || !record.contractPdfFileName || record.contractPdfBase64) return;
+    let cancelled = false;
+    void api
+      .getContractSignedPdf(record._id)
+      .then(async (blob) => {
+        if (cancelled) return;
+        const base64 = await blobToBase64(blob);
+        if (cancelled) return;
+        setContractPdf({
+          fileName: record.contractPdfFileName || 'contract.pdf',
+          contentType: record.contractPdfContentType || blob.type || 'application/pdf',
+          base64,
+          uploadedAt: record.contractPdfUploadedAt
+            ? String(record.contractPdfUploadedAt)
+            : undefined,
+        });
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [api, open, record]);
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -2808,7 +2852,10 @@ export function ContractFormDialog({
                 >
                   <ContractPdfPanel
                     value={contractPdf}
-                    onChange={setContractPdf}
+                    onChange={(next) => {
+                      pdfTouchedRef.current = true;
+                      setContractPdf(next);
+                    }}
                     disabled={saving}
                   />
                 </ContractSection>

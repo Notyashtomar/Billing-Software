@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-03
+station: COK
+service: ADS
+airline: UK
+airlineName: Air Vistara
+contracts: UK-COK-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

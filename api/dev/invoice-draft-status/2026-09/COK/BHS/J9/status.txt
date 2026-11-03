@@ -1,0 +1,10 @@
+status: DRAFT
+month: 2026-09
+station: COK
+service: BHS
+airline: J9
+airlineName: Jazeera Airways
+contracts: J9-COK-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/COK/20261007/60279539 | draft | 2026-09-01 to 2026-09-30 | INR 36,358.34

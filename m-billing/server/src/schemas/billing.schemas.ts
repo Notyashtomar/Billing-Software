@@ -546,6 +546,8 @@ export class BillingContract {
       {
         serviceCode: { type: String, required: true },
         freePerFlight: { type: Number },
+        /** FOC × airline flights in the ADS billing month. */
+        cumulativeMonthlyBasis: { type: Boolean, default: false },
         freePerFlightNb: { type: Number },
         freePerFlightWb: { type: Number },
         alwaysChargeable: { type: Boolean, default: false },
@@ -566,6 +568,7 @@ export class BillingContract {
   adsEquipmentRules?: Array<{
     serviceCode: string;
     freePerFlight?: number;
+    cumulativeMonthlyBasis?: boolean;
     freePerFlightNb?: number;
     freePerFlightWb?: number;
     alwaysChargeable?: boolean;

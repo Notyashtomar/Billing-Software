@@ -1,0 +1,10 @@
+status: DRAFT
+month: 2026-08
+station: DEL
+service: BHS
+airline: VJ
+airlineName: Vietjet Aviation Joint Stock Company
+contracts: VJ-DEL-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/DEL/20261005/46687932 | draft | 2026-08-01 to 2026-08-31 | USD 5,43,337.06

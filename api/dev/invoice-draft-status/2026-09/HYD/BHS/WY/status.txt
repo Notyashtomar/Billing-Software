@@ -1,0 +1,10 @@
+status: DRAFT
+month: 2026-09
+station: HYD
+service: BHS
+airline: WY
+airlineName: Oman Air
+contracts: WY-HYD-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/HYD/20261001/63183629 | draft | 2026-09-01 to 2026-09-30 | INR 2,187.72

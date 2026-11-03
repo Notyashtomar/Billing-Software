@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-10
+station: GOI
+service: ADS
+airline: SU
+airlineName: Aeroflot
+contracts: SU-GOI-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

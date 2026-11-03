@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-06
+station: DEL
+service: BHS
+airline: RA
+airlineName: NEPAL AIRLINES CORPORATION
+contracts: RA-DEL-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

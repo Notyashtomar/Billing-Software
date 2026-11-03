@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-05
+station: GOI
+service: BHS
+airline: IX
+airlineName: Air India Express
+contracts: IX-GOI-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

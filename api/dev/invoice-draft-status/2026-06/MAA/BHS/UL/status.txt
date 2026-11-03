@@ -1,0 +1,11 @@
+status: DRAFT
+month: 2026-06
+station: MAA
+service: BHS
+airline: UL
+airlineName: Srilankan Airlines
+contracts: UL-BAS-MAA-SGHA, UL-MAA-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/MAA/20260713/28121975 | draft | 2026-06-01 to 2026-06-30 | USD 90,57,825.19
+- DRAFT/MAA/20260713/86938541 | draft | 2026-06-01 to 2026-06-30 | USD 2,75,040.13

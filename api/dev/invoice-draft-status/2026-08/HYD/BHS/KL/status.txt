@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-08
+station: HYD
+service: BHS
+airline: KL
+airlineName: KLM Royal Dutch Airline
+contracts: KL-HYD-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

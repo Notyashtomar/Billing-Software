@@ -21,7 +21,7 @@ const RETRYABLE_STATUSES = new Set([408, 425, 429, 500, 502, 503, 504]);
 
 /** Paths that often exceed the default client deadline (also often @SkipTimeout server-side). */
 const LONG_BILLING_PATH_RE =
-  /\/billing\/(preparation\/(ingest|refresh|create-drafts|submit-custom|bulk-ready|bulk-delete(?:-by-filter)?|unsend)|sources\/(ads|raf)(?:\/|$)|invoices\/[^/]+\/(generate|pdf|annexure|backing-sheet\/pdf|send-to-airline)|invoices\/send-to-airline|customers\/sync-from-advance|price-card-airlines\/bulk|cutover\/|mis-bhs\/|mis-ads\/|invoice-drafts\/?$|invoice-drafts\/(merge|bulk-delete|custom-bill|refresh-all)|invoice-drafts\/[^/]+\/(recompute|refresh-rates|split-ads-lines|custom-lines|lines|custom-bill|total-receivable-usd))/i;
+  /\/billing\/(preparation\/(ingest|refresh|create-drafts|submit-custom|bulk-ready|bulk-delete(?:-by-filter)?|unsend)|sources\/(ads|raf)(?:\/|$)|invoices\/[^/]+\/(generate|pdf|annexure|backing-sheet\/pdf|send-to-airline)|invoices\/send-to-airline|customers\/sync-from-advance|price-card-airlines\/bulk|cutover\/|mis-bhs\/|mis-ads\/|contracts\/[^/]+\/signed-pdf|invoice-drafts\/?$|invoice-drafts\/(merge|bulk-delete|custom-bill|refresh-all)|invoice-drafts\/[^/]+\/(recompute|refresh-rates|split-ads-lines|custom-lines|lines|custom-bill|total-receivable-usd))/i;
 
 function resolveBillingTimeoutMs(path: string, init?: FrisFetchInit): number | null {
   if (init?.timeoutMs !== undefined) return init.timeoutMs;
@@ -603,6 +603,18 @@ export function createBillingApi({ getApiBase, fetch }: BillingApiConfig) {
 
     getContract: (id: string) =>
       request(`/billing/contracts/${encodeURIComponent(id)}`).then((r) => parseJson(r)),
+
+    getContractSignedPdf: async (id: string) => {
+      const res = await request(
+        `/billing/contracts/${encodeURIComponent(id)}/signed-pdf`,
+        { timeoutMs: 120000 },
+      );
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || `Could not open the signed contract PDF (${res.status})`);
+      }
+      return res.blob();
+    },
 
     createContract: (body: Record<string, unknown>) =>
       request('/billing/contracts', {

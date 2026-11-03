@@ -1467,8 +1467,9 @@ export class BillingInvoiceDraftsService {
    * USD BHS/ADS drafts re-apply ROE to line unit prices after prep rebuild (prep stores INR).
    */
   /**
-   * Primary customer currency applies only when the added airline opted into Customer master.
-   * Bill-to stays the added customer.
+   * Invoice currency comes from the customer page.
+   * An added airline uses the contract owner's currency only when Customer master is inherited.
+   * Otherwise the billed airline's own saved currency wins over the draft's previous currency.
    */
   private async resolveCommercialInvoiceCurrency(
     ctx: StationScopeContext,
@@ -1483,14 +1484,14 @@ export class BillingInvoiceDraftsService {
     const flags = inheritForCustomer(billedCustomerCode, contract);
     const commercialCode = commercialCustomerCode(billedCustomerCode, contract);
     const billed = String(billedCustomerCode ?? '').trim().toUpperCase();
-    if (!flags.customer || !commercialCode || commercialCode === billed) {
-      return resolveBillingCurrency(fallbackCurrency);
-    }
-    const primary = await this.customerModel
-      .findOne(StationScope.filter({ customerCode: commercialCode }, ctx))
+    const lookupCode =
+      flags.customer && commercialCode && commercialCode !== billed ? commercialCode : billed;
+    if (!lookupCode) return resolveBillingCurrency(fallbackCurrency);
+    const customer = await this.customerModel
+      .findOne(StationScope.filter({ customerCode: lookupCode }, ctx))
       .select('currencyCode')
       .lean();
-    return resolveBillingCurrency(primary?.currencyCode ?? fallbackCurrency);
+    return resolveBillingCurrency(customer?.currencyCode ?? fallbackCurrency);
   }
 
   async fortnightExchangeRateForHeader(

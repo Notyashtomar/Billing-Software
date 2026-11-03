@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-06
+station: COK
+service: BHS
+airline: IX
+airlineName: Air India Express Limited
+contracts: IX-COK-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

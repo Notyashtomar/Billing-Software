@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-09
+station: HYD
+service: ADS
+airline: SG
+airlineName: SpiceJet
+contracts: SG-HYD-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-10
+station: MAA
+service: ADS
+airline: SG
+airlineName: Spicejet
+contracts: SG-MAA-SGHA, SG-BAS-MAA-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

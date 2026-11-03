@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-03
+station: HYD
+service: ADS
+airline: KU
+airlineName: Kuwait Airways
+contracts: KU-HYD-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

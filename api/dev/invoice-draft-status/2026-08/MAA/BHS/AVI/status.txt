@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-08
+station: MAA
+service: BHS
+airline: AVI
+airlineName: Aviaarc Trip Support Pvt Ltd
+contracts: none on an active contract
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

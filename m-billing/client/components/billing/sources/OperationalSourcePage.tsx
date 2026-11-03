@@ -60,6 +60,7 @@ import {
   countUniqueAdsFlights,
   billingAdsFlightKey,
   adsRowOperationalQuantity,
+  adsRowMatchesEquipmentMaster,
   filterBillingRowsByAdsBriefs,
   formatAdsFlightEngagementEntries,
   formatAdsFlightBhsIncludedEntries,
@@ -236,11 +237,17 @@ function adsEngagementFilterLabel(
   row: BillingSourceRow,
   linesByFlightKey: ReadonlyMap<string, BillingSourceRow[]>,
   adsBriefFilters: ReadonlySet<BillingAdsBriefKey>,
+  linesAlreadyScoped = false,
 ): string {
   const flightKey = billingAdsFlightKey(row) || adsLineKey(row);
-  if (adsBriefFilters.size === 0) return 'Check palette equipment';
   const lines = linesByFlightKey.get(flightKey) ?? [];
-  const scoped = filterBillingRowsByAdsBriefs(lines, adsBriefFilters);
+  if (adsBriefFilters.size === 0) {
+    if (!linesAlreadyScoped) return 'Check palette equipment';
+  }
+  const scoped =
+    adsBriefFilters.size === 0
+      ? lines
+      : filterBillingRowsByAdsBriefs(lines, adsBriefFilters);
   const entries = formatAdsFlightEngagementEntries(scoped);
   if (entries.length === 0) return '—';
   return entries.map((entry) => `${entry.label}: ${entry.value}`).join('; ');
@@ -252,6 +259,7 @@ function adsFlightRowMatchesColumnFilters(
   formatCustomerFn: (row: BillingSourceRow) => string,
   linesByFlightKey: ReadonlyMap<string, BillingSourceRow[]>,
   adsBriefFilters: ReadonlySet<BillingAdsBriefKey>,
+  linesAlreadyScoped = false,
 ): boolean {
   if (filters.serial && adsFlightSerialLabel(row) !== filters.serial) return false;
   if (filters.flight && adsFlightNumberLabel(row) !== filters.flight) return false;
@@ -262,19 +270,22 @@ function adsFlightRowMatchesColumnFilters(
     return false;
   }
   if (filters.engagement &&
-    adsEngagementFilterLabel(row, linesByFlightKey, adsBriefFilters) !== filters.engagement
+    adsEngagementFilterLabel(row, linesByFlightKey, adsBriefFilters, linesAlreadyScoped) !==
+      filters.engagement
   ) {
     return false;
   }
   if (
     filters.bhsIncluded &&
-    adsBhsIncludedFilterLabel(row, linesByFlightKey, adsBriefFilters) !== filters.bhsIncluded
+    adsBhsIncludedFilterLabel(row, linesByFlightKey, adsBriefFilters, linesAlreadyScoped) !==
+      filters.bhsIncluded
   ) {
     return false;
   }
   if (
     filters.charged &&
-    adsChargedFilterLabel(row, linesByFlightKey, adsBriefFilters) !== filters.charged
+    adsChargedFilterLabel(row, linesByFlightKey, adsBriefFilters, linesAlreadyScoped) !==
+      filters.charged
   ) {
     return false;
   }
@@ -345,11 +356,15 @@ function adsBhsIncludedFilterLabel(
   row: BillingSourceRow,
   linesByFlightKey: ReadonlyMap<string, BillingSourceRow[]>,
   adsBriefFilters: ReadonlySet<BillingAdsBriefKey>,
+  linesAlreadyScoped = false,
 ): string {
   const flightKey = billingAdsFlightKey(row) || adsLineKey(row);
-  if (adsBriefFilters.size === 0) return 'Check palette equipment';
   const lines = linesByFlightKey.get(flightKey) ?? [];
-  const scoped = filterBillingRowsByAdsBriefs(lines, adsBriefFilters);
+  if (adsBriefFilters.size === 0 && !linesAlreadyScoped) return 'Check palette equipment';
+  const scoped =
+    adsBriefFilters.size === 0
+      ? lines
+      : filterBillingRowsByAdsBriefs(lines, adsBriefFilters);
   const entries = formatAdsFlightBhsIncludedEntries(scoped);
   if (entries.length === 0) return '—';
   return entries.map((entry) => `${entry.label}: ${entry.count}`).join('; ');
@@ -359,11 +374,15 @@ function adsChargedFilterLabel(
   row: BillingSourceRow,
   linesByFlightKey: ReadonlyMap<string, BillingSourceRow[]>,
   adsBriefFilters: ReadonlySet<BillingAdsBriefKey>,
+  linesAlreadyScoped = false,
 ): string {
   const flightKey = billingAdsFlightKey(row) || adsLineKey(row);
-  if (adsBriefFilters.size === 0) return 'Check palette equipment';
   const lines = linesByFlightKey.get(flightKey) ?? [];
-  const scoped = filterBillingRowsByAdsBriefs(lines, adsBriefFilters);
+  if (adsBriefFilters.size === 0 && !linesAlreadyScoped) return 'Check palette equipment';
+  const scoped =
+    adsBriefFilters.size === 0
+      ? lines
+      : filterBillingRowsByAdsBriefs(lines, adsBriefFilters);
   const entries = formatAdsFlightChargedEntries(scoped);
   if (entries.length === 0) return '—';
   return entries.map((entry) => `${entry.label}: ${entry.count}`).join('; ');
@@ -764,6 +783,10 @@ export function OperationalSourcePage({ api, config }: Props) {
   const [adsErrorsOnly, setAdsErrorsOnly] = useState(false);
   const [statFilters, setStatFilters] = useState<Set<BillingScheduledFlightStatKey>>(new Set());
   const [adsBriefFilters, setAdsBriefFilters] = useState<Set<BillingAdsBriefKey>>(new Set());
+  const [adsMasterFilter, setAdsMasterFilter] = useState<{
+    itemNo: string;
+    description: string;
+  } | null>(null);
   const [adsEquipmentMaster, setAdsEquipmentMaster] = useState<EquipmentMasterRecord[]>([]);
   const [maasFilters, setMaasFilters] = useState<MaasBillingFilters>(EMPTY_MAAS_BILLING_FILTERS);
   const [customers, setCustomers] = useState<Array<{ customerCode: string; name: string }>>([]);
@@ -875,6 +898,7 @@ export function OperationalSourcePage({ api, config }: Props) {
         if (!options?.preserveFilters) {
           setStatFilters(new Set());
           setAdsBriefFilters(new Set());
+          setAdsMasterFilter(null);
           setRafEquipmentFilters(new Set());
           setAdsErrorsOnly(false);
           setColumnFilters(EMPTY_COLUMN_FILTERS);
@@ -1000,6 +1024,7 @@ export function OperationalSourcePage({ api, config }: Props) {
     }
     if (usesAdsEquipmentPalette(config.fetchMethod)) {
       setAdsBriefFilters(new Set());
+      setAdsMasterFilter(null);
       setSelected(new Set());
     }
     if (usesRafEquipmentPalette(config.fetchMethod)) {
@@ -1128,6 +1153,11 @@ export function OperationalSourcePage({ api, config }: Props) {
         flightDomFilteredRows,
         adsBriefFilters,
       );
+      if (adsMasterFilter) {
+        adsLines = adsLines.filter((row) =>
+          adsRowMatchesEquipmentMaster(row, adsMasterFilter),
+        );
+      }
       if (adsErrorsOnly) {
         const errorFlightKeys = new Set(
           adsLines
@@ -1163,17 +1193,17 @@ export function OperationalSourcePage({ api, config }: Props) {
         prep: uniqueSorted(grouped.map(prepStatusLabel)),
         engagement: uniqueSorted(
           grouped.map((row) =>
-            adsEngagementFilterLabel(row, linesMap, adsBriefFilters),
+            adsEngagementFilterLabel(row, linesMap, adsBriefFilters, Boolean(adsMasterFilter)),
           ),
         ),
         bhsIncluded: uniqueSorted(
           grouped.map((row) =>
-            adsBhsIncludedFilterLabel(row, linesMap, adsBriefFilters),
+            adsBhsIncludedFilterLabel(row, linesMap, adsBriefFilters, Boolean(adsMasterFilter)),
           ),
         ),
         charged: uniqueSorted(
           grouped.map((row) =>
-            adsChargedFilterLabel(row, linesMap, adsBriefFilters),
+            adsChargedFilterLabel(row, linesMap, adsBriefFilters, Boolean(adsMasterFilter)),
           ),
         ),
         contract: uniqueSorted(grouped.map(contractFilterLabel)),
@@ -1222,6 +1252,7 @@ export function OperationalSourcePage({ api, config }: Props) {
     flightDomFilteredRows,
     formatCustomer,
     adsBriefFilters,
+    adsMasterFilter,
     adsErrorsOnly,
     rafEquipmentFilters,
   ]);
@@ -1242,6 +1273,9 @@ export function OperationalSourcePage({ api, config }: Props) {
   const adsLineRows = useMemo(() => {
     if (config.fetchMethod !== 'listAds') return [];
     let next = filterBillingRowsByAdsBriefs(sourceRows, adsBriefFilters);
+    if (adsMasterFilter) {
+      next = next.filter((row) => adsRowMatchesEquipmentMaster(row, adsMasterFilter));
+    }
     if (adsErrorsOnly) {
       const errorFlightKeys = new Set(
         next
@@ -1252,7 +1286,7 @@ export function OperationalSourcePage({ api, config }: Props) {
       next = next.filter((r) => errorFlightKeys.has(billingAdsFlightKey(r)));
     }
     return next;
-  }, [config.fetchMethod, sourceRows, adsBriefFilters, adsErrorsOnly]);
+  }, [config.fetchMethod, sourceRows, adsBriefFilters, adsMasterFilter, adsErrorsOnly]);
 
   /** ADS flight display key → its underlying equipment/manpower lines (for send/unsend). */
   const adsLinesByFlightKey = useMemo(() => {
@@ -1291,6 +1325,7 @@ export function OperationalSourcePage({ api, config }: Props) {
           formatCustomer,
           adsLinesByFlightKey,
           adsBriefFilters,
+          Boolean(adsMasterFilter),
         ),
       );
     }
@@ -1403,6 +1438,7 @@ export function OperationalSourcePage({ api, config }: Props) {
   };
 
   const toggleAdsBriefFilter = (key: BillingAdsBriefKey) => {
+    setAdsMasterFilter(null);
     setAdsBriefFilters((prev) => {
       const next = new Set(prev);
       if (next.has(key)) next.delete(key);
@@ -1413,6 +1449,7 @@ export function OperationalSourcePage({ api, config }: Props) {
   };
 
   const toggleAdsBriefFilterGroup = (keys: readonly BillingAdsBriefKey[]) => {
+    setAdsMasterFilter(null);
     setAdsBriefFilters((prev) => {
       const next = new Set(prev);
       const allSelected = keys.every((key) => next.has(key));
@@ -1428,11 +1465,19 @@ export function OperationalSourcePage({ api, config }: Props) {
 
   const clearAdsBriefFilters = () => {
     setAdsBriefFilters(new Set());
+    setAdsMasterFilter(null);
     setSelected(new Set());
   };
 
   const selectAdsBriefOnly = (key: BillingAdsBriefKey) => {
+    setAdsMasterFilter(null);
     setAdsBriefFilters(new Set([key]));
+    setSelected(new Set());
+  };
+
+  const selectAdsEquipmentMaster = (master: { itemNo: string; description: string }) => {
+    setAdsBriefFilters(new Set());
+    setAdsMasterFilter(master);
     setSelected(new Set());
   };
 
@@ -2389,7 +2434,10 @@ export function OperationalSourcePage({ api, config }: Props) {
           loading={loading}
           rows={sourceRows}
           uomsByKey={adsUomsByKey}
+          equipmentMaster={adsEquipmentMaster}
+          masterFilter={adsMasterFilter}
           onSelectOnly={selectAdsBriefOnly}
+          onSelectMaster={selectAdsEquipmentMaster}
         />
       ) : null}
 
@@ -2945,7 +2993,7 @@ export function OperationalSourcePage({ api, config }: Props) {
                   ),
                   className: 'min-w-[10rem] max-w-[18rem]',
                   render: (r: BillingSourceRow) => {
-                    if (adsBriefFilters.size === 0) {
+                    if (adsBriefFilters.size === 0 && !adsMasterFilter) {
                       return (
                         <span className="text-xs text-gray-400">
                           Check palette equipment
@@ -3003,7 +3051,7 @@ export function OperationalSourcePage({ api, config }: Props) {
                   ),
                   className: 'min-w-[9rem] max-w-[16rem]',
                   render: (r: BillingSourceRow) => {
-                    if (adsBriefFilters.size === 0) {
+                    if (adsBriefFilters.size === 0 && !adsMasterFilter) {
                       return (
                         <span className="text-xs text-gray-400">
                           Check palette equipment
@@ -3055,7 +3103,7 @@ export function OperationalSourcePage({ api, config }: Props) {
                   ),
                   className: 'min-w-[8rem] max-w-[16rem]',
                   render: (r: BillingSourceRow) => {
-                    if (adsBriefFilters.size === 0) {
+                    if (adsBriefFilters.size === 0 && !adsMasterFilter) {
                       return (
                         <span className="text-xs text-gray-400">
                           Check palette equipment

@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-10
+station: COK
+service: BHS
+airline: WY
+airlineName: Oman Air
+contracts: WY-COK-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

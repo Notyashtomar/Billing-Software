@@ -1,0 +1,10 @@
+status: DRAFT
+month: 2026-08
+station: DEL
+service: ADS
+airline: FG
+airlineName: ARIANA AFGHAN AIRLINES
+contracts: FG-DEL-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/DEL/20260921/41279958 | draft | 2026-08-16 to 2026-08-30 | INR 1,69,540.09

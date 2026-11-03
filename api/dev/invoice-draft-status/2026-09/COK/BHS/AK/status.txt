@@ -1,0 +1,10 @@
+status: DRAFT
+month: 2026-09
+station: COK
+service: BHS
+airline: AK
+airlineName: Air Asia
+contracts: AK-COK-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/COK/20261007/59832828 | draft | 2026-09-01 to 2026-09-30 | USD 63,25,416.6

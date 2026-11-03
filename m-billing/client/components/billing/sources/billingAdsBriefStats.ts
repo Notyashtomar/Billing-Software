@@ -23,6 +23,8 @@ export const BILLING_ADS_BRIEF_KEYS = [
   'pbnb',
   'mpsl',
   'gpuNb',
+  'gpu90',
+  'gpu140',
   'acuNb',
   'crewCoach',
   'csh',
@@ -34,6 +36,8 @@ export const BILLING_ADS_BRIEF_KEYS = [
   'pbwb',
   'acuWb',
   'gpuWb',
+  'gpu180',
+  'gpu280',
   'asuWb',
   'rc',
   'tow',
@@ -114,6 +118,8 @@ export const BILLING_ADS_BRIEF_FULL_NAMES: Record<BillingAdsBriefKey, string> = 
   pbnb: 'Push Back Narrow Body',
   mpsl: 'Motorized Passenger Step Ladder',
   gpuNb: 'Ground Power Unit - Narrow Body',
+  gpu90: 'Ground Power Unit - 90KV',
+  gpu140: 'Ground Power Unit - 140KV',
   acuNb: 'Air Conditioner Unit - Narrow Body',
   crewCoach: 'Crew Coach',
   csh: 'Customer Service Host',
@@ -125,6 +131,8 @@ export const BILLING_ADS_BRIEF_FULL_NAMES: Record<BillingAdsBriefKey, string> = 
   pbwb: 'Push Back Wide Body',
   acuWb: 'Air Conditioner Unit - Wide Body',
   gpuWb: 'Ground Power Unit - Wide Body',
+  gpu180: 'Ground Power Unit - 180KV',
+  gpu280: 'Ground Power Unit - 280KV',
   asuWb: 'Air Start Unit - Wide Body',
   rc: 'Ramp Car',
   tow: 'Towbar',
@@ -445,7 +453,12 @@ const DEFINITIONS: ReadonlyArray<
       'Ground Power Unit Narrow Body',
       'Ground Power Unit - Narrow Body',
       'Ground power unit - narrow body',
-      // FHR stores KV class for NB GPUs
+    ],
+  },
+  {
+    key: 'gpu90',
+    label: 'GPU-90KV',
+    aliases: [
       'GPU-90KV',
       'GPU-90 KV',
       'GPU 90KV',
@@ -453,6 +466,18 @@ const DEFINITIONS: ReadonlyArray<
       'GPU90KV',
       'GPU-90KVA',
       'GPU 90KVA',
+      'Ground Power Unit -90KV',
+      'Ground Power Unit - 90KV',
+      'Ground Power Unit -90 KV',
+      'Ground Power Unit 90KV',
+      'Ground Power Unit 90 KV',
+      'Ground Power Unit (GPU) 90 KV',
+    ],
+  },
+  {
+    key: 'gpu140',
+    label: 'GPU-140KV',
+    aliases: [
       'GPU-140KV',
       'GPU-140 KV',
       'GPU 140KV',
@@ -460,18 +485,13 @@ const DEFINITIONS: ReadonlyArray<
       'GPU140KV',
       'GPU-140KVA',
       'GPU 140KVA',
-      'Ground Power Unit -90KV',
-      'Ground Power Unit - 90KV',
-      'Ground Power Unit -90 KV',
-      'Ground Power Unit 90KV',
-      'Ground Power Unit 90 KV',
       'Ground Power Unit -140KV',
       'Ground Power Unit - 140KV',
       'Ground Power Unit -140 KV',
       'Ground Power Unit 140KV',
       'Ground Power Unit 140 KV',
-      'Ground Power Unit (GPU) 90 KV',
       'Ground Power Unit (GPU) 140 KV',
+      'Ground Power Unit-140 KV',
     ],
   },
   {
@@ -573,24 +593,40 @@ const DEFINITIONS: ReadonlyArray<
       'Ground Power Unit Wide Body',
       'Ground Power Unit - Wide Body',
       'Ground power unit - wide body',
+    ],
+  },
+  {
+    key: 'gpu180',
+    label: 'GPU-180KV',
+    aliases: [
       'GPU-180KV',
       'GPU-180 KV',
       'GPU 180KV',
       'GPU 180 KV',
       'GPU180KV',
+      'GPU-180KVA',
+      'Ground Power Unit -180KV',
+      'Ground Power Unit - 180KV',
+      'Ground Power Unit 180KV',
+      'Ground Power Unit 180 KV',
+      'Ground Power Unit (GPU) 180 KV',
+    ],
+  },
+  {
+    key: 'gpu280',
+    label: 'GPU-280KV',
+    aliases: [
       'GPU-280KV',
       'GPU-280 KV',
       'GPU 280KV',
       'GPU 280 KV',
       'GPU280KV',
-      'Ground Power Unit -180KV',
-      'Ground Power Unit - 180KV',
-      'Ground Power Unit 180KV',
-      'Ground Power Unit 180 KV',
+      'GPU-280KVA',
       'Ground Power Unit -280KV',
       'Ground Power Unit - 280KV',
       'Ground Power Unit 280KV',
       'Ground Power Unit 280 KV',
+      'Ground Power Unit (GPU) 280 KV',
     ],
   },
   {
@@ -820,7 +856,11 @@ const ADS_BRIEF_MOTORISED_KEYS: readonly BillingAdsBriefKey[] = [
   'udl',
   'rc',
   'gpuNb',
+  'gpu90',
+  'gpu140',
   'gpuWb',
+  'gpu180',
+  'gpu280',
   'acuNb',
   'acuWb',
   'asuNb',
@@ -853,11 +893,25 @@ export type MotorisedNbWbPaletteGroup = {
   nbKey?: BillingAdsBriefKey;
   wbKey?: BillingAdsBriefKey;
   keys: readonly BillingAdsBriefKey[];
+  /** KV (or other) classes shown beside NB/WB on the chip. */
+  detailKeys?: ReadonlyArray<{ key: BillingAdsBriefKey; short: string }>;
 };
 
 /** Motorised equipment families with NB/WB palette chips (combined display). */
 export const MOTORISED_NB_WB_PALETTE_GROUPS: readonly MotorisedNbWbPaletteGroup[] = [
-  { id: 'gpu', label: 'Ground Power Unit', nbKey: 'gpuNb', wbKey: 'gpuWb', keys: ['gpuNb', 'gpuWb'] },
+  {
+    id: 'gpu',
+    label: 'Ground Power Unit',
+    nbKey: 'gpuNb',
+    wbKey: 'gpuWb',
+    keys: ['gpuNb', 'gpuWb', 'gpu90', 'gpu140', 'gpu180', 'gpu280'],
+    detailKeys: [
+      { key: 'gpu90', short: '90KV' },
+      { key: 'gpu140', short: '140KV' },
+      { key: 'gpu180', short: '180KV' },
+      { key: 'gpu280', short: '280KV' },
+    ],
+  },
   {
     id: 'acu',
     label: 'Air Conditioner Unit',
@@ -1431,9 +1485,17 @@ function aircraftLooksWideBody(row: BillingSourceRow): boolean {
 }
 
 /**
- * FHR stores GPU as KV class (`GPU-90KV`), not always GPU-NB.
- * Map only real GPU scheduled names onto NB/WB — never generic non-GPU text.
+ * FHR stores GPU as a KV class (`GPU-90KV`), not only GPU-NB / GPU-WB.
+ * A named KV class stays on that class. Bare GPU still follows aircraft body.
  */
+function gpuKvBriefKey(compact: string): BillingAdsBriefKey | null {
+  if (/280KVA?/.test(compact)) return 'gpu280';
+  if (/180KVA?/.test(compact)) return 'gpu180';
+  if (/140KVA?/.test(compact)) return 'gpu140';
+  if (/90KVA?/.test(compact)) return 'gpu90';
+  return null;
+}
+
 function inferGpuBriefKeys(
   row: BillingSourceRow,
   candidates: ReadonlySet<string>,
@@ -1446,16 +1508,17 @@ function inferGpuBriefKeys(
     compact.includes('GROUNDPOWER');
   if (!isGpu) return [];
 
+  const kvKey = gpuKvBriefKey(compact);
+  if (kvKey) return [kvKey];
+
   const explicitWb =
     /\bGPU\s*WB\b|\bGPUWB\b|\bWIDE\s*BODY\b/.test(blob) ||
     compact.includes('GPUWB') ||
-    compact.includes('WIDEBODY') ||
-    /180KV|280KV|180KVA|280KVA/.test(compact);
+    compact.includes('WIDEBODY');
   const explicitNb =
     /\bGPU\s*NB\b|\bGPUNB\b|\bNARROW\s*BODY\b/.test(blob) ||
     compact.includes('GPUNB') ||
-    compact.includes('NARROWBODY') ||
-    /90KV|140KV|90KVA|140KVA/.test(compact);
+    compact.includes('NARROWBODY');
 
   if (explicitWb && !explicitNb) return ['gpuWb'];
   if (explicitNb && !explicitWb) return ['gpuNb'];
@@ -1542,10 +1605,22 @@ function preferSpecificBriefKeys(keys: BillingAdsBriefKey[]): BillingAdsBriefKey
   if (set.has('asuNb') || set.has('asuWb')) {
     set.delete('gpuNb');
     set.delete('gpuWb');
+    set.delete('gpu90');
+    set.delete('gpu140');
+    set.delete('gpu180');
+    set.delete('gpu280');
     set.delete('acu');
     set.delete('acuNb');
     set.delete('acuWb');
   } else if (set.has('acuNb') || set.has('acuWb')) {
+    set.delete('gpuNb');
+    set.delete('gpuWb');
+    set.delete('gpu90');
+    set.delete('gpu140');
+    set.delete('gpu180');
+    set.delete('gpu280');
+  }
+  if (set.has('gpu90') || set.has('gpu140') || set.has('gpu180') || set.has('gpu280')) {
     set.delete('gpuNb');
     set.delete('gpuWb');
   }
@@ -1624,7 +1699,12 @@ function matchingBriefKeys(row: BillingSourceRow): BillingAdsBriefKey[] {
     // the real equipment (ASU, ACU, GPU-WB, …) must not lose to a fragment
     // such as "Wide Body" sitting inside a longer GPU alias.
     if (
-      (item.key === 'gpuNb' || item.key === 'gpuWb') &&
+      (item.key === 'gpuNb' ||
+        item.key === 'gpuWb' ||
+        item.key === 'gpu90' ||
+        item.key === 'gpu140' ||
+        item.key === 'gpu180' ||
+        item.key === 'gpu280') &&
       hasFuzzyAliasMatch(candidates, aliases)
     ) {
       fuzzy.push(item.key);
@@ -2177,6 +2257,8 @@ export function filterBillingRowsByAdsBriefs(
 
 export type AdsBriefSelectionTotals = {
   key?: BillingAdsBriefKey;
+  /** Equipment Master row this hit came from, when it is not only a palette chip. */
+  master?: { itemNo: string; description: string };
   label: string;
   engagements: number;
   uom: string;
@@ -2190,7 +2272,8 @@ export type AdsBriefSelectionTotals = {
 export type AdsBriefUomCatalogRow = {
   itemNo?: string;
   description?: string;
-  uoms?: ReadonlyArray<{ uom?: string | null }>;
+  unitType?: string;
+  uoms?: ReadonlyArray<{ uom?: string | null; abbreviation?: string | null }>;
 };
 
 function compactAdsName(value: string): string {
@@ -2270,13 +2353,33 @@ export function computeAdsBriefSelectionTotals(
   const uomOverride = String(options?.uomOverride ?? '').trim();
   const filtered = filterBillingRowsByAdsBriefs(rows, selected);
   const singleKey = selected.size === 1 ? [...selected][0] : undefined;
+  return summarizeAdsUsageRows(filtered, {
+    key: singleKey,
+    label: formatSelectedAdsBriefLabels(selected),
+    uomOverride,
+    uomOptions: options?.uomOptions,
+  });
+}
+
+function summarizeAdsUsageRows(
+  filtered: BillingSourceRow[],
+  options: {
+    key?: BillingAdsBriefKey;
+    label: string;
+    uomOverride?: string;
+    uomOptions?: readonly string[];
+    master?: { itemNo: string; description: string };
+  },
+): AdsBriefSelectionTotals {
+  const uomOverride = String(options.uomOverride ?? '').trim();
   if (filtered.length === 0) {
     return {
-      key: singleKey,
-      label: formatSelectedAdsBriefLabels(selected),
+      key: options.key,
+      master: options.master,
+      label: options.label,
       engagements: 0,
       uom: uomOverride || '—',
-      uomOptions: [...(options?.uomOptions ?? [])],
+      uomOptions: [...(options.uomOptions ?? [])],
       usedUnits: 0,
       chargedUnits: 0,
       engagementTime: '—',
@@ -2329,17 +2432,16 @@ export function computeAdsBriefSelectionTotals(
     }
   }
 
-  const labels = formatSelectedAdsBriefLabels(selected);
-
   const uomOptions = [
-    ...new Set([...(options?.uomOptions ?? []), ...uomCounts.keys()].map((value) => value.trim()).filter(Boolean)),
+    ...new Set([...(options.uomOptions ?? []), ...uomCounts.keys()].map((value) => value.trim()).filter(Boolean)),
   ].sort((a, b) => a.localeCompare(b));
 
   return {
-    key: singleKey,
-    label: labels,
+    key: options.key,
+    master: options.master,
+    label: options.label,
     engagements: toWholeAdsUnits(engagements),
-    uom,
+    uom: uomOverride || uom,
     uomOptions,
     usedUnits: toWholeAdsUnits(usedUnits),
     chargedUnits: Math.max(0, Math.round(chargedUnits)),
@@ -2347,17 +2449,160 @@ export function computeAdsBriefSelectionTotals(
   };
 }
 
+function equipmentIdentityCompacts(...values: Array<string | null | undefined>): Set<string> {
+  const names = new Set<string>();
+  for (const value of values) {
+    const text = String(value ?? '').trim();
+    if (!text) continue;
+    const variants = [text];
+    const full = toBillingTrackableFullName(text);
+    if (full && full !== text) variants.push(full);
+    for (const variant of variants) {
+      const compact = compactAdsName(variant);
+      if (compact.length >= 2) names.add(compact);
+    }
+  }
+  return names;
+}
+
+function adsRowIdentityCompacts(row: BillingSourceRow): Set<string> {
+  const op = row.operationalData ?? {};
+  return equipmentIdentityCompacts(
+    String(op.equipment_name ?? ''),
+    String(op.equipmentName ?? ''),
+    String(op.equipmentCode ?? ''),
+    String(op.equipment_code ?? ''),
+    String(op.abbr ?? ''),
+    String(op.particular ?? ''),
+    String(op.equipment ?? ''),
+    String(op.adsParticular ?? ''),
+  );
+}
+
+/** Usage line belongs to this Equipment Master item (code, description, or catalog abbreviation). */
+export function adsRowMatchesEquipmentMaster(
+  row: BillingSourceRow,
+  master: AdsBriefUomCatalogRow,
+): boolean {
+  const abbreviations = (master.uoms ?? [])
+    .map((pair) => String(pair.abbreviation ?? '').trim())
+    .filter((value) => compactAdsName(value).length >= 4);
+  const wanted = equipmentIdentityCompacts(master.itemNo, master.description, ...abbreviations);
+  if (wanted.size === 0) return false;
+  const found = adsRowIdentityCompacts(row);
+  for (const name of found) {
+    if (wanted.has(name)) return true;
+  }
+  return false;
+}
+
+function masterMatchesQuery(master: AdsBriefUomCatalogRow, query: string): boolean {
+  const needle = query.trim().toLowerCase();
+  const compactNeedle = compactAdsName(query);
+  if (!needle) return false;
+  const texts = [
+    master.itemNo,
+    master.description,
+    toBillingTrackableFullName(String(master.itemNo ?? '')),
+    toBillingTrackableFullName(String(master.description ?? '')),
+    ...(master.uoms ?? []).flatMap((pair) => [pair.uom, pair.abbreviation]),
+  ];
+  return texts.some((value) => {
+    const text = String(value ?? '').trim();
+    if (!text) return false;
+    if (text.toLowerCase().includes(needle)) return true;
+    const compact = compactAdsName(text);
+    return compactNeedle.length >= 2 && compact.includes(compactNeedle);
+  });
+}
+
+function masterSearchLabel(master: AdsBriefUomCatalogRow): string {
+  const description = String(master.description ?? '').trim();
+  const itemNo = String(master.itemNo ?? '').trim();
+  if (description && itemNo && !description.toLowerCase().includes(itemNo.toLowerCase())) {
+    return `${description} (${itemNo})`;
+  }
+  return description || itemNo;
+}
+
+function paletteCoveredByMaster(
+  item: { label: string; fullName?: string; aliases: readonly string[] },
+  masters: readonly AdsBriefUomCatalogRow[],
+): boolean {
+  const paletteNames = equipmentIdentityCompacts(item.label, item.fullName, ...item.aliases);
+  return masters.some((master) => {
+    const names = equipmentIdentityCompacts(
+      master.itemNo,
+      master.description,
+      ...(master.uoms ?? [])
+        .map((pair) => String(pair.abbreviation ?? '').trim())
+        .filter((value) => compactAdsName(value).length >= 4),
+    );
+    for (const name of names) {
+      if (paletteNames.has(name)) return true;
+    }
+    return false;
+  });
+}
+
+function briefKeyForMaster(master: AdsBriefUomCatalogRow): BillingAdsBriefKey | undefined {
+  const names = equipmentIdentityCompacts(master.itemNo, master.description);
+  let best: BillingAdsBriefKey | undefined;
+  let bestLength = 0;
+  for (const item of BILLING_ADS_BRIEF_ITEMS) {
+    const paletteNames = equipmentIdentityCompacts(item.label, item.fullName, ...item.aliases);
+    let hit = false;
+    for (const name of names) {
+      if (paletteNames.has(name)) {
+        hit = true;
+        break;
+      }
+    }
+    if (!hit) continue;
+    if (item.label.length >= bestLength) {
+      best = item.key;
+      bestLength = item.label.length;
+    }
+  }
+  return best;
+}
+
 /** Palette items whose name matches the typed text, with invoice counts for the loaded airline rows. */
 export function searchAdsBriefDetails(
   rows: BillingSourceRow[],
   query: string,
   uomsByKey?: ReadonlyMap<BillingAdsBriefKey, readonly string[]>,
+  equipmentMaster?: readonly AdsBriefUomCatalogRow[],
 ): AdsBriefSelectionTotals[] {
   const needle = query.trim();
   if (!needle) return [];
+  const masterHits = (equipmentMaster ?? []).filter((master) => masterMatchesQuery(master, needle));
   const hits: AdsBriefSelectionTotals[] = [];
+  const seen = new Set<string>();
+  for (const master of masterHits) {
+    const itemNo = String(master.itemNo ?? '').trim();
+    const description = String(master.description ?? '').trim();
+    const id = `${itemNo}|${description}`.toLowerCase();
+    if (seen.has(id)) continue;
+    seen.add(id);
+    const label = masterSearchLabel(master);
+    const matched = rows.filter((row) => adsRowMatchesEquipmentMaster(row, master));
+    const masterUoms = (master.uoms ?? [])
+      .map((pair) => String(pair.uom ?? '').trim())
+      .filter(Boolean);
+    const key = briefKeyForMaster(master);
+    const totals = summarizeAdsUsageRows(matched, {
+      key,
+      label,
+      master: { itemNo, description },
+      uomOptions: masterUoms.length > 0 ? masterUoms : key ? uomsByKey?.get(key) : undefined,
+    });
+    if (masterUoms.length > 0) totals.uom = masterUoms.join(', ');
+    hits.push(totals);
+  }
   for (const item of BILLING_ADS_BRIEF_ITEMS) {
     if (!adsBriefItemMatchesQuery(item, needle)) continue;
+    if (paletteCoveredByMaster(item, masterHits)) continue;
     const totals = computeAdsBriefSelectionTotals(rows, new Set([item.key]), {
       uomOptions: uomsByKey?.get(item.key),
     });

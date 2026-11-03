@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-02
+station: COK
+service: BHS
+airline: SL
+airlineName: Thai Lion
+contracts: SL-COK-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

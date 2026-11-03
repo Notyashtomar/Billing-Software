@@ -1,0 +1,11 @@
+status: DRAFT
+month: 2026-09
+station: COK
+service: BHS
+airline: GF
+airlineName: Gulf Air
+contracts: GF-COK-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/COK/20261007/45268911 | draft | 2026-09-01 to 2026-09-30 | USD 2,03,976.66
+- DRAFT/COK/20261007/60239617 | draft | 2026-09-01 to 2026-09-30 | USD 61,19,299.94

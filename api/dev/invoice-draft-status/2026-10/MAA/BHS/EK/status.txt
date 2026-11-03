@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-10
+station: MAA
+service: BHS
+airline: EK
+airlineName: Emirates
+contracts: EK-MAA-BAS-SGHA, EK-MAA-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

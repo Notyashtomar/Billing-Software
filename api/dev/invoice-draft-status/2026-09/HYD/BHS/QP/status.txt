@@ -1,0 +1,10 @@
+status: DRAFT
+month: 2026-09
+station: HYD
+service: BHS
+airline: QP
+airlineName: Akasa Air
+contracts: QP-HYD-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/HYD/20261001/49331201 | draft | 2026-09-01 to 2026-09-30 | INR 12,82,818.12

@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-08
+station: HYD
+service: BHS
+airline: GF
+airlineName: Gulf Air
+contracts: GF-HYD-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-08
+station: DEL
+service: ADS
+airline: OV
+airlineName: Salam Air
+contracts: OV-DEL-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

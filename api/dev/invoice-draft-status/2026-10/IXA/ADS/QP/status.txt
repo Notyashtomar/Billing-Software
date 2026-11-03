@@ -1,0 +1,10 @@
+status: DRAFT
+month: 2026-10
+station: IXA
+service: ADS
+airline: QP
+airlineName: Akasa Air
+contracts: QP-IXA-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/IXA/20261102/55822933 | draft | 2026-10-01 to 2026-10-31 | INR 53,695.78

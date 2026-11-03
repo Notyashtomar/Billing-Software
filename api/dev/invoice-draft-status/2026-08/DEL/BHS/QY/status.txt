@@ -1,0 +1,11 @@
+status: DRAFT
+month: 2026-08
+station: DEL
+service: BHS
+airline: QY
+airlineName: European Air Transport
+contracts: QY-DEL-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/DEL/20261006/15832185 | draft | 2026-08-01 to 2026-08-15 | USD 12,130.97
+- DRAFT/DEL/20261006/16060666 | draft | 2026-08-16 to 2026-08-31 | USD 8,087.32

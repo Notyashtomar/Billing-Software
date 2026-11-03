@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-03
+station: MAA
+service: BHS
+airline: YTO
+airlineName: YTO
+contracts: YTO-MAA-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

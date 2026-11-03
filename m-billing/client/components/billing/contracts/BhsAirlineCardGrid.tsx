@@ -9,6 +9,8 @@ type Props = {
   groups: BhsAirlineCardGroup[];
   contracts: BillingContract[];
   onOpenRateCards: (group: BhsAirlineCardGroup) => void;
+  /** Aircraft from this month's flights that are not on the rate card, keyed by airline code. */
+  missingAircraftCounts?: Record<string, number>;
 };
 
 function airlineCardStatus(
@@ -56,8 +58,10 @@ function BhsAirlineCard({
   group,
   contracts,
   onOpenRateCards,
+  missingAircraftCount = 0,
 }: {
   group: BhsAirlineCardGroup;
+  missingAircraftCount?: number;
 } & Pick<Props, 'contracts' | 'onOpenRateCards'>) {
   const bhsPrices = uniqueBhsPrices(group);
   const status = airlineCardStatus(group, contracts);
@@ -109,6 +113,11 @@ function BhsAirlineCard({
           <div className="flex items-center justify-between gap-3">
             <span className="text-sm font-medium text-gray-600">
               {group.aircraftCount} aircraft{group.aircraftCount === 1 ? '' : 's'}
+              {missingAircraftCount > 0 ? (
+                <span className="mt-0.5 block text-xs font-semibold text-amber-800">
+                  {missingAircraftCount} from this month {missingAircraftCount === 1 ? 'is' : 'are'} not on the rate card
+                </span>
+              ) : null}
             </span>
             <div className="text-right">
               <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">
@@ -125,7 +134,12 @@ function BhsAirlineCard({
   );
 }
 
-export function BhsAirlineCardGrid({ groups, contracts, onOpenRateCards }: Props) {
+export function BhsAirlineCardGrid({
+  groups,
+  contracts,
+  onOpenRateCards,
+  missingAircraftCounts,
+}: Props) {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
       {groups.map((group) => (
@@ -134,6 +148,9 @@ export function BhsAirlineCardGrid({ groups, contracts, onOpenRateCards }: Props
           group={group}
           contracts={contracts}
           onOpenRateCards={onOpenRateCards}
+          missingAircraftCount={
+            missingAircraftCounts?.[group.customerCode.trim().toUpperCase()] ?? 0
+          }
         />
       ))}
     </div>

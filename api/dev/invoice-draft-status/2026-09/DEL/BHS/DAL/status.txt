@@ -1,0 +1,11 @@
+status: DRAFT
+month: 2026-09
+station: DEL
+service: BHS
+airline: DAL
+airlineName: DHL AIR (UK) LTD
+contracts: none on an active contract
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/DEL/20261001/22835535 | draft | 2026-09-01 to 2026-09-15 | USD 52,79,433.32
+- DRAFT/DEL/20261001/22896268 | draft | 2026-09-16 to 2026-09-30 | USD 52,82,619.96

@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-04
+station: TRV
+service: BHS
+airline: GF
+airlineName: Gulf Air
+contracts: GF-TRV-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

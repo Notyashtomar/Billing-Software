@@ -9,7 +9,7 @@ describe('toBillingTrackableFullName', () => {
     expect(toBillingTrackableFullName('C')).toBe('Cones');
     expect(toBillingTrackableFullName('CK')).toBe('Chocks');
     expect(toBillingTrackableFullName('AMB')).toBe('Ambulift');
-    expect(toBillingTrackableFullName('GPU-90KV')).toBe('Ground Power Unit - Narrow Body');
+    expect(toBillingTrackableFullName('GPU-90KV')).toBe('Ground Power Unit - 90KV');
     expect(toBillingTrackableFullName('GPU-140KV')).toBe('Ground Power Unit - 140KV');
     expect(toBillingTrackableFullName('GPU(BME)')).toBe('Ground Power Unit (BME)');
     expect(toBillingTrackableFullName('ACU(BME)')).toBe('Air Conditioner Unit (BME)');
@@ -28,7 +28,7 @@ describe('toBillingTrackableFullName', () => {
     expect(toBillingTrackableFullName('PSL')).toBe('Motorized Passenger Step Ladder');
     expect(toBillingTrackableFullName('ASU')).toBe('Air Start Unit');
     expect(toBillingTrackableFullName('TB')).toBe('Towbar');
-    expect(toBillingTrackableFullName('gpu 90 kv')).toBe('Ground Power Unit - Narrow Body');
+    expect(toBillingTrackableFullName('gpu 90 kv')).toBe('Ground Power Unit - 90KV');
   });
 
   it('expands manpower codes used on scheduled equipment lines', () => {

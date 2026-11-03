@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-06
+station: DEL
+service: ADS
+airline: TG
+airlineName: Thai Airways International Public Company Limited
+contracts: TG-DEL-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

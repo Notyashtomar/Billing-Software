@@ -1,0 +1,10 @@
+status: DRAFT
+month: 2026-04
+station: MAA
+service: BHS
+airline: EY
+airlineName: Etihad Airways
+contracts: EY-BAS-MAA-SGHA, EY-MAA-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/MAA/20260712/65569482 | draft | 2026-04-01 to 2026-04-30 | USD 75,90,440.62

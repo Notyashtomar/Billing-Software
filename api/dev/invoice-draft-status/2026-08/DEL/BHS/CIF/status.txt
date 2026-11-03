@@ -1,0 +1,10 @@
+status: DRAFT
+month: 2026-08
+station: DEL
+service: BHS
+airline: CIF
+airlineName: China Airlines Cargo
+contracts: none on an active contract
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/DEL/20260929/22028248 | draft | 2026-08-01 to 2026-08-31 | USD 1,19,567.04

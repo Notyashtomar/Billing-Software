@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-10
+station: DEL
+service: ADS
+airline: MS
+airlineName: EGYPT AIR
+contracts: MS-DEL-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

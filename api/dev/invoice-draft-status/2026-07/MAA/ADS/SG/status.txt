@@ -1,0 +1,12 @@
+status: DRAFT
+month: 2026-07
+station: MAA
+service: ADS
+airline: SG
+airlineName: Spicejet
+contracts: SG-MAA-SGHA, SG-BAS-MAA-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/MAA/20260820/20873379 | draft | 2026-07-01 to 2026-07-31 | INR 15,620.32
+- DRAFT/MAA/20260820/35188424 | draft | 2026-07-01 to 2026-07-31 | INR 6,431.9
+- DRAFT/MAA/20260820/47120783 | draft | 2026-07-01 to 2026-07-31 | INR 3,256.05

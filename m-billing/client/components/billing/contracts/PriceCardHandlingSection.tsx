@@ -46,6 +46,12 @@ import {
 } from '@/lib/billing-shared/contract-clauses';
 import { EditPriceCardAirlineDialog } from './EditPriceCardAirlineDialog';
 import { RafAdhocRatesPanel } from './RafAdhocRatesPanel';
+import {
+  MissingRateCardAircraftNotice,
+  MissingRateCardAircraftReminder,
+  useStoredRateCardAircraftGaps,
+} from './MissingRateCardAircraftNotice';
+import { useBillingWorkspaceIdentity } from '@/lib/billing-workspace';
 
 const HANDLING_ICONS: Record<PriceCardHandlingType, ComponentType<{ className?: string }>> = {
   BHS: Plane,
@@ -183,6 +189,11 @@ export function PriceCardHandlingSection({
   onError,
   onSuccess,
 }: Props) {
+  const stationCode = useBillingWorkspaceIdentity()?.stationCode;
+  const { items: missingAircraftNotices } = useStoredRateCardAircraftGaps(
+    stationCode,
+    selectedHandling,
+  );
   const [assignOpen, setAssignOpen] = useState(false);
   const [addDialogCustomerCode, setAddDialogCustomerCode] = useState<string | null>(null);
   const [entries, setEntries] = useState<BillingPriceCardAirline[]>([]);
@@ -380,6 +391,31 @@ export function PriceCardHandlingSection({
     () => customers.find((c) => c.customerCode === selectedCustomerCode),
     [customers, selectedCustomerCode],
   );
+
+  const openAirlineRateCardRows = useMemo(() => {
+    if (!selectedHandling || !selectedCustomerCode) return [];
+    const code = selectedCustomerCode.trim().toUpperCase();
+    return allPriceCardAirlines.filter(
+      (entry) =>
+        entry.handlingType === selectedHandling &&
+        entry.customerCode.trim().toUpperCase() === code,
+    );
+  }, [allPriceCardAirlines, selectedCustomerCode, selectedHandling]);
+
+  const openAirlineName =
+    selectedBhsAirlineGroup?.airlineName ||
+    openAirlineRateCardRows[0]?.airlineName ||
+    selectedCustomer?.name ||
+    selectedCustomerCode ||
+    '';
+
+  const missingAircraftCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const item of missingAircraftNotices) {
+      counts[item.customerCode] = item.gaps.length;
+    }
+    return counts;
+  }, [missingAircraftNotices]);
 
   const airlineSummary = useMemo(() => {
     if (!selectedBhsAirlineGroup || !selectedHandling) return null;
@@ -649,6 +685,11 @@ export function PriceCardHandlingSection({
           </div>
         ) : null}
 
+        <MissingRateCardAircraftReminder
+          stationCode={stationCode}
+          handlingType={selectedHandling}
+        />
+
         {loadingEntries ? (
           <div className="rounded-xl border border-gray-200 bg-white px-4 py-10 text-center text-sm text-gray-500">
             Loading airlines…
@@ -688,6 +729,7 @@ export function PriceCardHandlingSection({
             groups={airlineGroups}
             contracts={contracts}
             onOpenRateCards={openRateCardsForGroup}
+            missingAircraftCounts={missingAircraftCounts}
           />
         ) : (
           <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
@@ -729,10 +771,19 @@ export function PriceCardHandlingSection({
               <tbody className="divide-y divide-gray-100">
                 {filteredEntries.map((entry) => {
                   const expired = isPriceCardEntryExpired(entry, contracts);
+                  const missingCount =
+                    missingAircraftCounts[entry.customerCode.trim().toUpperCase()] ?? 0;
                   return (
                   <tr key={entry._id} className={expired ? 'bg-red-50/70 hover:bg-red-50' : 'hover:bg-gray-50'}>
                     <td className="px-3 py-2.5 font-medium text-[color:var(--billing-accent-strong)]">{entry.customerCode}</td>
-                    <td className="px-3 py-2.5 text-gray-900">{entry.airlineName}</td>
+                    <td className="px-3 py-2.5 text-gray-900">
+                      {entry.airlineName}
+                      {missingCount > 0 ? (
+                        <span className="mt-0.5 block text-xs font-semibold text-amber-800">
+                          {missingCount} from this month {missingCount === 1 ? 'is' : 'are'} not on the rate card
+                        </span>
+                      ) : null}
+                    </td>
                     <td className="px-3 py-2.5 tabular-nums text-gray-700">{formatBillingDate(entry.validFrom)}</td>
                     <td className="px-3 py-2.5 tabular-nums text-gray-700">{formatValidTo(entry.validTo, entry.openEnded)}</td>
                     <td className="px-3 py-2.5 text-gray-600">{entry.remarks?.trim() || '—'}</td>
@@ -1036,6 +1087,15 @@ export function PriceCardHandlingSection({
           </div>
         </div>
 
+        <MissingRateCardAircraftNotice
+          api={api}
+          stationCode={stationCode}
+          handlingType={selectedHandling}
+          customerCode={selectedBhsAirlineGroup.customerCode}
+          airlineName={selectedBhsAirlineGroup.airlineName}
+          rateCardRows={openAirlineRateCardRows}
+        />
+
         <BhsAirlineCategoryRateCards
           group={selectedBhsAirlineGroup}
           handling={selectedHandling}
@@ -1108,6 +1168,15 @@ export function PriceCardHandlingSection({
       : [];
 
     return (
+      <>
+      <MissingRateCardAircraftNotice
+        api={api}
+        stationCode={stationCode}
+        handlingType={selectedHandling}
+        customerCode={selectedCustomerCode}
+        airlineName={openAirlineName}
+        rateCardRows={openAirlineRateCardRows}
+      />
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <button
           type="button"
@@ -1222,6 +1291,7 @@ export function PriceCardHandlingSection({
           </span>
         ) : null}
       </div>
+      </>
     );
   }
 

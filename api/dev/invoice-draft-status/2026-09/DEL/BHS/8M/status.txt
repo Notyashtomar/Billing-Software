@@ -1,0 +1,11 @@
+status: DRAFT
+month: 2026-09
+station: DEL
+service: BHS
+airline: 8M
+airlineName: MYANMAR AIRWAYS INTERNATIONAL COMPANY LIMITED
+contracts: none on an active contract
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/DEL/20261005/81702546 | draft | 2026-09-16 to 2026-09-30 | USD 7,24,036.06
+- DRAFT/DEL/20261005/81734480 | draft | 2026-09-01 to 2026-09-15 | USD 6,10,545.54

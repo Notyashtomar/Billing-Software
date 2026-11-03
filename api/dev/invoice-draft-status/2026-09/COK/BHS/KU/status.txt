@@ -1,0 +1,10 @@
+status: DRAFT
+month: 2026-09
+station: COK
+service: BHS
+airline: KU
+airlineName: Kuwait Airways
+contracts: KU-COK-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/COK/20261007/60169997 | draft | 2026-09-01 to 2026-09-30 | USD 2,78,075.04

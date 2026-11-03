@@ -36,17 +36,22 @@ import {
   incrementalSecondFlightIds,
 } from '../utils/incremental-flight-price.util';
 import { extractPreparationFlightYmd } from '../utils/contract-fortnight-billing.util';
+import { enumerateYmdRange, isCancelledFlight, ymdToDdMmYyyy } from '../utils/billing-date.util';
+import { resolveBillingCustomerCode } from '../utils/billing-customer-code.util';
+import { resolveAircraftBodyLabel } from '../utils/scheduled-flight-display.util';
 import {
   ADS_WCHR_S_PARTICULAR,
   adsWheelchairChargedParticular,
   adsWheelchairSubtype,
   contractBillsBmeEquipment,
+  cumulativeMonthlyFreeUnits,
   isBmeAdsEquipmentLabel,
   isWchrSCombinedAdsService,
   resolveAdsPricingFromContractRule,
   type AdsEquipmentInclusionContract,
   type AdsEquipmentInclusionRule,
   type AdsWheelchairSubtype,
+  type AirlineFlightCensus,
 } from '../shared/ads-equipment-inclusion.util';
 import { preparationInvoiceCategory } from '../common/billing-invoice-period.util';
 import {
@@ -696,6 +701,8 @@ export class InvoiceEngineService {
   /**
    * ADS / equipment / manpower: per-flight free allowance, then sum for the period.
    * Per flight: Charged = max(0, Used − freeAllowance); invoice line sums charged.
+   * Equipment marked cumulative monthly basis uses FOC × the airline’s flights
+   * in the billing month, then charges only the excess of the month’s usage.
    */
   private async composeAdsLines(
     ctx: StationScopeContext,
@@ -721,6 +728,8 @@ export class InvoiceEngineService {
       chargePercent: number;
       feeConcessionPercent: number;
       concessionAppliedToUnitPrice: boolean;
+      cumulativeMonthly: boolean;
+      cumulativeRule: CumulativeMonthlyRule | null;
       records: BillingPreparationRecordDocument[];
     };
 
@@ -741,6 +750,8 @@ export class InvoiceEngineService {
       turnaroundCrew: boolean;
       feeConcessionPercent: number;
       wheelchairKind: AdsWheelchairSubtype | null;
+      cumulativeMonthly: boolean;
+      cumulativeRule: CumulativeMonthlyRule | null;
     };
     const pending: PendingAdsUse[] = [];
 
@@ -914,15 +925,26 @@ export class InvoiceEngineService {
         continue;
       }
 
+      const cumulativeMonthly = Boolean(liveAds.cumulativeMonthlyBasis);
+      const cumulativeRule: CumulativeMonthlyRule | null = cumulativeMonthly
+        ? {
+            serviceCode: String(liveAds.serviceCode ?? '').trim(),
+            freePerFlight: liveAds.ruleFreePerFlight,
+            freePerFlightNb: liveAds.ruleFreePerFlightNb,
+            freePerFlightWb: liveAds.ruleFreePerFlightWb,
+          }
+        : null;
       const effectiveFree = manpowerLine
         ? 0
-        : liveAds.matched
-          ? toWholeAdsUnits(
-              Number.isFinite(liveAds.freePerFlight) && liveAds.freePerFlight > 0
-                ? liveAds.freePerFlight
-                : 0,
-            )
-          : freeAllowance;
+        : cumulativeMonthly
+          ? 0
+          : liveAds.matched
+            ? toWholeAdsUnits(
+                Number.isFinite(liveAds.freePerFlight) && liveAds.freePerFlight > 0
+                  ? liveAds.freePerFlight
+                  : 0,
+              )
+            : freeAllowance;
       const billedUnitPrice =
         liveAds.matched && liveAds.unitPrice != null && liveAds.unitPrice > 0
           ? liveAds.unitPrice
@@ -983,6 +1005,8 @@ export class InvoiceEngineService {
           isTurnaroundFlightContext(snap, snap.flightNo ?? snap.flightNoEquipmentNo),
         feeConcessionPercent,
         wheelchairKind,
+        cumulativeMonthly,
+        cumulativeRule,
       });
     }
 
@@ -1046,6 +1070,8 @@ export class InvoiceEngineService {
           chargePercent,
           feeConcessionPercent: head.feeConcessionPercent,
           concessionAppliedToUnitPrice,
+          cumulativeMonthly: Boolean(head.cumulativeMonthly),
+          cumulativeRule: head.cumulativeRule,
           records: [],
         } satisfies AdsBucket);
 
@@ -1063,9 +1089,25 @@ export class InvoiceEngineService {
       }
       bucket.chargedWchr = bucket.chargedWchr || chargedWchr;
       bucket.chargedWchs = bucket.chargedWchs || chargedWchs;
+      if (head.cumulativeMonthly) {
+        bucket.cumulativeMonthly = true;
+        bucket.cumulativeRule = head.cumulativeRule ?? bucket.cumulativeRule;
+      }
       for (const row of rows) bucket.records.push(row.rec);
       if (!bucket.pricingBasis && head.pricingBasis) bucket.pricingBasis = head.pricingBasis;
       map.set(key, bucket);
+    }
+
+    if (pending.some((row) => row.cumulativeMonthly)) {
+      const head = records[0];
+      let census = await this.airlineFlightCensusForAds(
+        ctx,
+        String(head?.customerCode ?? ''),
+        head?.billingPeriodStart,
+        head?.billingPeriodEnd,
+      );
+      if (census.total <= 0) census = censusFromAdsFlights(pending);
+      applyCumulativeMonthlyPools([...map.values()], census);
     }
 
     const lines: Omit<ComposedInvoiceLine, 'lineNo'>[] = [];
@@ -1127,6 +1169,86 @@ export class InvoiceEngineService {
     }
 
     return lines;
+  }
+
+  /**
+   * Flights of this airline in the ADS billing month. Each flight contributes
+   * one FOC multiple for equipment marked cumulative monthly basis.
+   */
+  private async airlineFlightCensusForAds(
+    ctx: StationScopeContext,
+    customerCode: string,
+    periodStart: Date | undefined,
+    periodEnd: Date | undefined,
+  ): Promise<AirlineFlightCensus> {
+    const empty: AirlineFlightCensus = { total: 0, nb: 0, wb: 0 };
+    const code = String(customerCode ?? '').trim().toUpperCase();
+    const fromYmd = utcYmd(periodStart);
+    const toYmd = utcYmd(periodEnd);
+    if (!code || !fromYmd || !toYmd || !String(ctx?.stationCode ?? '').trim()) return empty;
+    const dates = staDateCandidates(fromYmd, toYmd);
+    if (dates.length === 0) return empty;
+    const escaped = code.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const prefix = new RegExp(`^${escaped}(\\d|$)`, 'i');
+    try {
+      const docs = await this.fhrModel
+        .find(
+          StationScope.filter(
+            {
+              $and: [
+                {
+                  $or: [
+                    { staDates: { $in: dates } },
+                    { 'mainDetails.STADate': { $in: dates } },
+                    { 'mainDetails.staDate': { $in: dates } },
+                    { 'terminalDetails.STADate': { $in: dates } },
+                  ],
+                },
+                {
+                  $or: [
+                    { 'mainDetails.Arline_Code': code },
+                    { 'mainDetails.airlineCode': code },
+                    { 'mainDetails.AirlineCode': code },
+                    { 'mainDetails.customerCode': code },
+                    { 'mainDetails.Arline_Code': prefix },
+                    { 'mainDetails.airlineCode': prefix },
+                  ],
+                },
+              ],
+            },
+            ctx,
+          ),
+        )
+        .select('SerialNo mainDetails terminalDetails')
+        .lean();
+      const seen = new Set<string>();
+      const census: AirlineFlightCensus = { total: 0, nb: 0, wb: 0 };
+      for (const doc of docs) {
+        const main = ((doc as { mainDetails?: Record<string, unknown> }).mainDetails ??
+          {}) as Record<string, unknown>;
+        const terminal = ((doc as { terminalDetails?: Record<string, unknown> }).terminalDetails ??
+          {}) as Record<string, unknown>;
+        if (isCancelledFlight({ ...terminal, ...main })) continue;
+        const airline = resolveBillingCustomerCode(main, {}, '').toUpperCase();
+        if (airline !== code) continue;
+        const serial = String((doc as { SerialNo?: unknown }).SerialNo ?? '').trim();
+        const key = serial ? `s:${serial}` : `row:${seen.size}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        census.total += 1;
+        const aircraftType = String(
+          main.TypeCraft ?? main.typeCraft ?? main.AircraftType ?? main.aircraftType ?? '',
+        ).trim();
+        const body = aircraftType
+          ? resolveAircraftBodyLabel(main, aircraftType, null)
+          : '';
+        if (body === 'WB') census.wb += 1;
+        else if (body === 'NB') census.nb += 1;
+      }
+      return census;
+    } catch {
+      return empty;
+    }
   }
 
   /**
@@ -1758,6 +1880,95 @@ function uniquePreparationRecords(
     out.push(rec);
   }
   return out;
+}
+
+type CumulativeMonthlyRule = {
+  serviceCode: string;
+  freePerFlight: number;
+  freePerFlightNb: number | null;
+  freePerFlightWb: number | null;
+};
+
+type CumulativePoolBucket = {
+  equipmentServiceCode: string;
+  used: number;
+  charged: number;
+  freeAllowance: number;
+  cumulativeMonthly?: boolean;
+  cumulativeRule?: CumulativeMonthlyRule | null;
+};
+
+/** FOC × flights, then charge only the month’s excess for that equipment. */
+function applyCumulativeMonthlyPools(
+  buckets: CumulativePoolBucket[],
+  census: AirlineFlightCensus,
+): void {
+  const groups = new Map<string, CumulativePoolBucket[]>();
+  for (const bucket of buckets) {
+    if (!bucket.cumulativeMonthly || !bucket.cumulativeRule) continue;
+    const key = bucket.equipmentServiceCode.trim().toLowerCase();
+    const list = groups.get(key);
+    if (list) list.push(bucket);
+    else groups.set(key, [bucket]);
+  }
+  for (const group of groups.values()) {
+    const rule = group[0]?.cumulativeRule;
+    if (!rule) continue;
+    const free = cumulativeMonthlyFreeUnits(rule, census);
+    const used = group.reduce((sum, bucket) => sum + bucket.used, 0);
+    const charged = toWholeAdsUnits(Math.max(0, used - free));
+    const ordered = [...group].sort((a, b) => b.used - a.used);
+    let remaining = charged;
+    ordered.forEach((bucket, index) => {
+      const share =
+        index === ordered.length - 1
+          ? remaining
+          : toWholeAdsUnits(used > 0 ? (charged * bucket.used) / used : 0);
+      const take = Math.min(Math.max(0, remaining), Math.max(0, share));
+      bucket.charged = take;
+      remaining -= take;
+    });
+    const carrier = ordered.find((bucket) => bucket.charged > 0) ?? ordered[0];
+    for (const bucket of ordered) {
+      bucket.freeAllowance = bucket === carrier ? free : 0;
+    }
+  }
+}
+
+function censusFromAdsFlights(
+  rows: Array<{ flightKey: string; aircraftType: string }>,
+): AirlineFlightCensus {
+  const seen = new Map<string, string>();
+  for (const row of rows) {
+    if (!row.flightKey || seen.has(row.flightKey)) continue;
+    const aircraftType = String(row.aircraftType ?? '').trim();
+    const body = aircraftType ? resolveAircraftBodyLabel({}, aircraftType, null) : '';
+    seen.set(row.flightKey, body);
+  }
+  const census: AirlineFlightCensus = { total: 0, nb: 0, wb: 0 };
+  for (const body of seen.values()) {
+    census.total += 1;
+    if (body === 'WB') census.wb += 1;
+    else if (body === 'NB') census.nb += 1;
+  }
+  return census;
+}
+
+function utcYmd(value: Date | undefined): string {
+  if (!value) return '';
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toISOString().slice(0, 10);
+}
+
+function staDateCandidates(fromYmd: string, toYmd: string): string[] {
+  const out = new Set<string>();
+  for (const ymd of enumerateYmdRange(fromYmd, toYmd)) {
+    out.add(ymd);
+    const dmy = ymdToDdMmYyyy(ymd);
+    if (dmy) out.add(dmy);
+  }
+  return [...out];
 }
 
 /** One FHR flight. Several equipment lines on that flight share one free allowance. */
