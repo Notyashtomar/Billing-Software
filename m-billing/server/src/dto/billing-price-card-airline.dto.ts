@@ -34,8 +34,8 @@ export class CreateBillingPriceCardAirlineRowDto {
   @IsString()
   aircraftType: string;
 
-  @IsEnum(['Dom', 'Int', 'Ta'])
-  category: 'Dom' | 'Int' | 'Ta';
+  @IsEnum(['Dom', 'Int', 'Ta', 'DomCargo', 'IntCargo'])
+  category: 'Dom' | 'Int' | 'Ta' | 'DomCargo' | 'IntCargo';
 
   @IsOptional()
   @IsNumber()
@@ -85,8 +85,8 @@ export class UpdateBillingPriceCardAirlineDto {
   @IsString()
   aircraftType: string;
 
-  @IsEnum(['Dom', 'Int', 'Ta'])
-  category: 'Dom' | 'Int' | 'Ta';
+  @IsEnum(['Dom', 'Int', 'Ta', 'DomCargo', 'IntCargo'])
+  category: 'Dom' | 'Int' | 'Ta' | 'DomCargo' | 'IntCargo';
 
   @IsOptional()
   @IsNumber()

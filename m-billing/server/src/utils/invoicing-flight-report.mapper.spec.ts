@@ -25,6 +25,20 @@ describe('mapFhrToInvoicingFlightReportRow customer fields', () => {
     expect(row.customerName).toBe('Air India Express');
   });
 
+  it('stores one flight number when arrival and departure are the same', () => {
+    const row = mapFhrToInvoicingFlightReportRow(218140, {
+      SerialNo: 218140,
+      mainDetails: {
+        Airline: 'China Airlines Cargo',
+        Arline_Code: 'CIF',
+        ArrivalFltNo: 'CI5637',
+        DepartureFltNo: 'CI5637',
+        Cate_of_Flight: 'International-Cargo',
+      },
+    });
+    expect(row.flightNoEquipmentNo).toBe('CI5637');
+  });
+
   it('shows the stored CANC flight number instead of the split legs', () => {
     const row = mapFhrToInvoicingFlightReportRow(127621, {
       SerialNo: 127621,

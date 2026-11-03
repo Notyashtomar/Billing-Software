@@ -1,6 +1,7 @@
 import {
-  normalizeFlightCategory,
+  normalizeStoredFlightCategory,
   pickBestRateCardForFlight,
+  rateCardMatchesFlightCategory,
 } from './aircraft-type-match.util';
 import type { BillingCurrency } from './billing-currency.util';
 
@@ -94,10 +95,7 @@ function openingVolumeBand(label: string): { to: number } | null {
 }
 
 function sameFlightCategory(entryCategory: string, flightCategory: string): boolean {
-  const flight = normalizeFlightCategory(flightCategory);
-  const card = normalizeFlightCategory(entryCategory);
-  if (!flight || !card) return true;
-  return flight === card;
+  return rateCardMatchesFlightCategory({ category: entryCategory }, flightCategory);
 }
 
 /**
@@ -107,8 +105,13 @@ function sameFlightCategory(entryCategory: string, flightCategory: string): bool
  * Freighter cards: prefer TRND/Turnaround over Transit/Technical variants.
  */
 function pickBaseHandlingBand(rows: BhsPackagePriceRow[], flightCategory: string): BhsPackagePriceRow {
+  const flightCat = normalizeStoredFlightCategory(flightCategory);
+  const exactCategory = flightCat
+    ? rows.filter((entry) => normalizeStoredFlightCategory(entry.category) === flightCat)
+    : [];
   const sameCategory = rows.filter((entry) => sameFlightCategory(entry.category, flightCategory));
-  const pool = sameCategory.length > 0 ? sameCategory : rows;
+  const pool =
+    exactCategory.length > 0 ? exactCategory : sameCategory.length > 0 ? sameCategory : rows;
   const opening = pool.filter((entry) => {
     const text = packageSearchText(entry);
     if (!isComprehensiveLabel(text) || isRampLabel(text)) return false;

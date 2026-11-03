@@ -17,6 +17,11 @@ describe('stripCancelledFlightPrefix', () => {
     expect(stripCancelledFlightPrefix('CANCIX472/CANCIX473')).toBe('IX472/IX473');
   });
 
+  it('collapses a flight number repeated on both legs', () => {
+    expect(stripCancelledFlightPrefix('CI5637/CI5637')).toBe('CI5637');
+    expect(stripCancelledFlightPrefix('CI5637/CI5640')).toBe('CI5637/CI5640');
+  });
+
   it('does not treat the word cancelled as a flight prefix', () => {
     expect(stripCancelledFlightPrefix('CANCELLED')).toBe('CANCELLED');
   });

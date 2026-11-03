@@ -31,7 +31,10 @@ function resolveBillingFlightNo(
     if (/^CANC/i.test(compact)) return compact;
   }
   if (m.DepartureFltNo && m.ArrivalFltNo) {
-    return `${m.ArrivalFltNo}/${m.DepartureFltNo}`;
+    const arrival = String(m.ArrivalFltNo).trim();
+    const departure = String(m.DepartureFltNo).trim();
+    if (arrival.toUpperCase() === departure.toUpperCase()) return arrival;
+    return `${arrival}/${departure}`;
   }
   return pick(m.DepartureFltNo, m.ArrivalFltNo, t.FlightNo, dailyData?.flightNo);
 }

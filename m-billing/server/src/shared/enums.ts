@@ -14,9 +14,11 @@ export type CurrencyCode = (typeof CURRENCY_CODES)[number];
 export const CONTRACT_CATEGORIES = ['Dom', 'Int', 'Both'] as const;
 export type ContractCategory = (typeof CONTRACT_CATEGORIES)[number];
 
-export const PRICE_CARD_AIRLINE_CATEGORIES = ['Dom', 'Int'] as const;
+export const PRICE_CARD_AIRLINE_CATEGORIES = ['Dom', 'Int', 'DomCargo', 'IntCargo'] as const;
 /** Includes legacy `Ta` (Turnaround) still present on older stored rows. */
-export type PriceCardAirlineCategory = 'Dom' | 'Int' | 'Ta';
+export type PriceCardAirlineCategory =
+  | (typeof PRICE_CARD_AIRLINE_CATEGORIES)[number]
+  | 'Ta';
 
 export const CONTRACT_STATUSES = ['draft', 'active', 'expired'] as const;
 export type ContractStatus = (typeof CONTRACT_STATUSES)[number];

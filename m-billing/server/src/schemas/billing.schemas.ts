@@ -729,7 +729,7 @@ export class BillingPriceCardAirline {
   @Prop({ required: true, trim: true })
   aircraftType: string;
 
-  @Prop({ required: true, enum: ['Dom', 'Int', 'Ta'] })
+  @Prop({ required: true, enum: ['Dom', 'Int', 'Ta', 'DomCargo', 'IntCargo'] })
   category: string;
 
   /** BHS handling — unit price from the airline price card. */
