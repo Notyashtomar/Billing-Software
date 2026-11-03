@@ -1,0 +1,10 @@
+status: DRAFT
+month: 2026-08
+station: DEL
+service: BHS
+airline: KB
+airlineName: DRUK AIR CORPORATION LIMITED
+contracts: KB-DEL-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/DEL/20261005/45825389 | draft | 2026-08-01 to 2026-08-31 | USD 70,85,683.02

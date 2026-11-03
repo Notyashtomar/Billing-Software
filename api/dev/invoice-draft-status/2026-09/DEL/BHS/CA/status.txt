@@ -1,0 +1,10 @@
+status: DRAFT
+month: 2026-09
+station: DEL
+service: BHS
+airline: CA
+airlineName: Air China Limited
+contracts: CA-DEL-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/DEL/20261001/23621874 | draft | 2026-09-01 to 2026-09-30 | USD 60,70,745.44

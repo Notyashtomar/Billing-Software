@@ -1,0 +1,10 @@
+status: DRAFT
+month: 2026-09
+station: HYD
+service: BHS
+airline: GF
+airlineName: Gulf Air
+contracts: GF-HYD-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/HYD/20261001/61502200 | draft | 2026-09-01 to 2026-09-30 | USD 53,10,038.56

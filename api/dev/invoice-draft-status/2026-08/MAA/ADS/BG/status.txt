@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-08
+station: MAA
+service: ADS
+airline: BG
+airlineName: Biman Bangladesh
+contracts: BG-BAS-MAA-SGHA, BG-MAA-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

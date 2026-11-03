@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import {
   Download,
   Eye,
+  FileText,
   FileSpreadsheet,
   Pencil,
   Plus,
@@ -660,6 +661,18 @@ export function ContractsPage({ api }: Props) {
     return rows.length;
   }, [deleteMode, selected.size, rows.length]);
 
+  const openSignedContractPdf = async (row: BillingContract) => {
+    setError('');
+    try {
+      const blob = await api.getContractSignedPdf(row._id);
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank', 'noopener,noreferrer');
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not open the signed contract PDF');
+    }
+  };
+
   const downloadContractPdf = async (row: BillingContract) => {
     setDownloadingPdfId(row._id);
     setError('');
@@ -1004,6 +1017,17 @@ export function ContractsPage({ api }: Props) {
                       >
                         <Eye className="h-4 w-4" aria-hidden />
                       </button>
+                      {r.contractPdfFileName ? (
+                        <button
+                          type="button"
+                          onClick={() => void openSignedContractPdf(r)}
+                          className={contractUi.iconBtn}
+                          aria-label={`Open signed contract PDF ${r.contractPdfFileName}`}
+                          title={`Signed PDF: ${r.contractPdfFileName}`}
+                        >
+                          <FileText className="h-4 w-4" aria-hidden />
+                        </button>
+                      ) : null}
                       <button
                         type="button"
                         disabled={downloadingPdfId === r._id}
@@ -1157,6 +1181,17 @@ export function ContractsPage({ api }: Props) {
                       >
                         <Eye className="h-4 w-4" aria-hidden />
                       </button>
+                      {r.contractPdfFileName ? (
+                        <button
+                          type="button"
+                          onClick={() => void openSignedContractPdf(r)}
+                          className={contractUi.iconBtn}
+                          aria-label={`Open signed contract PDF ${r.contractPdfFileName}`}
+                          title={`Signed PDF: ${r.contractPdfFileName}`}
+                        >
+                          <FileText className="h-4 w-4" aria-hidden />
+                        </button>
+                      ) : null}
                       <button
                         type="button"
                         disabled={downloadingPdfId === r._id}

@@ -1,0 +1,11 @@
+status: DRAFT
+month: 2026-09
+station: DEL
+service: BHS
+airline: SZ
+airlineName: AIR COMPANY SOMON AIR LLC
+contracts: SZ-DEL-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/DEL/20261001/85500004 | draft | 2026-09-16 to 2026-09-30 | USD 6,97,240.98
+- DRAFT/DEL/20261001/85609888 | draft | 2026-09-01 to 2026-09-15 | USD 6,96,820.38

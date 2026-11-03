@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-04
+station: HYD
+service: BHS
+airline: FITS
+airlineName: Fits Aviation
+contracts: FITS-HYD-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

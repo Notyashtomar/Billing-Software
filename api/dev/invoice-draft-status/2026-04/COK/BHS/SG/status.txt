@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-04
+station: COK
+service: BHS
+airline: SG
+airlineName: Spice Jet
+contracts: SG-COK-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

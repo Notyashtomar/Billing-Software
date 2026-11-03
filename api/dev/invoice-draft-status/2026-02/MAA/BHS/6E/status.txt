@@ -1,0 +1,10 @@
+status: APPROVED
+month: 2026-02
+station: MAA
+service: BHS
+airline: 6E
+airlineName: Indigo Airlines
+contracts: none on an active contract
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/MAA/20260707/0010 | approved | 2026-02-28 to 2026-03-31 | INR 3,37,881.2

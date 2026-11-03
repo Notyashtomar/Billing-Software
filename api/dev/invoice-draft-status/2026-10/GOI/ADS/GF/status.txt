@@ -1,0 +1,10 @@
+status: DRAFT
+month: 2026-10
+station: GOI
+service: ADS
+airline: GF
+airlineName: Gulf Air
+contracts: GF-GOI-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/GOI/20261102/72756922 | draft | 2026-10-01 to 2026-10-31 | USD 1,22,284.73

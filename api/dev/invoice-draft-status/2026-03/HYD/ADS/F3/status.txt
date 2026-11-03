@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-03
+station: HYD
+service: ADS
+airline: F3
+airlineName: Flyadeal
+contracts: F3-HYD-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

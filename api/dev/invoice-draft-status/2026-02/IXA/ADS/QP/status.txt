@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-02
+station: IXA
+service: ADS
+airline: QP
+airlineName: Akasa Air
+contracts: QP-IXA-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

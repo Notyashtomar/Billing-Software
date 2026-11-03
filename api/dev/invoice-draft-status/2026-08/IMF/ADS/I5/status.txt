@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-08
+station: IMF
+service: ADS
+airline: I5
+airlineName: AIX Connect
+contracts: I5-IMF-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

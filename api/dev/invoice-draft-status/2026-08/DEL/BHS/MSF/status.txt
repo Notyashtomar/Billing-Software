@@ -1,0 +1,11 @@
+status: DRAFT
+month: 2026-08
+station: DEL
+service: BHS
+airline: MSF
+airlineName: EgyptAir Cargo
+contracts: none on an active contract
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/DEL/20261007/49266190 | draft | 2026-08-01 to 2026-08-31 | USD 4,20,501.66
+- DRAFT/DEL/20261007/49308153 | draft | 2026-08-01 to 2026-08-31 | USD 5,36,829.19

@@ -1,0 +1,10 @@
+status: DRAFT
+month: 2026-08
+station: DEL
+service: BHS
+airline: WY
+airlineName: OMAN AIR SAOC
+contracts: WY-DEL-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/DEL/20261005/45385198 | draft | 2026-08-01 to 2026-08-31 | USD 63,37,242.97

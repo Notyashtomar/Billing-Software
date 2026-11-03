@@ -1,0 +1,10 @@
+status: DRAFT
+month: 2026-09
+station: COK
+service: BHS
+airline: WY
+airlineName: Oman Air
+contracts: WY-COK-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/COK/20261007/60024802 | draft | 2026-09-01 to 2026-09-30 | USD 1,46,29,303.22

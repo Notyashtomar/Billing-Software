@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-07
+station: GOI
+service: BHS
+airline: QP
+airlineName: Akasa Air
+contracts: QP-GOI-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-09
+station: DEL
+service: BHS
+airline: KE
+airlineName: KOREAN AIRLINES CO LTD
+contracts: KE-DEL-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

@@ -1,0 +1,10 @@
+status: DRAFT
+month: 2026-08
+station: DEL
+service: BHS
+airline: C6
+airlineName: Centrum Air
+contracts: C6-DEL-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/DEL/20261005/45691982 | draft | 2026-08-01 to 2026-08-31 | USD 48,71,336.69

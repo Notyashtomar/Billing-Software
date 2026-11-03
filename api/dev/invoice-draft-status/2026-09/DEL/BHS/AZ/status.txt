@@ -1,0 +1,10 @@
+status: DRAFT
+month: 2026-09
+station: DEL
+service: BHS
+airline: AZ
+airlineName: Ita Airways
+contracts: AZ-DEL-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/DEL/20261001/23071683 | draft | 2026-09-01 to 2026-09-30 | INR 50,27,654.32

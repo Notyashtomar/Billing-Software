@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-09
+station: HYD
+service: ADS
+airline: QRF
+airlineName: Qatar Cargo Airways
+contracts: QRF-HYD-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

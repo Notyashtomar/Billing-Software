@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-05
+station: CJB
+service: ADS
+airline: SG
+airlineName: Spice Jet
+contracts: SG-CJB-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

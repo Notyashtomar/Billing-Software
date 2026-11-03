@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-03
+station: DEL
+service: ADS
+airline: TK
+airlineName: Turkish Airline
+contracts: TK-DEL-CARGO
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

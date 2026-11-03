@@ -1,0 +1,10 @@
+status: DRAFT
+month: 2026-09
+station: DEL
+service: BHS
+airline: UA
+airlineName: UNITED AIRLINES INC.
+contracts: UA-DEL-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/DEL/20261001/22511814 | draft | 2026-09-01 to 2026-09-30 | INR 71,61,172.2

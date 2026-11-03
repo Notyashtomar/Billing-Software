@@ -1,0 +1,10 @@
+status: DRAFT
+month: 2026-09
+station: DEL
+service: BHS
+airline: TG
+airlineName: Thai Airways International Public Company Limited
+contracts: TG-DEL-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/DEL/20261001/21299666 | draft | 2026-09-01 to 2026-09-30 | INR 1,99,86,868.79

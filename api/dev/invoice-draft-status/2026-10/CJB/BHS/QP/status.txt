@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-10
+station: CJB
+service: BHS
+airline: QP
+airlineName: Akasa Airline (No New Agreement)
+contracts: QP-CJB-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

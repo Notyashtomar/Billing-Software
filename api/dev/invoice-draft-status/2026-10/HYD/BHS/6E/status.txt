@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-10
+station: HYD
+service: BHS
+airline: 6E
+airlineName: Interglobe Aviation
+contracts: 6E-HYD-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

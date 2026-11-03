@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-06
+station: DEL
+service: BHS
+airline: LH
+airlineName: LUFTHANSA GERMAN AIRLINES
+contracts: LH-DEL-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-06
+station: CJB
+service: BHS
+airline: G9
+airlineName: Air Arabia
+contracts: G9-CJB-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

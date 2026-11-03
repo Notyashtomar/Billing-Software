@@ -1,0 +1,10 @@
+status: DRAFT
+month: 2026-09
+station: DEL
+service: BHS
+airline: AF
+airlineName: AIR FRANCE
+contracts: AF-DEL-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/DEL/20261001/22993120 | draft | 2026-09-01 to 2026-09-30 | INR 70,28,847

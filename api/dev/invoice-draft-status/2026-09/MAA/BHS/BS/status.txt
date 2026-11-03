@@ -1,0 +1,10 @@
+status: DRAFT
+month: 2026-09
+station: MAA
+service: BHS
+airline: BS
+airlineName: Us-bangla Airlines
+contracts: US-BAS-MAA-SGHA, BS-MAA-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/MAA/20261001/91762083 | draft | 2026-09-01 to 2026-09-30 | INR 9,38,654.6

@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-06
+station: DEL
+service: ADS
+airline: PAE
+airlineName: Pradhaan Air
+contracts: PAE-DEL-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-04
+station: DEL
+service: ADS
+airline: DHL
+airlineName: DHL Aviation
+contracts: DHL-DEL-CARGO
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

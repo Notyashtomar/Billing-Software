@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-06
+station: HYD
+service: ADS
+airline: FD
+airlineName: Thai Air Asia
+contracts: FD-HYD-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

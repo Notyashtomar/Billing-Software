@@ -1,0 +1,11 @@
+status: DRAFT
+month: 2026-07
+station: MAA
+service: BHS
+airline: IX
+airlineName: Air India Express
+contracts: IX-MAA-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/MAA/20260812/34853118 | draft | 2026-07-01 to 2026-07-31 | INR 13,093.51
+- DRAFT/MAA/20260812/54449141 | draft | 2026-07-01 to 2026-07-31 | INR 64,68,191.08

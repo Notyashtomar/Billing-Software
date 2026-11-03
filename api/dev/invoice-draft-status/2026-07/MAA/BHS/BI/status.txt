@@ -1,0 +1,10 @@
+status: DRAFT
+month: 2026-07
+station: MAA
+service: BHS
+airline: BI
+airlineName: Royal Brunei
+contracts: BI-MAA-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/MAA/20260811/79272606 | draft | 2026-07-01 to 2026-07-31 | INR 7,751.18

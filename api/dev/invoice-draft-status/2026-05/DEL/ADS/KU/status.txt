@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-05
+station: DEL
+service: ADS
+airline: KU
+airlineName: KUWAIT AIRWAYS COMPANY
+contracts: KU-DEL-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

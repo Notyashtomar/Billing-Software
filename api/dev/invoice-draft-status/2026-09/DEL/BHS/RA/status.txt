@@ -1,0 +1,11 @@
+status: DRAFT
+month: 2026-09
+station: DEL
+service: BHS
+airline: RA
+airlineName: NEPAL AIRLINES CORPORATION
+contracts: RA-DEL-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/DEL/20261001/85019596 | draft | 2026-09-16 to 2026-09-30 | USD 29,67,982.92
+- DRAFT/DEL/20261001/85143311 | draft | 2026-09-01 to 2026-09-15 | USD 37,42,915.04

@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-04
+station: IXA
+service: ADS
+airline: IX
+airlineName: Air India Express
+contracts: IX-IXA-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

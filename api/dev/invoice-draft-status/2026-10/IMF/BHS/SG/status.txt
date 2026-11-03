@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-10
+station: IMF
+service: BHS
+airline: SG
+airlineName: SpiceJet
+contracts: SG-IMF-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

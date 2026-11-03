@@ -1,0 +1,10 @@
+status: DRAFT
+month: 2026-09
+station: DEL
+service: BHS
+airline: CX
+airlineName: CATHAY PACIFIC AIRWAYS LTD
+contracts: CX-DEL-CARGO
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/DEL/20261020/51429715 | draft | 2026-09-01 to 2026-09-30 | INR 27,33,285.92

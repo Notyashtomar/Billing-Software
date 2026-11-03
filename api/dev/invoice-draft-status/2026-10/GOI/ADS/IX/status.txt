@@ -1,0 +1,10 @@
+status: DRAFT
+month: 2026-10
+station: GOI
+service: ADS
+airline: IX
+airlineName: Air India Express
+contracts: IX-GOI-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/GOI/20261102/58986100 | draft | 2026-10-01 to 2026-10-31 | INR 5,352.48

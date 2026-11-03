@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-07
+station: IXC
+service: BHS
+airline: IX
+airlineName: Air India Express
+contracts: IXC-IX-SGHA, IXC-IX-SGHAA, IX-IXC-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

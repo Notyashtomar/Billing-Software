@@ -1,0 +1,11 @@
+status: DRAFT
+month: 2026-08
+station: DEL
+service: BHS
+airline: HY
+airlineName: Uzbekistan Airways
+contracts: HY-DEL-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/DEL/20260929/57248108 | draft | 2026-08-01 to 2026-08-31 | USD 2,40,751.04
+- DRAFT/DEL/20261005/46039267 | draft | 2026-08-01 to 2026-08-31 | USD 1,04,07,202.52

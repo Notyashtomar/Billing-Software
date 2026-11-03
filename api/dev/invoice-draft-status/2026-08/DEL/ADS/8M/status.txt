@@ -1,0 +1,10 @@
+status: DRAFT
+month: 2026-08
+station: DEL
+service: ADS
+airline: 8M
+airlineName: MYANMAR AIRWAYS INTERNATIONAL COMPANY LIMITED
+contracts: none on an active contract
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/DEL/20260921/44503962 | draft | 2026-08-16 to 2026-08-31 | USD 22,499.37

@@ -1,0 +1,10 @@
+status: DRAFT
+month: 2026-08
+station: DEL
+service: BHS
+airline: 6E
+airlineName: Indigo Airlines
+contracts: 6E-DEL-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/DEL/20261005/45784564 | draft | 2026-08-01 to 2026-08-31 | INR 57,08,116.66

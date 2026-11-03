@@ -1,0 +1,10 @@
+status: DRAFT
+month: 2026-08
+station: HYD
+service: ADS
+airline: VJ
+airlineName: Vietjet Aviaton
+contracts: VJ-HYD-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/HYD/20260921/31796633 | draft | 2026-08-01 to 2026-08-31 | INR 2,39,665.08

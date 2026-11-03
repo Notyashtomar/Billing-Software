@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-10
+station: HYD
+service: ADS
+airline: I5
+airlineName: Air Asia
+contracts: I5-HYD-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

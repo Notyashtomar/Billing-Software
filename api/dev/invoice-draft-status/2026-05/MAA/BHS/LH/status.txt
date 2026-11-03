@@ -1,0 +1,11 @@
+status: DRAFT
+month: 2026-05
+station: MAA
+service: BHS
+airline: LH
+airlineName: Lufthansa German Airlines
+contracts: LH-MAA-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/MAA/20260713/53010506 | draft | 2026-05-01 to 2026-05-30 | INR 51,70,170
+- DRAFT/MAA/20260713/85329343 | draft | 2026-05-01 to 2026-05-31 | INR 25,850.86

@@ -3,11 +3,16 @@ import {
   Controller,
   Delete,
   Get,
+  InternalServerErrorException,
   Param,
   Patch,
   Post,
   Query,
+  Res,
+  StreamableFile,
 } from '@nestjs/common';
+import type { Response } from 'express';
+import { SkipTimeout } from 'src/protection/decorators/skip-timeout.decorator';
 import { BillingPageAccess } from '../common/billing-page-access.decorator';
 import {
   BillingContractsService,
@@ -61,6 +66,24 @@ export class BillingContractsController {
     @CurrentBillingActor() actor: { userId: string; userName: string },
   ) {
     return this.contractsService.removeAll(station, actor);
+  }
+
+  @Get(':id/signed-pdf')
+  @SkipTimeout()
+  async signedPdf(
+    @CurrentBillingStation() station: StationScopeContext,
+    @Param('id') id: string,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<StreamableFile> {
+    const file = await this.contractsService.readSignedPdf(station, id);
+    if (!file.data?.length) {
+      throw new InternalServerErrorException('Signed contract PDF is empty');
+    }
+    const fileName = file.fileName.replace(/[\r\n"]/g, '') || 'contract.pdf';
+    res.setHeader('Content-Type', file.contentType || 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="${fileName}"`);
+    res.setHeader('Content-Length', String(file.data.length));
+    return new StreamableFile(Uint8Array.from(file.data));
   }
 
   @Get(':id')

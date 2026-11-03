@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-04
+station: CJB
+service: BHS
+airline: 6E
+airlineName: Interglobe Aviation
+contracts: 6E-CJB-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

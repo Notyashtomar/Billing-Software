@@ -1,0 +1,10 @@
+status: DRAFT
+month: 2026-08
+station: DEL
+service: ADS
+airline: MS
+airlineName: EGYPT AIR
+contracts: MS-DEL-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/DEL/20260921/45987548 | draft | 2026-08-16 to 2026-08-30 | USD 5,54,089.14

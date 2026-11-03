@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-02
+station: MAA
+service: ADS
+airline: EY
+airlineName: Etihad Airways
+contracts: EY-BAS-MAA-SGHA, EY-MAA-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

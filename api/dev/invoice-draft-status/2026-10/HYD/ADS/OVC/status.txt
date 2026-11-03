@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-10
+station: HYD
+service: ADS
+airline: OVC
+airlineName: Salam Air
+contracts: OVC-HYD-CARGO
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

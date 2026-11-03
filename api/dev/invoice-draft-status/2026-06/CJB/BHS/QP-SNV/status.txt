@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-06
+station: CJB
+service: BHS
+airline: QP-SNV
+airlineName: QP-SNV
+contracts: QP-SNV-CJB-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

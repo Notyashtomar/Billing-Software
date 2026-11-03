@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-04
+station: HYD
+service: ADS
+airline: G9
+airlineName: AirArabia
+contracts: G9-HYD-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

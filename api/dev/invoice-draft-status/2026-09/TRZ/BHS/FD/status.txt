@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-09
+station: TRZ
+service: BHS
+airline: FD
+airlineName: Thai AirAsia
+contracts: FD-TRZ-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

@@ -1,0 +1,10 @@
+status: DRAFT
+month: 2026-05
+station: MAA
+service: BHS
+airline: GF
+airlineName: Gulf Air
+contracts: GF-BAS-MAA-SGHA, GF-MAA-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/MAA/20260713/56565346 | draft | 2026-05-01 to 2026-05-31 | USD 25,16,360.96

@@ -1,0 +1,10 @@
+status: DRAFT
+month: 2026-09
+station: DEL
+service: ADS
+airline: KU
+airlineName: KUWAIT AIRWAYS COMPANY
+contracts: KU-DEL-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/DEL/20261020/67259987 | draft | 2026-09-01 to 2026-09-30 | USD 10,10,647.49

@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-03
+station: DEL
+service: ADS
+airline: AF
+airlineName: AIR FRANCE
+contracts: AF-DEL-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

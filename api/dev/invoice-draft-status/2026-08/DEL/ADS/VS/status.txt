@@ -1,0 +1,10 @@
+status: DRAFT
+month: 2026-08
+station: DEL
+service: ADS
+airline: VS
+airlineName: Virgin Atlantic Airways Limited
+contracts: VS-DEL-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/DEL/20260921/37879219 | draft | 2026-08-01 to 2026-08-31 | INR 3,05,109.06

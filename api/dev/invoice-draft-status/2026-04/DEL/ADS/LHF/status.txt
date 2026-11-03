@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-04
+station: DEL
+service: ADS
+airline: LHF
+airlineName: LUFTHANSA CARGO AG
+contracts: LHF-DEL-CARGO
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

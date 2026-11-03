@@ -1,0 +1,10 @@
+status: DRAFT
+month: 2026-09
+station: COK
+service: BHS
+airline: IX
+airlineName: Air India Express Limited
+contracts: IX-COK-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/COK/20261006/45754458 | draft | 2026-09-01 to 2026-09-30 | INR 1,34,39,235.94

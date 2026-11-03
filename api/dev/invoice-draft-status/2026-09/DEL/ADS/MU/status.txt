@@ -1,0 +1,10 @@
+status: DRAFT
+month: 2026-09
+station: DEL
+service: ADS
+airline: MU
+airlineName: CHINA EASTERN AIRLINES CO LTD
+contracts: MU-DEL-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/DEL/20261020/68208205 | draft | 2026-09-01 to 2026-09-30 | USD 5,43,562.32

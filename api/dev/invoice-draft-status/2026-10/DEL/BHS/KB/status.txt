@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-10
+station: DEL
+service: BHS
+airline: KB
+airlineName: DRUK AIR CORPORATION LIMITED
+contracts: KB-DEL-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none

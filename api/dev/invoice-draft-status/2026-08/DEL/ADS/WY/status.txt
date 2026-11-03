@@ -1,0 +1,10 @@
+status: DRAFT
+month: 2026-08
+station: DEL
+service: ADS
+airline: WY
+airlineName: OMAN AIR SAOC
+contracts: WY-DEL-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/DEL/20260921/39754857 | draft | 2026-08-01 to 2026-08-31 | USD 6,91,391.91

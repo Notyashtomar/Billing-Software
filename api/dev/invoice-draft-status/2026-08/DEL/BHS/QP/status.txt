@@ -1,0 +1,10 @@
+status: DRAFT
+month: 2026-08
+station: DEL
+service: BHS
+airline: QP
+airlineName: SNV AVIATION PRIVATE LIMITED AKASA AIR
+contracts: QP-DEL-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts:
+- DRAFT/DEL/20261012/69989596 | draft | 2026-08-01 to 2026-08-31 | INR 2,63,90,540.13

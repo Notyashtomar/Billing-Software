@@ -88,6 +88,18 @@ function sanitizeContractAdsRules(
   return rules.map((rule) => sanitizeAdsRuleAircraftTypes(rule));
 }
 
+function binaryToBuffer(value: unknown): Buffer | null {
+  if (!value) return null;
+  if (Buffer.isBuffer(value)) return value;
+  if (value instanceof Uint8Array) return Buffer.from(value);
+  if (typeof value === 'object' && value && 'buffer' in value) {
+    const buffer = (value as { buffer?: ArrayBuffer | Uint8Array }).buffer;
+    if (buffer instanceof ArrayBuffer) return Buffer.from(new Uint8Array(buffer));
+    if (buffer instanceof Uint8Array) return Buffer.from(buffer);
+  }
+  return null;
+}
+
 @Injectable()
 export class BillingContractsService {
   private readonly logger = new Logger(BillingContractsService.name);
@@ -113,7 +125,11 @@ export class BillingContractsService {
         : {},
       ctx,
     );
-    const items = await this.contractModel.find(filter).sort({ priceValidFrom: -1 }).lean();
+    const items = await this.contractModel
+      .find(filter)
+      .select('-contractPdfBase64')
+      .sort({ priceValidFrom: -1 })
+      .lean();
     return successResponse({
       items: items.map((item) => this.presentContract(item)),
       total: items.length,
@@ -121,10 +137,43 @@ export class BillingContractsService {
   }
 
   async findOne(ctx: StationScopeContext, id: string) {
-    const doc = await this.contractModel.findById(id).lean();
+    const doc = await this.contractModel.findById(id).select('-contractPdfBase64').lean();
     if (!doc) throw new NotFoundException('Contract not found');
     StationScope.assertOwnership(doc, ctx);
     return successResponse(this.presentContract(doc));
+  }
+
+  async readSignedPdf(
+    ctx: StationScopeContext,
+    id: string,
+  ): Promise<{ data: Buffer; fileName: string; contentType: string }> {
+    const doc = await this.contractModel
+      .findById(id)
+      .select('stationCode contractPdfFileName contractPdfContentType contractPdfBase64')
+      .lean();
+    if (!doc) throw new NotFoundException('Contract not found');
+    StationScope.assertOwnership(doc, ctx);
+
+    const stored = await this.signedPdfCollection().findOne({ contractId: doc._id });
+    const storedData = stored ? binaryToBuffer(stored.data) : null;
+    if (storedData && storedData.length > 0) {
+      return {
+        data: storedData,
+        fileName: String(stored?.fileName || doc.contractPdfFileName || 'contract.pdf'),
+        contentType: String(stored?.contentType || doc.contractPdfContentType || 'application/pdf'),
+      };
+    }
+
+    const inline = String(doc.contractPdfBase64 ?? '').trim();
+    if (inline) {
+      return {
+        data: Buffer.from(inline, 'base64'),
+        fileName: String(doc.contractPdfFileName || 'contract.pdf'),
+        contentType: String(doc.contractPdfContentType || 'application/pdf'),
+      };
+    }
+
+    throw new NotFoundException('Signed contract PDF is not on file');
   }
 
   async create(ctx: StationScopeContext, dto: CreateBillingContractDto, actor: BillingActor) {
@@ -187,9 +236,8 @@ export class BillingContractsService {
           fortnightBillingPartCount: fortnightBilling.partCount,
           fortnightBillingRanges: fortnightBilling.ranges ?? [],
           fortnightBillingMonthRates: fortnightBilling.monthRates ?? [],
-          contractPdfFileName: dto.contractPdfFileName,
-          contractPdfContentType: dto.contractPdfContentType,
-          contractPdfBase64: dto.contractPdfBase64,
+          contractPdfFileName: dto.contractPdfBase64 ? dto.contractPdfFileName : undefined,
+          contractPdfContentType: dto.contractPdfBase64 ? dto.contractPdfContentType : undefined,
           contractPdfUploadedAt: dto.contractPdfBase64
             ? dto.contractPdfUploadedAt
               ? new Date(dto.contractPdfUploadedAt)
@@ -200,6 +248,15 @@ export class BillingContractsService {
         ctx,
       ),
     );
+
+    if (dto.contractPdfBase64) {
+      await this.writeSignedPdf(created._id, created.stationCode, created.contractNumber, {
+        fileName: dto.contractPdfFileName,
+        contentType: dto.contractPdfContentType,
+        base64: dto.contractPdfBase64,
+        uploadedAt: created.contractPdfUploadedAt,
+      });
+    }
 
     await this.auditEngine.log({
       entityType: 'contract',
@@ -343,21 +400,27 @@ export class BillingContractsService {
     }
     if (dto.contractPdfBase64 !== undefined) {
       if (!dto.contractPdfBase64) {
+        await this.signedPdfCollection().deleteOne({ contractId: doc._id });
         doc.contractPdfBase64 = undefined;
         doc.contractPdfFileName = undefined;
         doc.contractPdfContentType = undefined;
         doc.contractPdfUploadedAt = undefined;
       } else {
-        doc.contractPdfBase64 = dto.contractPdfBase64;
-        if (dto.contractPdfFileName !== undefined) {
-          doc.contractPdfFileName = dto.contractPdfFileName;
-        }
+        const uploadedAt = dto.contractPdfUploadedAt
+          ? new Date(dto.contractPdfUploadedAt)
+          : new Date();
+        doc.contractPdfBase64 = undefined;
+        doc.contractPdfFileName = dto.contractPdfFileName || doc.contractPdfFileName;
         if (dto.contractPdfContentType !== undefined) {
           doc.contractPdfContentType = dto.contractPdfContentType;
         }
-        doc.contractPdfUploadedAt = dto.contractPdfUploadedAt
-          ? new Date(dto.contractPdfUploadedAt)
-          : new Date();
+        doc.contractPdfUploadedAt = uploadedAt;
+        await this.writeSignedPdf(doc._id, doc.stationCode, doc.contractNumber, {
+          fileName: doc.contractPdfFileName,
+          contentType: doc.contractPdfContentType,
+          base64: dto.contractPdfBase64,
+          uploadedAt,
+        });
       }
     } else {
       if (dto.contractPdfFileName !== undefined) {
@@ -442,6 +505,7 @@ export class BillingContractsService {
     }
 
     const snapshot = doc.toObject();
+    await this.signedPdfCollection().deleteOne({ contractId: doc._id });
     await doc.deleteOne();
 
     await this.auditEngine.log({
@@ -507,6 +571,42 @@ export class BillingContractsService {
       ctx,
     );
     return this.contractModel.findOne(filter).lean();
+  }
+
+  private signedPdfCollection() {
+    const db = this.contractModel.db.db;
+    if (!db) throw new NotFoundException('Contract store is unavailable');
+    return db.collection('billing_contract_pdfs');
+  }
+
+  private async writeSignedPdf(
+    contractId: unknown,
+    stationCode: string,
+    contractNumber: string,
+    file: {
+      fileName?: string;
+      contentType?: string;
+      base64: string;
+      uploadedAt?: Date;
+    },
+  ) {
+    const data = Buffer.from(file.base64, 'base64');
+    if (!data.length) return;
+    await this.signedPdfCollection().updateOne(
+      { contractId },
+      {
+        $set: {
+          contractId,
+          stationCode,
+          contractNumber,
+          fileName: file.fileName || 'contract.pdf',
+          contentType: file.contentType || 'application/pdf',
+          uploadedAt: file.uploadedAt ?? new Date(),
+          data,
+        },
+      },
+      { upsert: true },
+    );
   }
 
   private presentContract<T extends { aircraftTypes?: string[]; adsEquipmentRules?: ContractAdsEquipmentRuleDto[] }>(

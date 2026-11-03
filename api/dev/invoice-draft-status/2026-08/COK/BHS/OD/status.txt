@@ -1,0 +1,9 @@
+status: MISSING
+month: 2026-08
+station: COK
+service: BHS
+airline: OD
+airlineName: Malindo Airlines
+contracts: OD-COK-SGHA
+source: Invoice drafts (draft, pending approval, approved, generated)
+drafts: none
