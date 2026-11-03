@@ -1,6 +1,7 @@
 import {
   aircraftTokenMatchesFlight,
   normalizeFlightCategory,
+  normalizeStoredFlightCategory,
   pickBestRateCardForFlight,
   rateCardMatchesFlightAircraft,
   rateCardMatchesFlightCategory,
@@ -58,6 +59,25 @@ describe('aircraft-type-match.util', () => {
   it('resolves mixed domestic/international labels by departure side', () => {
     expect(normalizeFlightCategory('domestic-international')).toBe('Int');
     expect(normalizeFlightCategory('international-domestic')).toBe('Dom');
+  });
+
+  it('keeps cargo rows distinct and falls back to the parent sector', () => {
+    const international = { aircraftType: 'A330', category: 'Int', validFrom: '2026-01-01' };
+    const cargo = { aircraftType: 'A330', category: 'IntCargo', validFrom: '2026-01-01' };
+    expect(normalizeStoredFlightCategory('International-Cargo')).toBe('IntCargo');
+    expect(normalizeFlightCategory('International-Cargo')).toBe('Int');
+    expect(rateCardMatchesFlightCategory(cargo, 'International-Cargo')).toBe(true);
+    expect(rateCardMatchesFlightCategory(cargo, 'International')).toBe(false);
+    expect(rateCardMatchesFlightCategory(international, 'International-Cargo')).toBe(true);
+    expect(pickBestRateCardForFlight([international, cargo], 'A330', 'International-Cargo')?.category).toBe(
+      'IntCargo',
+    );
+    expect(pickBestRateCardForFlight([international], 'A330', 'International-Cargo')?.category).toBe(
+      'Int',
+    );
+    expect(pickBestRateCardForFlight([international, cargo], 'A330', 'International')?.category).toBe(
+      'Int',
+    );
   });
 
   it('matches rate-card category using departure-side resolution', () => {

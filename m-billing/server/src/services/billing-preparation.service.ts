@@ -194,13 +194,7 @@ export class BillingPreparationService {
     const visibleFilter = withPreparationVisibility(filter);
     const [items, total, tabCounts, scopedTabCounts, scopedCustomCount] =
       await Promise.all([
-        this.preparationModel
-          .find(visibleFilter)
-          .select('-workflowNotes')
-          .sort({ updatedAt: -1 })
-          .skip(skip)
-          .limit(limit)
-          .lean(),
+        this.listPageNewestFirst(visibleFilter, skip, limit),
         this.preparationModel.countDocuments(visibleFilter),
         this.countByStatus(ctx),
         this.countByStatusScoped(scopeFilter),
@@ -235,6 +229,42 @@ export class BillingPreparationService {
         scopedCustomCount,
       },
     );
+  }
+
+  /**
+   * Newest-first page without asking MongoDB to sort full flight documents.
+   * A blocking sort of ADS rows (snapshots included) exceeds the 32MB limit.
+   * Sort keys are only `_id` and `updatedAt`; full rows are loaded for the page.
+   */
+  private async listPageNewestFirst(
+    filter: Record<string, unknown>,
+    skip: number,
+    limit: number,
+  ) {
+    const keys = await this.preparationModel
+      .find(filter)
+      .select({ updatedAt: 1 })
+      .lean<Array<{ _id: Types.ObjectId; updatedAt?: Date }>>();
+
+    keys.sort((a, b) => {
+      const aTime = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+      const bTime = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+      if (bTime !== aTime) return bTime - aTime;
+      return String(b._id).localeCompare(String(a._id));
+    });
+
+    const pageIds = keys.slice(skip, skip + limit).map((row) => row._id);
+    if (pageIds.length === 0) return [];
+
+    const docs = await this.preparationModel
+      .find({ _id: { $in: pageIds } })
+      .select('-workflowNotes')
+      .lean();
+    const order = new Map(pageIds.map((id, index) => [String(id), index]));
+    docs.sort(
+      (a, b) => (order.get(String(a._id)) ?? 0) - (order.get(String(b._id)) ?? 0),
+    );
+    return docs;
   }
 
   /**

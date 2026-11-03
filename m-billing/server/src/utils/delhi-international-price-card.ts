@@ -26,12 +26,14 @@ export function planDelhiInternationalCategoryUpdates(
   const internationalKeys = new Set<string>();
 
   for (const row of rows) {
+    if (isCargoPriceCardCategory(row.category)) continue;
     if (row.category === 'Int') {
       internationalKeys.add(rowKey(row));
     }
   }
 
   for (const row of rows) {
+    if (isCargoPriceCardCategory(row.category)) continue;
     if (row.category === 'Int') continue;
     const key = rowKey(row);
     if (internationalKeys.has(key)) {
@@ -43,6 +45,10 @@ export function planDelhiInternationalCategoryUpdates(
   }
 
   return { updateIds, retireIds };
+}
+
+function isCargoPriceCardCategory(category: string): boolean {
+  return category === 'DomCargo' || category === 'IntCargo';
 }
 
 function rowKey(row: PriceCardCategoryRow): string {

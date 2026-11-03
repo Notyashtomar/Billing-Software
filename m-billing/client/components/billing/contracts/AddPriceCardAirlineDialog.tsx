@@ -380,7 +380,7 @@ export function AddPriceCardAirlineDialog({
               </h2>
               <p className="mt-1 text-sm text-gray-600">
                 {isBhs
-                  ? 'One row per aircraft × flight category (Domestic or International). Enter the fixed BHS package price on each row — service lists are added separately per row.'
+                  ? 'One row per aircraft × flight category (Domestic, International, Domestic-Cargo, or International-Cargo). Enter the fixed BHS package price on each row — service lists are added separately per row.'
                   : 'Select a billing customer — one row is created per aircraft type from schedule and contract data. You can edit every field before saving.'}
               </p>
             </div>

@@ -26,6 +26,24 @@ function canonicalAircraft(value: string): string {
   return AIRCRAFT_CODE_ALIASES[compact] ?? compact;
 }
 
+export type StoredFlightCategory = 'Dom' | 'Int' | 'Ta' | 'DomCargo' | 'IntCargo';
+
+/**
+ * Price-card category, including cargo rows.
+ * Plain flight labels stay Dom / Int / Ta so existing billing keeps its sector.
+ * "International-Cargo" and "Domestic-Cargo" stay distinct from those sectors.
+ */
+export function normalizeStoredFlightCategory(raw: string): StoredFlightCategory | null {
+  const compact = raw.trim().toLowerCase().replace(/[^a-z]/g, '');
+  if (compact === 'domcargo' || compact === 'domesticcargo') return 'DomCargo';
+  if (compact === 'intcargo' || compact === 'internationalcargo') return 'IntCargo';
+  return normalizeFlightCategory(raw);
+}
+
+function isStoredFlightCategory(raw: string): boolean {
+  return normalizeStoredFlightCategory(raw) != null;
+}
+
 export function normalizeFlightCategory(raw: string): 'Dom' | 'Int' | 'Ta' | null {
   const s = raw.trim().toLowerCase();
   if (!s) return null;
@@ -64,10 +82,8 @@ type RateCardAircraftShape = {
 
 function rateCardFlightCategory(
   rateCard: RateCardAircraftShape,
-): 'Dom' | 'Int' | 'Ta' | null {
-  const cat = (rateCard.category ?? '').trim();
-  if (cat === 'Dom' || cat === 'Int' || cat === 'Ta') return cat;
-  return null;
+): StoredFlightCategory | null {
+  return normalizeStoredFlightCategory((rateCard.category ?? '').trim());
 }
 
 export function rateCardAircraftTokens(rateCard: RateCardAircraftShape): string[] {
@@ -87,7 +103,7 @@ export function rateCardAircraftTokens(rateCard: RateCardAircraftShape): string[
   }
 
   const category = (rateCard.category ?? '').trim();
-  if (category && category !== 'Dom' && category !== 'Int' && category !== 'Ta') {
+  if (category && !isStoredFlightCategory(category)) {
     for (const part of category.split(/[/,]+/)) {
       const token = part.trim();
       if (token) tokens.push(token);
@@ -130,10 +146,24 @@ export function rateCardMatchesFlightCategory(
   categoryOfFlight: string,
 ): boolean {
   const cardCategory = rateCardFlightCategory(rateCard);
-  const flightCategory = normalizeFlightCategory(categoryOfFlight);
+  const flightCategory = normalizeStoredFlightCategory(categoryOfFlight);
   if (!cardCategory) return true;
   if (!flightCategory) return true;
-  return cardCategory === flightCategory;
+  if (cardCategory === flightCategory) return true;
+  // Airlines without a cargo row keep billing cargo flights on Domestic / International.
+  if (flightCategory === 'IntCargo' && cardCategory === 'Int') return true;
+  if (flightCategory === 'DomCargo' && cardCategory === 'Dom') return true;
+  return false;
+}
+
+function categorySpecificity(
+  cardCategory: string | null | undefined,
+  categoryOfFlight: string,
+): number {
+  const card = normalizeStoredFlightCategory(cardCategory ?? '');
+  const flight = normalizeStoredFlightCategory(categoryOfFlight);
+  if (!card || !flight) return 0;
+  return card === flight ? 2 : 1;
 }
 
 function bestTokenMatchLength(flightAircraft: string, tokens: string[]): number {
@@ -166,16 +196,32 @@ export function pickBestRateCardForFlight<
     );
     const generic = categoryOnly.filter((card) => rateCardAircraftTokens(card).length === 0);
     if (generic.length > 0) {
-      return generic.sort((a, b) => String(b.validFrom).localeCompare(String(a.validFrom)))[0];
+      return generic.sort((a, b) => {
+        const rank =
+          categorySpecificity(b.category, categoryOfFlight) -
+          categorySpecificity(a.category, categoryOfFlight);
+        if (rank !== 0) return rank;
+        return String(b.validFrom).localeCompare(String(a.validFrom));
+      })[0];
     }
     return null;
   }
 
   if (!flight) {
-    return matching.sort((a, b) => String(b.validFrom).localeCompare(String(a.validFrom)))[0];
+    return matching.sort((a, b) => {
+      const rank =
+        categorySpecificity(b.category, categoryOfFlight) -
+        categorySpecificity(a.category, categoryOfFlight);
+      if (rank !== 0) return rank;
+      return String(b.validFrom).localeCompare(String(a.validFrom));
+    })[0];
   }
 
   matching.sort((a, b) => {
+    const rank =
+      categorySpecificity(b.category, categoryOfFlight) -
+      categorySpecificity(a.category, categoryOfFlight);
+    if (rank !== 0) return rank;
     const lenDiff =
       bestTokenMatchLength(flight, rateCardAircraftTokens(b)) -
       bestTokenMatchLength(flight, rateCardAircraftTokens(a));

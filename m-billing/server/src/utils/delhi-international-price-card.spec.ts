@@ -35,4 +35,25 @@ describe('planDelhiInternationalCategoryUpdates', () => {
     expect(plan.updateIds).toEqual([]);
     expect(plan.retireIds).toEqual(['dom']);
   });
+
+  it('leaves cargo rows in place beside International', () => {
+    const plan = planDelhiInternationalCategoryUpdates([
+      {
+        id: 'int',
+        handlingType: 'BHS',
+        customerCode: 'CX',
+        aircraftType: 'A330',
+        category: 'Int',
+      },
+      {
+        id: 'cargo',
+        handlingType: 'BHS',
+        customerCode: 'CX',
+        aircraftType: 'A330',
+        category: 'IntCargo',
+      },
+    ]);
+    expect(plan.updateIds).toEqual([]);
+    expect(plan.retireIds).toEqual([]);
+  });
 });

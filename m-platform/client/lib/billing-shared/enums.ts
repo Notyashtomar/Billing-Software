@@ -20,14 +20,18 @@ export const CONTRACT_CATEGORY_LABELS: Record<ContractCategory, string> = {
   Both: 'Domestic & International',
 };
 
-/** BHS / ADS / RAF airline price-card rows — Domestic or International only. */
-export const PRICE_CARD_AIRLINE_CATEGORIES = ['Dom', 'Int'] as const;
+/** BHS / ADS / RAF airline price-card rows. */
+export const PRICE_CARD_AIRLINE_CATEGORIES = ['Dom', 'Int', 'DomCargo', 'IntCargo'] as const;
 /** Includes legacy `Ta` (Turnaround) still present on older stored rows. */
-export type PriceCardAirlineCategory = 'Dom' | 'Int' | 'Ta';
+export type PriceCardAirlineCategory =
+  | (typeof PRICE_CARD_AIRLINE_CATEGORIES)[number]
+  | 'Ta';
 
 export const PRICE_CARD_AIRLINE_CATEGORY_LABELS: Record<PriceCardAirlineCategory, string> = {
   Dom: 'Domestic',
   Int: 'International',
+  DomCargo: 'Domestic-Cargo',
+  IntCargo: 'International-Cargo',
   Ta: 'Turnaround',
 };
 
@@ -47,8 +51,8 @@ export function formatContractCategory(category: ContractCategory | string): str
 export function formatPriceCardAirlineCategory(
   category: PriceCardAirlineCategory | string,
 ): string {
-  if (category === 'Dom' || category === 'Int' || category === 'Ta') {
-    return PRICE_CARD_AIRLINE_CATEGORY_LABELS[category];
+  if (category in PRICE_CARD_AIRLINE_CATEGORY_LABELS) {
+    return PRICE_CARD_AIRLINE_CATEGORY_LABELS[category as PriceCardAirlineCategory];
   }
   return category;
 }

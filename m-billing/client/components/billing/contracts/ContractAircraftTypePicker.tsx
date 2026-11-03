@@ -227,18 +227,29 @@ export function ContractAircraftTypePicker({
               fieldLabel="Add aircraft manually"
               value={manualDraft}
               onChange={setManualDraft}
-              onPickOption={(option) => addManualType(option.label)}
+              onPickOption={(option) => {
+                addManualType(option.label);
+                return true;
+              }}
               options={advanceComboOptions}
               loading={loadingAdvanceCatalog}
               placeholder="Search Advance aircraft or type a code…"
               onRequestOptions={onReloadAdvanceCatalog}
-              maxVisibleOptions={1000}
-              listPanelClassName="absolute left-0 right-0 top-full z-[200] mt-1 max-h-[11.5rem] overflow-y-auto rounded-lg border border-gray-200 bg-white py-1 shadow-lg"
+              maxVisibleOptions={12}
+              inputProps={{
+                onKeyDown: (event) => {
+                  if (event.key !== 'Enter') return;
+                  event.preventDefault();
+                  addManualType(manualDraft);
+                },
+              }}
+              listPanelClassName="max-h-60 overflow-y-auto"
             />
           </div>
           <button
             type="button"
             disabled={disabled || !manualDraft.trim()}
+            onMouseDown={(event) => event.preventDefault()}
             onClick={() => addManualType(manualDraft)}
             className="shrink-0 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
           >
