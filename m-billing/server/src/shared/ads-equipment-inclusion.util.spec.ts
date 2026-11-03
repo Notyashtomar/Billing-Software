@@ -9,6 +9,7 @@ import {
   contractBillsBmeEquipment,
   isBmeAdsEquipmentLabel,
   isWchrSCombinedAdsService,
+  cumulativeMonthlyFreeUnits,
   resolveAdsPricingFromContractRule,
 } from './ads-equipment-inclusion.util';
 
@@ -420,6 +421,27 @@ describe('ads-equipment-inclusion.util', () => {
     expect(priced.matched).toBe(true);
     expect(priced.unitPrice).toBe(3176);
     expect(priced.serviceCode).toBe('Ground Power Unit - 180KV');
+  });
+
+  it('pools FOC across the airline flights in the billing month', () => {
+    expect(
+      cumulativeMonthlyFreeUnits(
+        { serviceCode: 'Wheel Chair - WCHR', freePerFlight: 5, freePerFlightNb: 5, freePerFlightWb: 5 },
+        { total: 10, nb: 8, wb: 2 },
+      ),
+    ).toBe(50);
+    expect(
+      cumulativeMonthlyFreeUnits(
+        { serviceCode: 'WCHC', freePerFlight: 5, freePerFlightNb: 6, freePerFlightWb: 2 },
+        { total: 10, nb: 8, wb: 2 },
+      ),
+    ).toBe(52);
+    expect(
+      cumulativeMonthlyFreeUnits(
+        { serviceCode: 'Headset', freePerFlight: 1 },
+        { total: 8, nb: 0, wb: 0 },
+      ),
+    ).toBe(8);
   });
 
   it('recognises BME equipment labels and keeps the toggle off unless explicitly true', () => {

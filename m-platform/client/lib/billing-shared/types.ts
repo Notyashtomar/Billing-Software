@@ -143,6 +143,12 @@ export interface BillingContractAdsEquipmentRule {
   serviceCode: string;
   /** Free quantity included per flight; extras are chargeable. */
   freePerFlight?: number;
+  /**
+   * When true, the month’s free quantity is this FOC × the airline’s flights
+   * in the ADS billing month. Extra units above that pool are chargeable.
+   * Omitted / false keeps the free quantity on each flight.
+   */
+  cumulativeMonthlyBasis?: boolean;
   /** Wheelchair FOC for narrow-body flights (advance aircraft body = NB). */
   freePerFlightNb?: number;
   /** Wheelchair FOC for wide-body flights (advance aircraft body = WB). */

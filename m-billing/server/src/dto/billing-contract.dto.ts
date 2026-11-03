@@ -138,6 +138,14 @@ export class ContractAdsEquipmentRuleDto {
   @Min(0)
   freePerFlight?: number;
 
+  /**
+   * FOC × the airline’s flights in the ADS billing month.
+   * Omitted / false keeps the free quantity on each flight.
+   */
+  @IsOptional()
+  @IsBoolean()
+  cumulativeMonthlyBasis?: boolean;
+
   /** Wheelchair FOC for narrow-body flights. */
   @IsOptional()
   @IsNumber()

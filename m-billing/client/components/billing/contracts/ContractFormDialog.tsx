@@ -59,7 +59,7 @@ import {
   fetchAdvanceAircraftMasterTypes,
   fetchContractAircraftTypeOptions,
 } from '@/lib/billing-shared/contract-aircraft-types';
-import { ContractAdsEquipmentRulesEditor, isWheelchairAdsService } from './ContractAdsEquipmentRulesEditor';
+import { ContractAdsEquipmentRulesEditor, adsRuleHasFreeAllowance, isWheelchairAdsService } from './ContractAdsEquipmentRulesEditor';
 import { ContractBhsVolumeEditor } from './ContractBhsVolumeEditor';
 import {
   validateBhsVolumeSchedules,
@@ -855,6 +855,7 @@ export function ContractFormDialog({
             rule.freePerFlightWb ??
             (isWheelchairAdsService(rule.serviceCode) ? rule.freePerFlight : undefined),
           alwaysChargeable: Boolean(rule.alwaysChargeable),
+          cumulativeMonthlyBasis: Boolean(rule.cumulativeMonthlyBasis),
           includedForAds: rule.includedForAds !== false,
           unitPriceINR:
             rule.unitPriceINR != null && Number.isFinite(Number(rule.unitPriceINR))
@@ -1268,6 +1269,10 @@ export function ContractFormDialog({
             freePerFlightNb: rule.alwaysChargeable ? 0 : rule.freePerFlightNb,
             freePerFlightWb: rule.alwaysChargeable ? 0 : rule.freePerFlightWb,
             alwaysChargeable: Boolean(rule.alwaysChargeable),
+            cumulativeMonthlyBasis:
+              !rule.alwaysChargeable &&
+              adsRuleHasFreeAllowance(rule) &&
+              Boolean(rule.cumulativeMonthlyBasis),
             includedForAds: rule.includedForAds !== false,
             unitPriceINR:
               rule.unitPriceINR == null

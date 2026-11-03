@@ -16,6 +16,7 @@ import {
   motorisedNbWbGroupHoverTitle,
   searchAdsBriefDetails,
   WCH_SUBTYPE_LABELS,
+  type AdsBriefUomCatalogRow,
   wchPaletteGroupCounts,
   wchPaletteGroupHoverTitle,
   type BillingAdsBriefKey,
@@ -41,7 +42,11 @@ type Props = {
   rows?: readonly BillingSourceRow[];
   /** Equipment Master UOMs keyed by palette item. */
   uomsByKey?: ReadonlyMap<BillingAdsBriefKey, readonly string[]>;
+  /** Every row from Equipment Master. Search lists these, not only palette chips. */
+  equipmentMaster?: readonly AdsBriefUomCatalogRow[];
+  masterFilter?: { itemNo: string; description: string } | null;
   onSelectOnly?: (key: BillingAdsBriefKey) => void;
+  onSelectMaster?: (master: { itemNo: string; description: string }) => void;
 };
 
 function cardBoxShadow(theme: ActiveFlightStatTheme, selected: boolean): string {
@@ -205,6 +210,14 @@ function MotorisedNbWbPaletteChip({
               <span className="text-gray-400" aria-hidden>·</span>
             ) : null}
             {group.wbKey ? <span>WB-{counts.wb}</span> : null}
+            {group.detailKeys?.map((detail) => (
+              <span key={detail.key} className="inline-flex items-center gap-x-1">
+                <span className="text-gray-400" aria-hidden>·</span>
+                <span>
+                  {detail.short}-{stats[detail.key]}
+                </span>
+              </span>
+            ))}
             <span className="text-gray-400" aria-hidden>·</span>
             <span className="font-extrabold">
               {group.label}-{counts.total}
@@ -306,7 +319,10 @@ export function BillingAdsBriefStatsBar({
   emptyMessage = null,
   rows = [],
   uomsByKey,
+  equipmentMaster = [],
+  masterFilter = null,
   onSelectOnly,
+  onSelectMaster,
 }: Props) {
   const [equipmentQuery, setEquipmentQuery] = useState('');
   const [uomChoice, setUomChoice] = useState('');
@@ -325,8 +341,8 @@ export function BillingAdsBriefStatsBar({
 
   const sections = buildAdsPaletteSections(items);
   const searchHits = useMemo(
-    () => searchAdsBriefDetails(rows, equipmentQuery, uomsByKey),
-    [rows, equipmentQuery, uomsByKey],
+    () => searchAdsBriefDetails(rows, equipmentQuery, uomsByKey, equipmentMaster),
+    [rows, equipmentQuery, uomsByKey, equipmentMaster],
   );
   const selectionTotals = useMemo(() => {
     if (selectedFilters.size === 0) return null;
@@ -356,7 +372,7 @@ export function BillingAdsBriefStatsBar({
         />
       </label>
       {equipmentQuery.trim() ? (
-        <div className="mb-2 overflow-x-auto rounded-lg border border-gray-200">
+        <div className="mb-2 max-h-72 overflow-auto rounded-lg border border-gray-200">
           {searchHits.length === 0 ? (
             <p className="px-3 py-2 text-xs text-gray-500">No equipment matches that name.</p>
           ) : (
@@ -372,12 +388,18 @@ export function BillingAdsBriefStatsBar({
               </thead>
               <tbody>
                 {searchHits.map((hit) => (
-                  <tr key={hit.key ?? hit.label} className="border-t border-gray-100">
+                  <tr
+                    key={`${hit.master?.itemNo ?? ''}|${hit.master?.description ?? ''}|${hit.key ?? ''}|${hit.label}`}
+                    className="border-t border-gray-100"
+                  >
                     <td className="px-3 py-2">
                       <button
                         type="button"
-                        className="font-semibold text-[color:var(--billing-primary)] hover:underline"
-                        onClick={() => hit.key && onSelectOnly?.(hit.key)}
+                        className="text-left font-semibold text-[color:var(--billing-primary)] hover:underline"
+                        onClick={() => {
+                          if (hit.master) onSelectMaster?.(hit.master);
+                          else if (hit.key) onSelectOnly?.(hit.key);
+                        }}
                       >
                         {hit.label}
                       </button>
@@ -395,7 +417,9 @@ export function BillingAdsBriefStatsBar({
       ) : null}
       <div className="mb-1.5 flex items-center justify-between gap-2 px-0.5 text-[11px] text-gray-600">
         <span>
-          {selectedFilters.size > 0
+          {masterFilter
+            ? `Showing ${masterFilter.description || masterFilter.itemNo}`
+            : selectedFilters.size > 0
             ? `${selectedFilters.size} palette filter${selectedFilters.size === 1 ? '' : 's'} active`
             : `Total flights: ${totalFlights.toLocaleString()} · palette = FHR engagements in date range (1 per equipment line, MIS parity) · ${
                 visibleKeys != null ? 'Rate-carded ADS services' : 'All categories'
@@ -404,7 +428,7 @@ export function BillingAdsBriefStatsBar({
         <button
           type="button"
           onClick={onClearFilters}
-          disabled={selectedFilters.size === 0}
+          disabled={selectedFilters.size === 0 && !masterFilter}
           className="shrink-0 rounded-md border border-[color:var(--billing-accent-border)] bg-[color:var(--billing-accent-soft)] px-2 py-1 font-semibold text-[color:var(--billing-accent-strong)] hover:bg-[color:var(--billing-accent-soft)] disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-50 disabled:text-gray-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--billing-accent)]"
         >
           Reset palette filters

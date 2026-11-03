@@ -1232,6 +1232,71 @@ describe('InvoiceEngineService', () => {
     expect(composed.lines[0].sourceRef?.chargedQuantity).toBe(1);
   });
 
+  it('ADS: cumulative monthly FOC is the free quantity times the airline flight count', async () => {
+    const flights = [101, 102, 103, 104].map((serial) => ({
+      SerialNo: serial,
+      mainDetails: { airlineCode: 'IX', TypeCraft: 'B737' },
+    }));
+    const fhrModel = {
+      find: () => ({
+        select: () => ({ lean: async () => flights }),
+      }),
+    } as never;
+    const local = new InvoiceEngineService(taxEngine, currencyEngine, fhrModel, emptyModel);
+    const contract = {
+      adsBillingEnabled: true,
+      aircraftTypes: ['B737'],
+      adsEquipmentRules: [
+        {
+          serviceCode: 'WCHC',
+          includedForAds: true,
+          cumulativeMonthlyBasis: true,
+          freePerFlight: 5,
+          unitPriceINR: 600,
+          uom: 'Per unit',
+          aircraftTypes: ['B737'],
+        },
+      ],
+    };
+    const line = (serial: string, usedUnits: number) => ({
+      _id: new Types.ObjectId(),
+      customerCode: 'IX',
+      customerName: 'Air India Express',
+      billingPeriodStart: new Date('2026-09-01T00:00:00.000Z'),
+      billingPeriodEnd: new Date('2026-09-30T23:59:59.999Z'),
+      sourceType: 'ads',
+      sourceRef: { serialNo: serial, usageRowId: `${serial}:0` },
+      operationalSnapshot: {
+        aircraftType: 'B737',
+        equipment_name: 'Wheel Chair - WCHC',
+        adsParticular: 'Wheel Chair - WCHC',
+      },
+      rateMatch: {
+        serviceCode: 'WCHC',
+        unitPrice: 600,
+        usedUnits,
+        freeAllowance: 0,
+        particular: 'Wheel Chair - WCHC',
+        aircraftType: 'B737',
+        uom: 'Per unit',
+        pricingBasis: 'rate_card',
+      },
+    });
+    const composed = await local.composeFromPreparation(
+      { stationCode: 'IXA' } as never,
+      [line('1', 12), line('2', 10)] as never,
+      new Date('2026-10-01'),
+      'INR',
+      contract,
+    );
+    // 4 flights × FOC 5 = 20 free. Used 22, so 2 are charged.
+    expect(composed.lines).toHaveLength(1);
+    expect(composed.lines[0].quantity).toBe(2);
+    expect(composed.lines[0].sourceRef?.usedQuantity).toBe(22);
+    expect(composed.lines[0].sourceRef?.freeAllowance).toBe(20);
+    expect(composed.lines[0].lineAmountExclTax).toBe(1200);
+  });
+
   it('ADS: free count is once per flight when FHR has several lines of the same equipment', async () => {
     const contract = {
       adsBillingEnabled: true,

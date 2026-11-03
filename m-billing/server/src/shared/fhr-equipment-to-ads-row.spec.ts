@@ -123,7 +123,7 @@ describe('fhr-equipment-to-ads-row', () => {
     );
     expect(rows).toHaveLength(2);
     const gpu = rows.find((r) => String(r.operationalData.equipment_name).includes('90KV'));
-    expect(gpu?.operationalData.particular).toBe('Ground Power Unit - Narrow Body');
+    expect(gpu?.operationalData.particular).toBe('Ground Power Unit - 90KV');
     expect(gpu?.billingDate).toBe('2026-07-15');
     expect(rows.find((r) => r.operationalData.equipment_name === 'LDL')?.operationalData.qty).toBe(2);
   });
