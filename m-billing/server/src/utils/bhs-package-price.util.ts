@@ -3,6 +3,7 @@ import {
   pickBestRateCardForFlight,
   rateCardMatchesFlightCategory,
 } from './aircraft-type-match.util';
+import { priceCardIsTariffCode } from './aircraft-tariff-code.util';
 import type { BillingCurrency } from './billing-currency.util';
 
 export type BhsPackagePriceRow = {
@@ -195,6 +196,7 @@ export function pickBhsPackagePriceEntry(
   entries: BhsPackagePriceRow[],
   flightAircraft: string,
   categoryOfFlight: string,
+  tariffCode?: string | null,
 ): BhsPackagePriceRow | null {
   const priced = entries.filter(
     (entry) => entry.price != null && Number.isFinite(Number(entry.price)) && Number(entry.price) > 0,
@@ -230,6 +232,17 @@ export function pickBhsPackagePriceEntry(
     });
     if (familyHits.length === 1) return familyHits[0];
     if (familyHits.length > 1) return pickBaseHandlingBand(familyHits, categoryOfFlight);
+  }
+
+  const letter = String(tariffCode ?? '').trim().toUpperCase();
+  if (/^[A-F]$/.test(letter)) {
+    const codeHits = priced.filter((entry) => priceCardIsTariffCode(entry.aircraftType, letter));
+    const categoryHits = codeHits.filter((entry) =>
+      sameFlightCategory(entry.category, categoryOfFlight),
+    );
+    const pool = categoryHits.length > 0 ? categoryHits : codeHits;
+    if (pool.length === 1) return pool[0];
+    if (pool.length > 1) return pickBaseHandlingBand(pool, categoryOfFlight);
   }
 
   const handling = priced.filter(

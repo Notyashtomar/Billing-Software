@@ -6,6 +6,10 @@ import type { StationScopeContext } from '../../common/station-scope';
 import { StationScope, successResponse } from '../../common/station-scope';
 import { ValidationEngineService } from '../../engines/validation-engine.service';
 import {
+  BillingAircraftMaster,
+  type BillingAircraftMasterDocument,
+} from '../../schemas/billing-aircraft-master.schema';
+import {
   BillingContract,
   BillingContractDocument,
   BillingCustomer,
@@ -34,6 +38,10 @@ import { stripCancelledFlightPrefix } from '../../utils/billing-flight-no.util';
 import {
   pickBestRateCardForFlight,
 } from '../../utils/aircraft-type-match.util';
+import {
+  resolveAircraftTariffCode,
+  type AircraftMasterTariffRow,
+} from '../../utils/aircraft-tariff-code.util';
 import {
   isAdditionalBhsFlight,
   packagePriceFromEntry,
@@ -81,6 +89,7 @@ type EnrichmentCache = {
   rateCardsByCustomer: Map<string, Array<BillingRateCard & { _id?: unknown }>>;
   bhsEntriesByCustomer: Map<string, Array<BillingPriceCardAirline & { _id?: unknown }>>;
   stationCode?: string;
+  aircraftMaster: AircraftMasterTariffRow[];
   rafAdhoc: Array<{
     label: string;
     stationCode: string;
@@ -117,6 +126,8 @@ export class BillingSourceEnrichmentService {
     private readonly priceCardAirlineModel: Model<BillingPriceCardAirlineDocument>,
     @InjectModel(BillingRafAdhocRate.name)
     private readonly rafAdhocModel: Model<BillingRafAdhocRateDocument>,
+    @InjectModel(BillingAircraftMaster.name)
+    private readonly aircraftMasterModel: Model<BillingAircraftMasterDocument>,
     private readonly validationEngine: ValidationEngineService,
   ) {}
 
@@ -219,7 +230,8 @@ export class BillingSourceEnrichmentService {
 
     const needsRafAdhoc = inputs.some((input) => input.sourceType === 'raf');
 
-    const [customers, contracts, rateCards, bhsEntries, rafAdhoc] = await Promise.all([
+    const stationCode = String(ctx.stationCode ?? '').trim().toUpperCase();
+    const [customers, contracts, rateCards, bhsEntries, rafAdhoc, aircraftMaster] = await Promise.all([
       needsAds || needsBhs
         ? customerCodes.length > 0
           ? this.customerModel
@@ -304,6 +316,14 @@ export class BillingSourceEnrichmentService {
             })
             .lean()
         : Promise.resolve([]),
+      needsBhs
+        ? this.aircraftMasterModel
+            .find({
+              stationCode: { $in: stationCode ? [stationCode, 'GLOBAL'] : ['GLOBAL'] },
+            })
+            .select('aircraftType icaoCode categoryCode stationCode')
+            .lean()
+        : Promise.resolve([]),
     ]);
 
     const loadedCodes = new Set(customerCodes);
@@ -369,6 +389,7 @@ export class BillingSourceEnrichmentService {
       rateCardsByCustomer: this.groupByCustomerCode(rateCardRows),
       bhsEntriesByCustomer: this.groupByCustomerCode(bhsRows),
       stationCode: ctx.stationCode,
+      aircraftMaster,
       rafAdhoc: rafAdhoc.map((row) => ({
         label: String(row.label ?? ''),
         stationCode: String(row.stationCode ?? '*').toUpperCase(),
@@ -677,6 +698,11 @@ export class BillingSourceEnrichmentService {
       operationalData.categoryOfFlight ?? '',
     ).trim();
 
+    const tariffCode = resolveAircraftTariffCode(
+      flightAircraft,
+      cache.aircraftMaster,
+      cache.stationCode,
+    );
     return pickBhsPackagePriceEntry(
       selectBhsEntriesForFlightOperation(
         entries.map((entry) => ({
@@ -693,6 +719,7 @@ export class BillingSourceEnrichmentService {
       ),
       flightAircraft,
       categoryOfFlight,
+      tariffCode,
     );
   }
 

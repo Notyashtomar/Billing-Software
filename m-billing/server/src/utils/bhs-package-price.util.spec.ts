@@ -149,6 +149,23 @@ describe('resolveBhsScheduledUnitPrice', () => {
     expect(pickBhsPackagePriceEntry(rows, 'B777F', 'International')?.price).toBe(204994.08);
     expect(pickBhsPackagePriceEntry(rows, 'B77F', 'International')?.price).toBe(204994.08);
   });
+
+  it('uses the ICAO code card when the flight type is not on the rate card', () => {
+    const rows = [
+      { aircraftType: 'Code C', category: 'Int', price: 58000, validFrom: '2025-05-15' },
+      { aircraftType: 'Code E', category: 'Int', price: 100000, validFrom: '2025-05-15' },
+    ];
+    expect(pickBhsPackagePriceEntry(rows, 'B737-800', 'International', 'C')?.price).toBe(58000);
+    expect(pickBhsPackagePriceEntry(rows, 'B777-300ER', 'International', 'E')?.price).toBe(100000);
+  });
+
+  it('keeps an exact aircraft row ahead of the ICAO code card', () => {
+    const rows = [
+      { aircraftType: 'B737-800', category: 'Int', price: 61190, validFrom: '2025-05-15' },
+      { aircraftType: 'Code C', category: 'Int', price: 58000, validFrom: '2025-05-15' },
+    ];
+    expect(pickBhsPackagePriceEntry(rows, 'B737-800', 'International', 'C')?.price).toBe(61190);
+  });
 });
 
 describe('selectBhsEntriesForFlightOperation', () => {
