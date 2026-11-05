@@ -53,6 +53,24 @@ describe('mapFhrToInvoicingFlightReportRow customer fields', () => {
     expect(row.flightNoEquipmentNo).toBe('CANC-FD196/197');
   });
 
+  it('falls back to stored FlightNo when arrival/departure legs are blank', () => {
+    const row = mapFhrToInvoicingFlightReportRow(21728, {
+      SerialNo: 21728,
+      mainDetails: {
+        FlightNo: 'EY346/347',
+        ArrivalFltNo: '',
+        DepartureFltNo: '',
+        Airline: 'Etihad Airways',
+        Arline_Code: 'EY',
+      },
+      terminalDetails: {},
+      rampDetails1: {},
+      loadControlDetails: {},
+    });
+
+    expect(row.flightNoEquipmentNo).toBe('EY346/347');
+  });
+
   it('keeps a clean airline code unchanged', () => {
     const row = mapFhrToInvoicingFlightReportRow(1, {
       SerialNo: 1,
