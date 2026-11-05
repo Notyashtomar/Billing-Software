@@ -1527,6 +1527,25 @@ function adsLineFeePercent(
 }
 
 /**
+ * Concession is saved as one invoice-level percent in contracts/royalty setup.
+ * If rows only differ by zero/non-zero application, keep the single saved
+ * positive percent instead of deriving a weighted one like 14.69%.
+ */
+function singleSavedPositivePercent(
+  rows: InvoiceLineConcessionInput[],
+  resolvePercent: (line: InvoiceLineConcessionInput) => number,
+): number | null {
+  const positive = new Set<number>();
+  for (const line of rows) {
+    const percent = resolvePercent(line);
+    if (!(percent > 0)) continue;
+    positive.add(roundBillingMoney(percent));
+    if (positive.size > 1) return null;
+  }
+  return positive.size === 1 ? [...positive][0] : null;
+}
+
+/**
  * Exclusive ADS / RAF / custom: same saved percent and extended royalty as BHS,
  * without comparing against the BHS ceiling (that is per scheduled flight).
  */
@@ -1537,6 +1556,17 @@ function exclusiveNonBhsInvoiceConcession(
 ): { amount: number; labelPercent: number } {
   const rows = particulars.filter((line) => lineExclAmount(line) > 0);
   if (rows.length === 0) return { amount: 0, labelPercent: 0 };
+  const singlePercent = singleSavedPositivePercent(
+    rows,
+    (line) => adsLineFeePercent(line, contract),
+  );
+  if (singlePercent != null) {
+    const base = rows.reduce((sum, line) => sum + lineExclAmount(line), 0);
+    return {
+      amount: roundBillingMoney(base * exclusiveRoyaltyRate(extended, singlePercent)),
+      labelPercent: singlePercent,
+    };
+  }
 
   let base = 0;
   let amount = 0;
@@ -1572,13 +1602,24 @@ function exclusivePercentConcession(
       ? bhsLines
       : particulars.filter((line) => lineExclAmount(line) > 0);
   if (rows.length === 0) return { amount: 0, labelPercent: 0 };
+  const singlePercent = singleSavedPositivePercent(
+    rows,
+    (line) => adsLineFeePercent(line, contract),
+  );
+  if (singlePercent != null) {
+    const base = rows.reduce((sum, line) => sum + lineExclAmount(line), 0);
+    return {
+      amount: roundBillingMoney(base * exclusiveRoyaltyRate(extended, singlePercent)),
+      labelPercent: singlePercent,
+    };
+  }
 
   let base = 0;
   let amount = 0;
   let weightedPercent = 0;
   const labels = new Set<number>();
   for (const line of rows) {
-    const percent = resolveLineFeeConcessionPercent(line, contract);
+    const percent = adsLineFeePercent(line, contract);
     const lineAmount = lineExclAmount(line);
     base += lineAmount;
     weightedPercent += lineAmount * percent;
@@ -1697,9 +1738,25 @@ export function calculateInvoiceConcessionFromLines(
   );
   const rawConcessionFeePercent =
     lineSubtotal > 0 ? (concessionAmountFromLines * 100) / lineSubtotal : 0;
-  const concessionFeePercent = precisePercent
-    ? rawConcessionFeePercent
-    : roundBillingMoney(rawConcessionFeePercent);
+  const singlePercent = singleSavedPositivePercent(
+    particulars.filter((line) => lineExclAmount(line) > 0),
+    (line) => {
+      const storedPercent = pickStoredConcessionPercent(
+        line.sourceRef as Record<string, unknown> | undefined,
+      );
+      return storedPercent != null
+        ? storedPercent
+        : resolveLineFeeConcessionPercent(line, contract);
+    },
+  );
+  const concessionFeePercent =
+    singlePercent != null
+      ? precisePercent
+        ? singlePercent
+        : roundBillingMoney(singlePercent)
+      : precisePercent
+        ? rawConcessionFeePercent
+        : roundBillingMoney(rawConcessionFeePercent);
   const percentConcession =
     concessionFeePercent > 0 && subtotal > 0
       ? roundBillingMoney(subtotal * (concessionFeePercent / 100))

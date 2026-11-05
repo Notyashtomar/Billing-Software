@@ -72,4 +72,16 @@ describe('billing-customer-code.util', () => {
       }),
     ).toBe('SMR');
   });
+
+  it('maps cargo-suffixed direct code EYF to known EY using flight code', () => {
+    expect(
+      resolveKnownBillingCustomerCode({
+        directCodes: ['EYF'],
+        flightCodes: ['EY993/994'],
+        isKnown: (code) => code === 'EY',
+        customerName: (code) => (code === 'EY' ? 'Etihad Airways' : ''),
+        operationalName: 'Etihad Cargo',
+      }),
+    ).toBe('EY');
+  });
 });
