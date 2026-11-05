@@ -17,6 +17,12 @@ const LINE_W = 0.75;
 const FONT_SCALE = 1.2;
 const CELL_PAD = 4;
 const FOOTER_RESERVED_H = invDim(58);
+/** Header typography (reference: seller name and Bill To airline name are set larger and bold). */
+const SELLER_NAME_FS = 9;
+const BILL_TO_LABEL_FS = 8;
+const BILL_TO_NAME_FS = 9;
+/** Breathing room between Bill To label, airline name, and the address lines. */
+const BILL_TO_GAP = 1.5;
 const FLOW_TOP_Y = MARGIN + 8;
 const FLOW_BOTTOM_Y = PAGE_H - MARGIN - FOOTER_RESERVED_H;
 
@@ -491,7 +497,7 @@ function measureCompanyBlockHeight(
   width: number,
 ): number {
   let h = CELL_PAD;
-  doc.font('Times-Bold').fontSize(invFs(8));
+  doc.font('Times-Bold').fontSize(invFs(SELLER_NAME_FS));
   if (lines[0]) {
     h += doc.heightOfString(lines[0], { width, lineGap: 1 }) + 1;
   }
@@ -531,10 +537,11 @@ function measureBillToBodyHeight(
   addressWidth: number,
 ): number {
   let h = CELL_PAD;
-  doc.font('Times-Bold').fontSize(invFs(7));
-  h += doc.heightOfString('Bill To:', { width: addressWidth, lineGap: 0 });
+  doc.font('Times-Bold').fontSize(invFs(BILL_TO_LABEL_FS));
+  h += doc.heightOfString('Bill To:', { width: addressWidth, lineGap: 0 }) + BILL_TO_GAP;
   if (billTo.name) {
-    h += doc.heightOfString(billTo.name.toUpperCase(), { width: addressWidth, lineGap: 0 });
+    doc.font('Times-Bold').fontSize(invFs(BILL_TO_NAME_FS));
+    h += doc.heightOfString(billTo.name.toUpperCase(), { width: addressWidth, lineGap: 0 }) + BILL_TO_GAP;
   }
   doc.font('Times-Roman').fontSize(invFs(7));
   for (const line of billTo.addressLines) {
@@ -653,7 +660,7 @@ export function layoutInvoiceHeaderGrid(
   // Value column above the particulars table is 30% of the page width.
   const metaLabelAbsW = rightW - w * 0.3;
 
-  doc.font('Times-Bold').fontSize(invFs(8));
+  doc.font('Times-Bold').fontSize(invFs(SELLER_NAME_FS));
   const sellerNameH = doc.heightOfString(companyLines[0] ?? '', { width: addressWidth, lineGap: 1 });
 
   // Description sits opposite the seller box so Bill To top aligns with Flight Category.
@@ -784,7 +791,7 @@ function renderHeaderGrid(doc: PDFKit.PDFDocument, input: InvoicePdfInput, start
   strokeBox(doc, x, y, leftW, sellerH);
   const sellerTextH = Math.max(0, measureCompanyBlockHeight(doc, companyLines, addressWidth) - CELL_PAD * 2);
   let cy = y + Math.max(CELL_PAD, (sellerH - sellerTextH) / 2);
-  doc.font('Times-Bold').fontSize(invFs(8)).fillColor('#000');
+  doc.font('Times-Bold').fontSize(invFs(SELLER_NAME_FS)).fillColor('#000');
   doc.text(companyLines[0] ?? '', x + CELL_PAD, cy, {
     width: addressWidth,
     lineGap: 1,
@@ -805,22 +812,23 @@ function renderHeaderGrid(doc: PDFKit.PDFDocument, input: InvoicePdfInput, start
   strokeBox(doc, x, billY, leftW, primaryAddressH);
   const primaryLines = input.billTo.addressLines.map((line) => line.trim()).filter(Boolean);
   let by = billY + CELL_PAD;
-  doc.font('Times-Bold').fontSize(invFs(7)).fillColor('#000');
+  doc.font('Times-Bold').fontSize(invFs(BILL_TO_LABEL_FS)).fillColor('#000');
   doc.text('Bill To:', x + CELL_PAD, by, {
     width: addressWidth,
     underline: true,
     lineGap: 0,
     lineBreak: true,
   });
-  by += doc.heightOfString('Bill To:', { width: addressWidth, lineGap: 0 });
+  by += doc.heightOfString('Bill To:', { width: addressWidth, lineGap: 0 }) + BILL_TO_GAP;
   if (input.billTo.name) {
     const billToName = input.billTo.name.toUpperCase();
+    doc.font('Times-Bold').fontSize(invFs(BILL_TO_NAME_FS)).fillColor('#000');
     doc.text(billToName, x + CELL_PAD, by, {
       width: addressWidth,
       lineGap: 0,
       lineBreak: true,
     });
-    by += doc.heightOfString(billToName, { width: addressWidth, lineGap: 0 });
+    by += doc.heightOfString(billToName, { width: addressWidth, lineGap: 0 }) + BILL_TO_GAP;
   }
   if (primaryLines.length) {
     doc.font('Times-Roman').fontSize(invFs(7)).fillColor('#000');
