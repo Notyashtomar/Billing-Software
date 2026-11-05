@@ -71,6 +71,16 @@ describe('buildInvoicePdfInput — flight category', () => {
     expect(input.flightCategory).toBe('International');
   });
 
+  it('prints International for an international-only airline when the flight is International-Domestic', () => {
+    const input = buildInvoicePdfInput({
+      header,
+      lines: [bhsLine({ categoryOfFlight: 'International-Domestic' })],
+      contractCategory: 'Int',
+      contractCategories: ['Int'],
+    });
+    expect(input.flightCategory).toBe('International');
+  });
+
   it('reports both categories when one invoice mixes domestic and international flights', () => {
     const input = buildInvoicePdfInput({
       header,

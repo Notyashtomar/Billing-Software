@@ -15,6 +15,7 @@ import {
   type InvoiceConcessionTotals,
 } from '../utils/invoice-concession.util';
 import {
+  isInternationalOnlyAirline,
   pickCategoryOfFlight,
   resolveInvoiceFlightCategory,
 } from '../utils/invoice-flight-category.util';
@@ -462,6 +463,8 @@ export type BuildInvoicePdfInputParams = {
   serviceCatalog?: ServiceCatalogLike[];
   /** Active contract category ('Dom' | 'Int') — fallback for legacy invoice lines. */
   contractCategory?: string;
+  /** Contract sector list. An international-only airline always prints International. */
+  contractCategories?: Array<string | null | undefined> | null;
   concessionFeePercent?: number;
   concessionTotals?: InvoiceConcessionTotals;
   irn?: string;
@@ -693,7 +696,12 @@ export function buildInvoicePdfInput(params: BuildInvoicePdfInputParams): Invoic
 
   const totalInclTax = round2(concessionTotals.totalInclTax);
 
-  const flightCategory = inferFlightCategory(lines, serviceCatalog, params.contractCategory);
+  const flightCategory = inferFlightCategory(
+    lines,
+    serviceCatalog,
+    params.contractCategory,
+    params.contractCategories,
+  );
   const irn = params.irn?.trim() || undefined;
 
   return {
@@ -786,7 +794,10 @@ function inferFlightCategory(
   lines: InvoiceLineLike[],
   catalog: ServiceCatalogLike[] | undefined,
   contractCategory: string | undefined,
+  contractCategories?: Array<string | null | undefined> | null,
 ): string {
+  const airline = { category: contractCategory, categories: contractCategories };
+  if (isInternationalOnlyAirline(airline)) return 'International';
   const fromLines = resolveInvoiceFlightCategory(
     lines.flatMap((line) => {
       const ref = line.sourceRef ?? {};
@@ -799,7 +810,7 @@ function inferFlightCategory(
   );
   if (fromLines) return fromLines;
 
-  const fromContract = resolveInvoiceFlightCategory([contractCategory]);
+  const fromContract = resolveInvoiceFlightCategory([contractCategory], airline);
   if (fromContract) return fromContract;
 
   const code = lines.find((l) => l.serviceCode)?.serviceCode;

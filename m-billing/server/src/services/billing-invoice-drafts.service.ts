@@ -86,6 +86,7 @@ import {
   preparationInvoiceGroupKey,
   preparationListPeriodFilter,
 } from '../common/billing-invoice-period.util';
+import { isInternationalOnlyAirline } from '../utils/invoice-flight-category.util';
 import { stationFlightConcessionPercents, stationRoyaltyOnGross } from '../utils/station-flight-concession.util';
 import { magFloorForFlights, type MagFlightInput } from '../utils/mag-concession.util';
 import { BillingAircraftMasterService } from './billing-aircraft-master.service';
@@ -556,10 +557,41 @@ export class BillingInvoiceDraftsService {
     // Always create a new draft per airline/group — never merge into an open draft.
     void dto.mergeOpenDraft;
     const mergeOpenDraft = false;
+    const internationalCustomers = new Set<string>();
+    if (!(dto.groupByCustomer === false && !periodScoped)) {
+      const codes = [
+        ...new Set(
+          records
+            .map((row) => String(row.customerCode ?? '').trim().toUpperCase())
+            .filter(Boolean),
+        ),
+      ];
+      await Promise.all(
+        codes.map(async (code) => {
+          const sample = records.find(
+            (row) => String(row.customerCode ?? '').trim().toUpperCase() === code,
+          );
+          if (!sample) return;
+          const contract = await resolveActiveContractForInvoice(this.contractModel, ctx, {
+            contractId: sample.contractMatch?.contractId,
+            customerCode: sample.customerCode,
+            documentDate,
+            stationCode: ctx.stationCode ?? sample.stationCode,
+          });
+          if (isInternationalOnlyAirline(contract)) internationalCustomers.add(code);
+        }),
+      );
+    }
     const groups =
       dto.groupByCustomer === false && !periodScoped
         ? new Map([['__single__', records]])
-        : groupBy(records, (r) => preparationInvoiceGroupKey(r));
+        : groupBy(records, (row) =>
+            preparationInvoiceGroupKey(row, {
+              internationalAirline: internationalCustomers.has(
+                String(row.customerCode ?? '').trim().toUpperCase(),
+              ),
+            }),
+          );
 
     const created: string[] = [];
     const merged: string[] = [];

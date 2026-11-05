@@ -129,6 +129,29 @@ describe('station flight concession', () => {
     expect(preparationFlightConcessionSector({ sourceType: 'raf' })).toBe('GA');
   });
 
+  it('uses the international royalty for an international airline flight tagged International-Domestic', () => {
+    const percents = { int: 15, dom: 3, ga: 15, gaDom: 15, gaInt: 15 };
+    const line = {
+      sourceRef: { operationalSnapshot: { categoryOfFlight: 'International-Domestic' } },
+    };
+    expect(
+      resolveLineFeeConcessionPercent(line, {
+        category: 'Int',
+        categories: ['Int'],
+        stationFlightConcession: percents,
+        concessionRates: { int: 1, dom: 2 },
+      }),
+    ).toBe(15);
+    expect(
+      resolveLineFeeConcessionPercent(line, {
+        category: 'Both',
+        categories: ['Dom', 'Int'],
+        stationFlightConcession: percents,
+        concessionRates: { int: 1, dom: 2 },
+      }),
+    ).toBe(3);
+  });
+
   it('keeps a September royalty fee for an ADS invoice regenerated in October', () => {
     const percents = stationFlightConcessionPercents(
       {

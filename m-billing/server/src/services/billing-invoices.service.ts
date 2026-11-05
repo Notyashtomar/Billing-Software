@@ -975,6 +975,7 @@ export class BillingInvoicesService {
       customer: customerForPdf,
       serviceCatalog,
       contractCategory: contract?.category,
+      contractCategories: contract?.categories,
       fortnightBilling: contract?.fortnightBillingEnabled === true,
       fortnightRanges: contract?.fortnightBillingRanges,
       invoiceCategory: header.invoiceCategory,
