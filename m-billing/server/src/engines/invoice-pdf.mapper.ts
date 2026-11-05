@@ -232,8 +232,11 @@ function adsFortnightPdfPeriodLabel(
 
 function splitAddress(address?: string): string[] {
   if (!address?.trim()) return [];
+  // Explicit line breaks are authored on purpose — keep them as-is. Only a
+  // single-line address is broken up at commas.
+  const hasLineBreaks = /\r?\n/.test(address);
   return address
-    .split(/\r?\n|,\s*/)
+    .split(hasLineBreaks ? /\r?\n/ : /,\s*/)
     .map((s) => s.trim())
     .filter(Boolean);
 }

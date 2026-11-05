@@ -552,6 +552,9 @@ export class CreateBillingContractDto {
   @IsOptional()
   @IsBoolean()
   royaltyInclusive?: boolean;
+  @IsOptional()
+  @IsBoolean()
+  concessionRatesOverrideStation?: boolean;
 
   @IsOptional()
   @IsIn(['comprehensive', 'non_comprehensive', 'mixed'])
@@ -717,6 +720,9 @@ export class UpdateBillingContractDto {
   @IsOptional()
   @IsBoolean()
   royaltyInclusive?: boolean;
+  @IsOptional()
+  @IsBoolean()
+  concessionRatesOverrideStation?: boolean;
 
   @IsOptional()
   @IsIn(['comprehensive', 'non_comprehensive', 'mixed'])

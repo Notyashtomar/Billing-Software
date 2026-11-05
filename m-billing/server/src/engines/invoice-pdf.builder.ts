@@ -177,6 +177,8 @@ const STATION_LOGO_BRANDS: Record<string, InvoiceLogoBrand> = {
   TRIVANDRUM: 'GSEC',
   THIRUVANANTHAPURAM: 'GSEC',
   TRV: 'GSEC',
+  HYDERABAD: 'GGI',
+  HYD: 'GGI',
 };
 
 export function resolveInvoiceLogoBrand(serviceStation: string): InvoiceLogoBrand {
@@ -192,7 +194,14 @@ function renderBrandHeader(doc: PDFKit.PDFDocument, input: InvoicePdfInput): num
     doc.image(logoBuffer, MARGIN, y, { height: logoH });
   }
   doc.font('Times-Bold').fontSize(invFs(15)).fillColor('#000');
-  doc.text(input.title || 'TAX INVOICE', MARGIN, y + 8, { width: CONTENT_W, align: 'center' });
+  // Centre the title on the logo's vertical midline so both sit on one line.
+  const titleH = doc.currentLineHeight();
+  const titleY = y + Math.max(0, (logoH - titleH) / 2);
+  doc.text(input.title || 'TAX INVOICE', MARGIN, titleY, {
+    width: CONTENT_W,
+    align: 'center',
+    lineBreak: false,
+  });
 
   return y + logoH + 6;
 }
@@ -519,9 +528,9 @@ function measureSecondaryAddressHeight(
   const clean = lines.map((line) => line.trim()).filter(Boolean);
   doc.font('Times-Roman').fontSize(invFs(7));
   const lineH = doc.heightOfString('X', { lineGap: 0 });
-  // The box always prints (reference layout) — at least two text lines tall, even with no data.
+  // No second address → no box (avoids a blank cell under Bill To / beside SAC).
+  if (clean.length === 0) return 0;
   const minH = CELL_PAD * 2 + lineH * 2;
-  if (clean.length === 0) return minH;
   let h = CELL_PAD;
   // First line (company name) stays on its own row; the rest wraps as one comma-joined block.
   h += doc.heightOfString(clean[0], { width, lineGap: 0 });

@@ -144,6 +144,8 @@ type AggregateBucket = {
 export type InvoiceChargeContractLike = {
   royaltyAtGross?: number | null;
   concessionRates?: ContractConcessionRatesShape | null;
+  /** Airline's own concessionRates win over the station Royalty Master. */
+  concessionRatesOverrideStation?: boolean | null;
   conditionalCharges?: ContractConditionalChargesShape | null;
   cancellationWithinHours?: number | null;
   /** ADS compose re-checks these so stale prep cannot bill non-contract equipment. */
@@ -2100,6 +2102,7 @@ function contractFromPreparationRecord(
     adsBillingEnabled: fallback?.adsBillingEnabled,
     billBmeEquipment: fallback?.billBmeEquipment === true,
     stationFlightConcession: fallback?.stationFlightConcession ?? null,
+    concessionRatesOverrideStation: fallback?.concessionRatesOverrideStation === true,
     adsEquipmentRules: fallback?.adsEquipmentRules,
     aircraftTypes: fallback?.aircraftTypes,
   };
