@@ -164,7 +164,7 @@ export const CONTRACT_CONCESSION_SCENARIO_HINTS: Record<ContractConcessionScenar
   divertedIntCargo: 'Diverted International-Cargo — this percent of the BHS package rate',
   divertedDomInt: 'Diverted Domestic-International — this percent of the BHS package rate',
   divertedIntDom: 'Diverted International-Domestic — this percent of the BHS package rate',
-  returnToRamp: 'Return to ramp flights — % of total billing on final invoice',
+  returnToRamp: 'Return to ramp — this percent of the BHS package rate is charged',
   originateTerminatePercent:
     'ATA only (originate) or ATD only (terminate) — this percent of the BHS package rate is charged',
   cancellationWithinHoursPercent:

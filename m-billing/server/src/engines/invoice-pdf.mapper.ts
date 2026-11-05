@@ -330,11 +330,24 @@ function mapLine(
     charged = round2(chargedRaw);
     unitPrice = storedUnitPrice;
   } else {
-    // BHS: Charged always equals Used. When a chargeable % applies to the unit price
-    // (e.g. 50% short ground time), the reduced rate prints in Rate/Unit rather than
-    // shrinking Charged to a factor (2 flights at 50% used to print as Charged 1).
-    charged = flightQty;
-    unitPrice = storedUnitPrice;
+    const packageRate = positiveNumber(ref.bhsPackageRate);
+    const replacementPercent = Number(ref.concessionPercent ?? 0);
+    const divertedFactor =
+      ref.concessionAppliedToUnitPrice === true &&
+      /diverted/i.test(`${line.description ?? ''}`) &&
+      packageRate != null &&
+      replacementPercent > 0 &&
+      replacementPercent < 100;
+    if (divertedFactor) {
+      // Diverted handling keeps the package rate in Rate/Unit. Charged is the
+      // contract fraction (25% prints as 0.25) and Amount is rate × charged.
+      charged = round2(flightQty * (replacementPercent / 100));
+      unitPrice = packageRate;
+    } else {
+      // Other BHS percents stay inside Rate/Unit so Charged remains the flight count.
+      charged = flightQty;
+      unitPrice = storedUnitPrice;
+    }
   }
 
   const base: InvoicePdfLineInput = {

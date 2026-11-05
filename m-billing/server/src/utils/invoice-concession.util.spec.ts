@@ -10,6 +10,8 @@ import {
   divertedChargeKeyForCategory,
   divertedUnitPricePercent,
   resolveLineConcessionPercent,
+  inferConcessionScenarioFromLine,
+  shouldApplyConcessionToBhsUnitPrice,
   concessionTotalsFromSavedHeader,
   roundBillingMoney,
   roundCeilingConcessionTotal,
@@ -511,15 +513,28 @@ describe('originate / terminate BHS percent', () => {
     ).toBe(true);
   });
 
-  it('adds return-to-ramp percent on top of the comprehensive rate', () => {
+  it('charges return to ramp at that percent of the package rate', () => {
     const line = {
       sourceRef: { operationalSnapshot: { returnToRamp: true, ataTime: '09:00', atdTime: '11:00' } },
+    };
+    const labelled = {
+      sourceRef: {
+        operationalSnapshot: {
+          typeOfFlight: 'Return to Ramp Flight',
+          typeOfHandling: 'Scheduled',
+          ataTime: '09:00',
+          atdTime: '11:00',
+        },
+      },
     };
     const rtrContract = {
       conditionalCharges: { returnToRamp: 42, originateTerminatePercent: 50 },
     };
-    expect(resolveLineConcessionPercent(line, rtrContract)).toBe(0);
-    expect(resolveLineAdditionalChargePercent(line, rtrContract)).toBe(42);
+    expect(resolveLineConcessionPercent(line, rtrContract)).toBe(42);
+    expect(resolveLineConcessionPercent(labelled, rtrContract)).toBe(42);
+    expect(resolveLineAdditionalChargePercent(line, rtrContract)).toBe(0);
+    expect(inferConcessionScenarioFromLine(labelled, rtrContract)).toBe('ReturnToRamp');
+    expect(shouldApplyConcessionToBhsUnitPrice('ReturnToRamp', rtrContract)).toBe(true);
   });
 
   it('charges the configured percent of the BHS package rate', () => {

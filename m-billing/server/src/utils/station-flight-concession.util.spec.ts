@@ -40,6 +40,36 @@ describe('station flight concession', () => {
     ).toBe(true);
   });
 
+  it('uses the royalty type saved for an Airport Authority', () => {
+    const authority = {
+      airportCommercial: { ownership: 'aai' as const, revenueShareMechanism: 'net' as const },
+      royaltyMaster: {
+        gross: { scheduledInternational: { percent: 18 } },
+        net: { scheduledInternational: { percent: 9 }, scheduledDomestic: { percent: 4 } },
+      },
+    };
+    expect(stationRoyaltyOnGross(authority, new Date('2026-09-15'))).toBe(false);
+    expect(stationFlightConcessionPercents(authority, new Date('2026-09-15'))).toEqual({
+      int: 9,
+      dom: 4,
+      ga: undefined,
+      gaDom: undefined,
+      gaInt: undefined,
+    });
+  });
+
+  it('keeps an Airport Authority on the gross card when no royalty type is saved', () => {
+    const authority = {
+      airportCommercial: { ownership: 'aai' as const },
+      royaltyMaster: {
+        gross: { scheduledInternational: { percent: 18 } },
+        net: { scheduledInternational: { percent: 9 } },
+      },
+    };
+    expect(stationRoyaltyOnGross(authority, new Date('2026-09-15'))).toBe(true);
+    expect(stationFlightConcessionPercents(authority, new Date('2026-09-15'))?.int).toBe(18);
+  });
+
   it('reads the private-airport side saved on Royalty Setup', () => {
     expect(stationFlightConcessionPercents(settings, new Date('2026-09-15'))).toEqual({
       int: 5,

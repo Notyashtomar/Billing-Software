@@ -71,6 +71,31 @@ describe('buildInvoicePdfInput — flight category', () => {
     expect(input.flightCategory).toBe('International');
   });
 
+  it('prints the package rate and the diverted fraction in Charged', () => {
+    const input = buildInvoicePdfInput({
+      header,
+      lines: [
+        {
+          ...bhsLine({
+            bhsPackageRate: 140733,
+            concessionPercent: 25,
+            concessionAppliedToUnitPrice: true,
+            usedQuantity: 1,
+            categoryOfFlight: 'International-Domestic',
+          }),
+          description: 'Charges for Diverted Flight handling',
+          quantity: 1,
+          unitPrice: 35183.25,
+          lineAmountExclTax: 35183.25,
+        },
+      ],
+    });
+    expect(input.lines[0].used).toBe(1);
+    expect(input.lines[0].charged).toBe(0.25);
+    expect(input.lines[0].unitPrice).toBe(140733);
+    expect(input.lines[0].amount).toBe(35183.25);
+  });
+
   it('prints International for an international-only airline when the flight is International-Domestic', () => {
     const input = buildInvoicePdfInput({
       header,

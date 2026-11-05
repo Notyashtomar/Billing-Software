@@ -100,10 +100,7 @@ export class BillingSettingsService {
         minRevenueShareApplicable: mag,
         magCurrency: mag ? (rules.magCurrency ?? prev?.magCurrency ?? 'INR') : undefined,
         ceilingRates: ceiling,
-        revenueShareMechanism:
-          rules.ownership === 'private'
-            ? (rules.revenueShareMechanism ?? prev?.revenueShareMechanism)
-            : undefined,
+        revenueShareMechanism: rules.revenueShareMechanism ?? prev?.revenueShareMechanism,
         revenueSharePercent: rules.revenueSharePercent ?? prev?.revenueSharePercent,
         effectiveFrom: rules.effectiveFrom
           ? new Date(rules.effectiveFrom)

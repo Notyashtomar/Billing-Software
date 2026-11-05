@@ -848,6 +848,7 @@ export const BHS_UNIT_PRICE_CONCESSION_SCENARIOS: ReadonlySet<ContractConcession
     'FiloChargesPercent',
     'LifoChargesPercent',
     'DelayChargesPercent',
+    'ReturnToRamp',
   ]);
 
 function hasExplicitConcessionRate(value: unknown): boolean {
@@ -913,6 +914,8 @@ export function shouldApplyConcessionToBhsUnitPrice(
       );
     case 'DelayChargesPercent':
       return hasExplicitConcessionRate(charges.delayChargesPercent);
+    case 'ReturnToRamp':
+      return positiveRate(charges.returnToRamp) > 0;
     default:
       return false;
   }
@@ -959,7 +962,7 @@ function ferryReplacementPercent(
 
 /**
  * Extra percent added on top of the handling amount (not a replacement of it).
- * Return to ramp 42% means 142% of the comprehensive rate.
+ * Return to ramp is not an add-on: that percent replaces the package rate.
  * RON is exclusive of late-arrival and extra-ground add-ons.
  * Split-sector flights do not get RON or extra ground time.
  */
@@ -971,19 +974,16 @@ export function resolveLineAdditionalChargePercent(
   const ron = positiveRate(charges.ronAdditionalPercent);
   const late = positiveRate(charges.lateArrivalAdditionalPercent);
   const ground = positiveRate(charges.extraGroundTimeAdditionalPercent);
-  const returnToRamp = positiveRate(charges.returnToRamp);
-  const rampExtra =
-    returnToRamp > 0 && isReturnToRampFlightSnapshot(line) ? returnToRamp : 0;
   const delayAdditional =
     positiveRate(charges.delayChargesPercent) > 0 && scheduleExceedsBySixHours(line)
       ? positiveRate(charges.delayChargesPercent)
       : 0;
-  if (ron <= 0 && late <= 0 && ground <= 0 && rampExtra <= 0 && delayAdditional <= 0) return 0;
+  if (ron <= 0 && late <= 0 && ground <= 0 && delayAdditional <= 0) return 0;
 
   const split = isSplitSectorFlight(line);
-  if (!split && ron > 0 && matchesRemainOvernight(line)) return ron + rampExtra + delayAdditional;
+  if (!split && ron > 0 && matchesRemainOvernight(line)) return ron + delayAdditional;
 
-  let extra = rampExtra + delayAdditional;
+  let extra = delayAdditional;
   const lateMinutes = lateArrivalMinutes(line);
   if (late > 0 && lateMinutes != null && lateMinutes > 75) extra += late;
   const groundMinutes = groundMinutesOf(line);
@@ -1018,6 +1018,7 @@ export function resolveLineConcessionPercent(
   if (ferryPercent != null) return ferryPercent;
 
   const divertedUnit = divertedUnitPricePercent(line, contract);
+  const returnToRamp = positiveRate(resolveConditionalCharges(contract).returnToRamp);
   const isTechnicalHandling =
     /technical/.test(handlingCorpus) ||
     /\btech\b/.test(handlingCorpus) ||
@@ -1026,6 +1027,7 @@ export function resolveLineConcessionPercent(
     /stand[\s-]?by/.test(handlingCorpus) || /stand[\s-]?by/.test(categoryLower);
 
   if (divertedUnit.diverted) return divertedUnit.percent ?? 0;
+  if (returnToRamp > 0 && isReturnToRampFlightSnapshot(line)) return returnToRamp;
   if (isTechnicalHandling) return rates.TechnicalHandlingChargesPercent;
   if (isStandby) return rates.StandbyChargesPercent;
   if (isOriginateOrTerminateFlight(line) && rates.OriginateTerminatePercent > 0) {
@@ -1130,6 +1132,12 @@ export function inferConcessionScenarioFromLine(
 
   const { handlingCorpus, categoryRaw } = flightSnapshotBlob(line);
   const categoryLower = categoryRaw.toLowerCase();
+  if (
+    isReturnToRampFlightSnapshot(line) &&
+    positiveRate(resolveConditionalCharges(contract).returnToRamp) > 0
+  ) {
+    return 'ReturnToRamp';
+  }
   const ferryKind = ferryHandlingKind(line);
   if (ferryKind === 'filo' && ferryReplacementPercent(line, contract) != null) {
     return 'FiloChargesPercent';
