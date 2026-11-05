@@ -979,6 +979,8 @@ export class BillingSettings {
     accountNumber?: string;
     ifscCode?: string;
     swiftCode?: string;
+    /** PAN printed in the invoice bank block ("Beneficiary's PAN"). Falls back to company PAN. */
+    beneficiaryPan?: string;
     chequePayableText?: string;
   };
 

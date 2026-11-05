@@ -305,6 +305,7 @@ export function resolveInvoiceBankDefaults(
     swiftCode: bank?.swiftCode?.trim() || base.swiftCode || '',
     ...(bank?.ifscCode?.trim() ? { ifscCode: bank.ifscCode.trim() } : {}),
     ...(bank?.micr?.trim() ? { micr: bank.micr.trim() } : {}),
+    ...(bank?.beneficiaryPan?.trim() ? { beneficiaryPan: bank.beneficiaryPan.trim() } : {}),
   };
 }
 

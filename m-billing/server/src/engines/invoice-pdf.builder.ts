@@ -1463,7 +1463,7 @@ function bankTableRows(input: InvoicePdfInput): Array<[string, string]> {
     [isUsd ? 'USD Account Number :' : 'INR Account Number :', bank.accountNumber ?? ''],
     ['MICR :', bank.micr ?? ''],
     ['IFSC :', bank.ifscCode ?? ''],
-    ["Beneficiary's PAN :", input.company.pan ?? ''],
+    ["Beneficiary's PAN :", bank.beneficiaryPan?.trim() || input.company.pan || ''],
   ];
 }
 

@@ -8,6 +8,7 @@ import {
   IsOptional,
   IsString,
   Matches,
+  MaxLength,
   ValidateNested,
 } from 'class-validator';
 
@@ -61,6 +62,11 @@ export class BankDetailsDto {
   @IsOptional()
   @IsString()
   swiftCode?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  beneficiaryPan?: string;
 
   @IsOptional()
   @IsString()
