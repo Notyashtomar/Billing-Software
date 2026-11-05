@@ -3840,6 +3840,14 @@ export class BillingInvoiceDraftsService {
     return 0;
   }
 
+  /**
+   * Re-derive concession + CGST/SGST + total on a saved header from its lines
+   * (used when the ROE on a USD draft is refreshed outside the draft editor).
+   */
+  async recalculateHeaderTotals(ctx: StationScopeContext, header: BillingInvoiceHeaderDocument) {
+    await this.recalculateHeader(header, ctx);
+  }
+
   private async recalculateHeader(
     header: BillingInvoiceHeaderDocument,
     ctx: StationScopeContext,

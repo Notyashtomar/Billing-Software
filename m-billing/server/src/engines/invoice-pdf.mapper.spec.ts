@@ -213,8 +213,7 @@ describe('buildInvoicePdfInput — flight category', () => {
     });
     expect(input.billTo.name).toBe('Air India Express');
     expect(input.billTo.addressLines).toEqual([
-      'GRN FLOOR',
-      'ROOM NO 22',
+      'GRN FLOOR, ROOM NO 22',
       'CHENNAI INTERNATIONAL AIRPORT',
     ]);
   });

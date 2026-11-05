@@ -121,6 +121,8 @@ export type InvoiceChargeContractShape = {
   cancellationWithinHours?: number | null;
   /** Concessions-page fee % (additive after Total Amount). */
   concessionRates?: ContractConcessionRatesShape | null;
+  /** When true, concessionRates.int / dom win over the station Royalty Master percent. */
+  concessionRatesOverrideStation?: boolean | null;
   /** Contracts-page conditional charges (BHS Charged / Amount). */
   conditionalCharges?: ContractConditionalChargesShape | null;
   bhsConcessionCoverage?: 'comprehensive' | 'non_comprehensive' | 'mixed' | null;
@@ -647,6 +649,20 @@ function durationMinutes(value: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+/**
+ * Minutes the actual movement ran past the scheduled one.
+ * Early movements are 0 (not late). Only a real midnight crossing — actual clock
+ * more than 12 h "before" schedule because the date did not roll — adds a day;
+ * otherwise an ATA of 22:57 against an STA of 23:15 would read as 23 h 42 m late.
+ */
+function minutesPastSchedule(scheduled: Date, actual: Date): number | null {
+  const dayMs = 24 * 60 * 60 * 1000;
+  let diff = actual.getTime() - scheduled.getTime();
+  if (diff < -dayMs / 2) diff += dayMs;
+  if (!Number.isFinite(diff)) return null;
+  return Math.max(0, diff / 60000);
+}
+
 function lateArrivalMinutes(line: InvoiceLineConcessionInput): number | null {
   const { snap, ref } = flightSnapshotBlob(line);
   const sta = snapshotDateTime(
@@ -662,10 +678,8 @@ function lateArrivalMinutes(line: InvoiceLineConcessionInput): number | null {
     ['ataTime', 'ATATime'],
   );
   if (sta && ata) {
-    let end = ata.getTime();
-    if (end < sta.getTime()) end += 24 * 60 * 60 * 1000;
-    const minutes = (end - sta.getTime()) / 60000;
-    if (Number.isFinite(minutes) && minutes >= 0) return minutes;
+    const minutes = minutesPastSchedule(sta, ata);
+    if (minutes != null) return minutes;
   }
   return durationMinutes(snap.delayOnSta ?? snap.arrivalDelay ?? snap.ActualDelay);
 }
@@ -686,10 +700,8 @@ function lateDepartureMinutes(line: InvoiceLineConcessionInput): number | null {
     ['atdTime', 'ATDTime'],
   );
   if (std && atd) {
-    let end = atd.getTime();
-    if (end < std.getTime()) end += 24 * 60 * 60 * 1000;
-    const minutes = (end - std.getTime()) / 60000;
-    if (Number.isFinite(minutes) && minutes >= 0) return minutes;
+    const minutes = minutesPastSchedule(std, atd);
+    if (minutes != null) return minutes;
   }
   return durationMinutes(snap.delayOnStd ?? snap.departureDelay);
 }
@@ -1072,6 +1084,11 @@ export function resolveLineFeeConcessionPercent(
       return Number(explicitDiverted);
     }
     if (!isCargo) {
+      // Airline-specific agreement: the contract's own fee % beats the station default.
+      if (contract?.concessionRatesOverrideStation === true) {
+        const own = positiveRate(isDom ? rawRates?.dom : rawRates?.int);
+        if (own > 0) return own;
+      }
       const stationPercent = stationPercentForSector(contract?.stationFlightConcession, sector);
       if (stationPercent != null && stationPercent > 0) return stationPercent;
     }
@@ -1659,6 +1676,9 @@ export function calculateInvoiceConcessionFromLines(
   if (ceilingFromLines > 0 && subtotal > lineSubtotal + 0.001) {
     subtotal = roundBillingMoney(lineSubtotal);
   }
+  // Airline-specific override rates can carry more than 2 decimals (e.g. 36.92275%),
+  // so keep full precision for them; the PDF label still prints 2 decimals.
+  const precisePercent = contract?.concessionRatesOverrideStation === true;
   const concessionAmountFromLines = roundBillingMoney(
     particulars.reduce((sum, line) => {
       const amt = lineExclAmount(line);
@@ -1671,13 +1691,15 @@ export function calculateInvoiceConcessionFromLines(
           ? storedPercent
           : resolveLineFeeConcessionPercent(line, contract);
       if (pct <= 0) return sum;
-      return sum + roundBillingMoney(amt * (pct / 100));
+      const lineFee = amt * (pct / 100);
+      return sum + (precisePercent ? lineFee : roundBillingMoney(lineFee));
     }, 0),
   );
-  const concessionFeePercent =
-    lineSubtotal > 0
-      ? roundBillingMoney((concessionAmountFromLines * 100) / lineSubtotal)
-      : 0;
+  const rawConcessionFeePercent =
+    lineSubtotal > 0 ? (concessionAmountFromLines * 100) / lineSubtotal : 0;
+  const concessionFeePercent = precisePercent
+    ? rawConcessionFeePercent
+    : roundBillingMoney(rawConcessionFeePercent);
   const percentConcession =
     concessionFeePercent > 0 && subtotal > 0
       ? roundBillingMoney(subtotal * (concessionFeePercent / 100))

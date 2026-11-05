@@ -280,6 +280,13 @@ export class BillingContract {
   royaltyInclusive?: boolean;
 
   /**
+   * When true, this airline's own Concessions-page fee % (concessionRates.int / dom)
+   * is used instead of the station Royalty Master percent for scheduled flights.
+   */
+  @Prop()
+  concessionRatesOverrideStation?: boolean;
+
+  /**
    * How concession sits against the BHS package.
    * comprehensive — already inside the package
    * non_comprehensive — charged separately on the airline invoice

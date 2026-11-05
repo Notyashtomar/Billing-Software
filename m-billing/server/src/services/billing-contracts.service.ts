@@ -329,6 +329,9 @@ export class BillingContractsService {
     }
     if (dto.royaltyAtGross !== undefined) doc.royaltyAtGross = dto.royaltyAtGross;
     if (dto.royaltyInclusive !== undefined) doc.royaltyInclusive = dto.royaltyInclusive;
+    if (dto.concessionRatesOverrideStation !== undefined) {
+      doc.concessionRatesOverrideStation = dto.concessionRatesOverrideStation;
+    }
     if (dto.bhsConcessionCoverage !== undefined) {
       doc.bhsConcessionCoverage = dto.bhsConcessionCoverage;
     }

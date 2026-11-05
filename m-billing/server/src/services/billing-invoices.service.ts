@@ -889,10 +889,15 @@ export class BillingInvoicesService {
     const headerDoc = initial;
 
     const partRate = await this.invoiceDraftsService.fortnightExchangeRateForHeader(ctx, headerDoc);
+    // A changed ROE must also re-derive the INR gross, CGST/SGST and total;
+    // saving only the factor left tax at 9% of the previous month's INR gross.
+    const saveWithRefreshedFactor = async (factor: number) => {
+      headerDoc.currencyFactor = factor;
+      await this.invoiceDraftsService.recalculateHeaderTotals(ctx, headerDoc);
+    };
     if (partRate != null && !headerDoc.totalReceivableInUsd) {
       if (partRate !== headerDoc.currencyFactor) {
-        headerDoc.currencyFactor = partRate;
-        await headerDoc.save();
+        await saveWithRefreshedFactor(partRate);
       }
     } else if (
       !headerDoc.totalReceivableInUsd &&
@@ -906,8 +911,7 @@ export class BillingInvoicesService {
           headerDoc.billingPeriodStart,
         );
         if (factor > 0 && factor !== headerDoc.currencyFactor) {
-          headerDoc.currencyFactor = factor;
-          await headerDoc.save();
+          await saveWithRefreshedFactor(factor);
         } else if (factor > 0) {
           headerDoc.currencyFactor = factor;
         }
