@@ -45,7 +45,50 @@ describe('station flight concession', () => {
       int: 5,
       dom: 12,
       ga: 8,
+      gaDom: 8,
+      gaInt: 8,
     });
+  });
+
+  it('keeps GA-Domestic and GA-International as separate fees', () => {
+    const percents = stationFlightConcessionPercents(
+      {
+        airportCommercial: { ownership: 'private', revenueShareMechanism: 'gross' },
+        royaltyMaster: {
+          gross: {
+            scheduledInternational: { percent: 5 },
+            scheduledDomestic: { percent: 12 },
+            generalAviationDomestic: { percent: 6 },
+            generalAviationInternational: { percent: 9 },
+          },
+        },
+      },
+      new Date('2026-09-15'),
+    );
+    expect(percents).toEqual({ int: 5, dom: 12, ga: undefined, gaDom: 6, gaInt: 9 });
+    expect(
+      preparationFlightConcessionSector({
+        operationalSnapshot: { categoryOfFlight: 'GA-Domestic' },
+      }),
+    ).toBe('GA_DOM');
+    expect(
+      preparationFlightConcessionSector({
+        operationalSnapshot: { categoryOfFlight: 'General Aviation International' },
+      }),
+    ).toBe('GA_INT');
+    const contract = { stationFlightConcession: percents };
+    expect(
+      resolveLineFeeConcessionPercent(
+        { sourceRef: { operationalSnapshot: { categoryOfFlight: 'GA-Domestic' } } },
+        contract,
+      ),
+    ).toBe(6);
+    expect(
+      resolveLineFeeConcessionPercent(
+        { sourceRef: { operationalSnapshot: { categoryOfFlight: 'GA International' } } },
+        contract,
+      ),
+    ).toBe(9);
   });
 
   it('puts domestic and international flights on different invoice groups', () => {

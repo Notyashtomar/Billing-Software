@@ -131,6 +131,8 @@ export type InvoiceChargeContractShape = {
     dom?: number;
     int?: number;
     ga?: number;
+    gaDom?: number;
+    gaInt?: number;
   } | null;
   /**
    * Station fee used only when the contract has no concession for that flight.
@@ -141,6 +143,8 @@ export type InvoiceChargeContractShape = {
     dom?: number;
     int?: number;
     ga?: number;
+    gaDom?: number;
+    gaInt?: number;
   } | null;
 };
 

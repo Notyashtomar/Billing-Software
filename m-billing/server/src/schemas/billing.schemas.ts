@@ -1023,7 +1023,7 @@ export class BillingSettings {
   };
 
   /**
-   * Royalty Master concessions (net and gross). Each side stores three flight concessions.
+   * Royalty Master concessions (net and gross). Each side stores scheduled and GA flight concessions.
    * Exclusive invoices read the card selected for this station.
    */
   @Prop({ type: Object })
@@ -1034,6 +1034,8 @@ export class BillingSettings {
       scheduledInternational?: { percent: number; effectiveFrom?: Date; effectiveTo?: Date };
       scheduledDomestic?: { percent: number; effectiveFrom?: Date; effectiveTo?: Date };
       generalAviation?: { percent: number; effectiveFrom?: Date; effectiveTo?: Date };
+      generalAviationDomestic?: { percent: number; effectiveFrom?: Date; effectiveTo?: Date };
+      generalAviationInternational?: { percent: number; effectiveFrom?: Date; effectiveTo?: Date };
     };
     gross?: {
       effectiveFrom?: Date;
@@ -1041,6 +1043,8 @@ export class BillingSettings {
       scheduledInternational?: { percent: number; effectiveFrom?: Date; effectiveTo?: Date };
       scheduledDomestic?: { percent: number; effectiveFrom?: Date; effectiveTo?: Date };
       generalAviation?: { percent: number; effectiveFrom?: Date; effectiveTo?: Date };
+      generalAviationDomestic?: { percent: number; effectiveFrom?: Date; effectiveTo?: Date };
+      generalAviationInternational?: { percent: number; effectiveFrom?: Date; effectiveTo?: Date };
     };
   };
 

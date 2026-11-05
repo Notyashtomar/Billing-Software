@@ -154,6 +154,8 @@ export type InvoiceChargeContractLike = {
     dom?: number;
     int?: number;
     ga?: number;
+    gaDom?: number;
+    gaInt?: number;
   } | null;
   adsEquipmentRules?: AdsEquipmentInclusionRule[];
   aircraftTypes?: string[];

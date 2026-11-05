@@ -4,12 +4,17 @@ import { useEffect, useState } from 'react';
 import type { BillingApi } from '@/lib/billing-api';
 import type { AirportCommercial } from './AirportRulesWizard';
 
-type ConcessionKind = 'scheduledInternational' | 'scheduledDomestic' | 'generalAviation';
+type ConcessionKind =
+  | 'scheduledInternational'
+  | 'scheduledDomestic'
+  | 'generalAviationDomestic'
+  | 'generalAviationInternational';
 
 const KINDS: { key: ConcessionKind; label: string }[] = [
   { key: 'scheduledInternational', label: 'Scheduled international' },
   { key: 'scheduledDomestic', label: 'Scheduled domestic' },
-  { key: 'generalAviation', label: 'General aviation' },
+  { key: 'generalAviationDomestic', label: 'GA-Domestic' },
+  { key: 'generalAviationInternational', label: 'GA-International' },
 ];
 
 type Fee = { percent?: number };
@@ -17,14 +22,21 @@ type Side = {
   scheduledInternational?: Fee;
   scheduledDomestic?: Fee;
   generalAviation?: Fee;
+  generalAviationDomestic?: Fee;
+  generalAviationInternational?: Fee;
 };
 type RoyaltyMaster = { net?: Side; gross?: Side };
 
 type Customer = { customerCode?: string; customerName?: string; airlineName?: string };
 
 function percentOf(side: Side | undefined, key: ConcessionKind): number | null {
-  const n = Number(side?.[key]?.percent);
-  return Number.isFinite(n) ? n : null;
+  const direct = Number(side?.[key]?.percent);
+  if (Number.isFinite(direct)) return direct;
+  if (key === 'generalAviationDomestic' || key === 'generalAviationInternational') {
+    const saved = Number(side?.generalAviation?.percent);
+    if (Number.isFinite(saved)) return saved;
+  }
+  return null;
 }
 
 export function FlightConcessionButton({ api }: { api: BillingApi }) {

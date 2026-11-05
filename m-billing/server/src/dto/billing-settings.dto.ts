@@ -182,7 +182,7 @@ export class RoyaltyFeeDto {
   percent: number;
 }
 
-/** Three concession fees on one royalty card, with one shared validity. */
+/** Concession fees on one royalty card, with one shared validity. */
 export class RoyaltySideDto {
   @IsDateString()
   effectiveFrom: string;
@@ -198,9 +198,19 @@ export class RoyaltySideDto {
   @Type(() => RoyaltyFeeDto)
   scheduledDomestic: RoyaltyFeeDto;
 
+  /** Older single General Aviation fee. New saves use the domestic and international fees. */
+  @IsOptional()
   @ValidateNested()
   @Type(() => RoyaltyFeeDto)
-  generalAviation: RoyaltyFeeDto;
+  generalAviation?: RoyaltyFeeDto;
+
+  @ValidateNested()
+  @Type(() => RoyaltyFeeDto)
+  generalAviationDomestic: RoyaltyFeeDto;
+
+  @ValidateNested()
+  @Type(() => RoyaltyFeeDto)
+  generalAviationInternational: RoyaltyFeeDto;
 }
 
 export class RoyaltyMasterDto {
