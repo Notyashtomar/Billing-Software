@@ -333,32 +333,24 @@ export function AirportRulesWizard({ api, initial, onClose, onSaved }: Props) {
     };
   }, [api, initial]);
 
-  const needsWorkbook = ownership === 'private' && minShare;
-  const steps: { id: 'ownership' | 'royalty' | 'minimum' | 'mag'; label: string }[] =
-    ownership === 'aai'
-      ? [{ id: 'ownership', label: 'Ownership' }]
-      : [
-          { id: 'ownership', label: 'Ownership' },
-          { id: 'royalty', label: 'Royalty' },
-          { id: 'minimum', label: 'Minimum share' },
-          { id: 'mag', label: 'MAG rates' },
-        ];
+  const needsWorkbook = minShare;
+  const steps: { id: 'ownership' | 'royalty' | 'minimum' | 'mag'; label: string }[] = [
+    { id: 'ownership', label: 'Ownership' },
+    { id: 'royalty', label: 'Royalty' },
+    { id: 'minimum', label: 'Minimum share' },
+    { id: 'mag', label: 'MAG rates' },
+  ];
   const stepIndex = Math.min(step, steps.length - 1);
   const currentStep = steps[stepIndex];
   const onMagStep = currentStep.id === 'mag';
-  const canSaveNow = ownership === 'aai' || onMagStep || (currentStep.id === 'minimum' && !minShare);
+  const canSaveNow = onMagStep || (currentStep.id === 'minimum' && !minShare);
 
   const chooseOwnership = (next: 'private' | 'aai') => {
     setOwnership(next);
-    if (next === 'aai') {
-      setMinShare(false);
-      setStep(0);
-    }
   };
 
   const goNext = () => {
     setError('');
-    if (currentStep.id === 'ownership' && ownership === 'aai') return;
     if (currentStep.id === 'royalty' && !mechanism) {
       setError('Choose Royalty on Net or Royalty on Gross.');
       return;
@@ -369,7 +361,7 @@ export function AirportRulesWizard({ api, initial, onClose, onSaved }: Props) {
 
   const save = async () => {
     setError('');
-    if (ownership === 'private' && !mechanism) {
+    if (!mechanism) {
       setError('Choose Royalty on Net or Royalty on Gross.');
       return;
     }
@@ -395,7 +387,7 @@ export function AirportRulesWizard({ api, initial, onClose, onSaved }: Props) {
       await api.updateSettings({
         airportCommercial: {
           ownership,
-          revenueShareMechanism: ownership === 'private' ? mechanism : undefined,
+          revenueShareMechanism: mechanism || undefined,
           minRevenueShareApplicable: needsWorkbook,
           magCurrency: needsWorkbook ? magCurrency : undefined,
           ceilingRates: needsWorkbook ? ceilingRates : [],
@@ -483,7 +475,7 @@ export function AirportRulesWizard({ api, initial, onClose, onSaved }: Props) {
         {currentStep.id === 'royalty' ? (
           <fieldset className="mt-4 grid gap-2">
             <legend className="text-sm font-medium text-[color:var(--billing-heading)]">
-              Which royalty applies at this private station?
+              Which royalty applies at this station?
             </legend>
             <p className="text-sm text-[color:var(--billing-text-muted)]">
               Royalty Master shows only the card you choose here.

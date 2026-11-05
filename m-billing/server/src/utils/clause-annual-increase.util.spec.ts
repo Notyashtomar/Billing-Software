@@ -1,5 +1,6 @@
 import {
   annualSteps,
+  increaseStartForRateCard,
   priceWithAnnualIncrease,
 } from './clause-annual-increase.util';
 
@@ -31,6 +32,30 @@ describe('clause annual increase', () => {
     expect(
       priceWithAnnualIncrease(20545, clauses, '2027-09-15', 'ADS', { bakedSteps: 1 }),
     ).toBe(21470);
+  });
+
+  it('keeps the listed rate-card price through the card year and increases next year', () => {
+    const cpi = [
+      {
+        clauseType: 'cpi',
+        label: 'Current-year rates',
+        appliesTo: ['BHS'],
+        percent: 5,
+        validFrom: '2026-01-01',
+      },
+    ];
+    expect(increaseStartForRateCard('2026-01-01', '2026-01-01')).toBe('2027-01-01');
+    expect(
+      priceWithAnnualIncrease(16032, cpi, '2026-10-15', 'BHS', {
+        cardValidFrom: '2026-01-01',
+      }),
+    ).toBe(16032);
+    expect(
+      priceWithAnnualIncrease(16032, cpi, '2027-10-15', 'BHS', {
+        cardValidFrom: '2026-01-01',
+        bakedSteps: 1,
+      }),
+    ).toBe(16834);
   });
 
   it('does not change the price when the clause has not started', () => {

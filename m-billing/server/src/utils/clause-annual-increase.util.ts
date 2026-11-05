@@ -107,22 +107,42 @@ export function bakedAnnualSteps(remarks: string | undefined, percent: number, v
   return Number.isFinite(steps) && steps > 0 ? steps : 0;
 }
 
+/**
+ * A rate card's from-date is the first day of the price shown on that card.
+ * The yearly increase starts on the card's next anniversary, and not before
+ * the clause date. A card from 1 Jan 2026 therefore bills its listed price
+ * through 2026 and increases from 1 Jan 2027.
+ */
+export function increaseStartForRateCard(
+  clauseValidFrom: string,
+  cardValidFrom?: Date | string | null,
+): string {
+  const card = ymd(cardValidFrom ?? undefined);
+  if (!card || !clauseValidFrom) return clauseValidFrom;
+  const anniversary = addYears(card, 1);
+  return anniversary > clauseValidFrom ? anniversary : clauseValidFrom;
+}
+
 export function priceWithAnnualIncrease(
   storedPrice: number,
   clauses: AnnualClause[] | undefined,
   billingDate: Date | string,
   scope: AnnualPriceScope,
-  opts?: { basePrice?: number | null; bakedSteps?: number },
+  opts?: { basePrice?: number | null; bakedSteps?: number; cardValidFrom?: Date | string | null },
 ): number {
   if (!(storedPrice > 0)) return storedPrice;
   const metric = pickAnnualIncrease(clauses, scope);
   if (!metric) return storedPrice;
   const billing = ymd(billingDate);
-  const steps = annualSteps(metric.validFrom, metric.validTo, billing);
-  const baked = opts?.bakedSteps ?? 0;
+  const start = increaseStartForRateCard(metric.validFrom, opts?.cardValidFrom);
+  const steps = annualSteps(start, metric.validTo, billing);
+  if (steps <= 0) return storedPrice;
+  const delayedByCard = start !== metric.validFrom;
+  const baked = delayedByCard ? 0 : (opts?.bakedSteps ?? 0);
+  const basePrice = delayedByCard ? null : opts?.basePrice;
   let price = storedPrice;
-  if (opts?.basePrice != null && opts.basePrice > 0 && steps >= 1) {
-    price = roundRupee(opts.basePrice * (1 + metric.percent / 100) ** steps);
+  if (basePrice != null && basePrice > 0 && steps >= 1) {
+    price = roundRupee(basePrice * (1 + metric.percent / 100) ** steps);
   } else if (baked > 0 && steps !== baked) {
     price = roundRupee(storedPrice * (1 + metric.percent / 100) ** (steps - baked));
   } else if (baked === 0 && steps >= 1) {

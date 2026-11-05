@@ -1,5 +1,6 @@
 import {
   categoriesOfFlightFromSnapshots,
+  isInternationalOnlyAirline,
   pickCategoryOfFlight,
   resolveInvoiceFlightCategory,
 } from './invoice-flight-category.util';
@@ -21,6 +22,20 @@ describe('invoice-flight-category.util', () => {
 
   it('shows both when one invoice mixes domestic and international flights', () => {
     expect(resolveInvoiceFlightCategory(['Dom', 'Int'])).toBe('Domestic & International');
+  });
+
+  it('prints International for an international-only airline even when a flight is tagged domestic', () => {
+    expect(isInternationalOnlyAirline({ category: 'Int', categories: ['Int'] })).toBe(true);
+    expect(isInternationalOnlyAirline({ category: 'Both', categories: ['Dom', 'Int'] })).toBe(false);
+    expect(
+      resolveInvoiceFlightCategory(['International-Domestic', 'Domestic'], {
+        category: 'Int',
+        categories: ['Int'],
+      }),
+    ).toBe('International');
+    expect(resolveInvoiceFlightCategory(['Domestic'], { category: 'Dom', categories: ['Dom'] })).toBe(
+      'Domestic',
+    );
   });
 
   it('collects distinct categories across the records behind a line', () => {

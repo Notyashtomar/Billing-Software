@@ -64,7 +64,14 @@ function guideFor(
     return `Set the station as a private airport or an Airport Authority on Airport Setup first. ${fees}`;
   }
   if (ownership === 'aai') {
-    return `This station is an Airport Authority. Both royalty cards are shown. ${fees} MAG rates are not used.`;
+    const chosen = mechanism === 'net' ? 'Royalty on Net' : mechanism === 'gross' ? 'Royalty on Gross' : '';
+    if (chosen && mag) {
+      return `This station is an Airport Authority with ${chosen} and MAG rates applicable. Only that card is shown. ${fees} An Exclusive invoice uses the higher of the royalty and the MAG for each flight’s aircraft band and handling (full handling unless the flight is cargo, ramp only, or passenger only).`;
+    }
+    if (chosen) {
+      return `This station is an Airport Authority with ${chosen}. Only that card is shown. ${fees}`;
+    }
+    return `This station is an Airport Authority. Choose Royalty on Net or Royalty on Gross in Configure rules. Until then, both royalty cards are shown. ${fees}`;
   }
   const chosen = mechanism === 'net' ? 'Royalty on Net' : mechanism === 'gross' ? 'Royalty on Gross' : '';
   if (!chosen) {
@@ -142,17 +149,19 @@ export function RoyaltySetupPage({ api }: Props) {
     void load();
   }, [load]);
 
-  const mag = Boolean(commercial?.ownership === 'private' && commercial.minRevenueShareApplicable);
+  const mag = Boolean(commercial?.minRevenueShareApplicable);
   const magRates = commercial?.ceilingRates ?? [];
   const magCurrency: MagCurrency = commercial?.magCurrency ?? 'INR';
   const hasMagRates = magRates.length > 0;
   const mechanism: Side | undefined =
-    commercial?.ownership === 'private' &&
-    (commercial.revenueShareMechanism === 'net' || commercial.revenueShareMechanism === 'gross')
+    commercial?.revenueShareMechanism === 'net' || commercial?.revenueShareMechanism === 'gross'
       ? commercial.revenueShareMechanism
       : undefined;
-  const visibleSides: Side[] =
-    commercial?.ownership === 'aai' ? ['net', 'gross'] : mechanism ? [mechanism] : [];
+  const visibleSides: Side[] = mechanism
+    ? [mechanism]
+    : commercial?.ownership === 'aai'
+      ? ['net', 'gross']
+      : [];
   const ownershipLabel =
     commercial?.ownership === 'private'
       ? 'Private airport'

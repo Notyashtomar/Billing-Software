@@ -235,7 +235,7 @@ export class AirportCommercialRulesDto {
   @IsEnum(['private', 'aai'])
   ownership: 'private' | 'aai';
 
-  /** Private stations choose Royalty on Net or Royalty on Gross. Concession fees are set on Royalty Master. */
+  /** Royalty on Net or Royalty on Gross for this station. Concession fees are set on Royalty Master. */
   @IsOptional()
   @IsEnum(['gross', 'net'])
   revenueShareMechanism?: 'gross' | 'net';

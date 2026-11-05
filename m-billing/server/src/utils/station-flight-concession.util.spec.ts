@@ -40,6 +40,36 @@ describe('station flight concession', () => {
     ).toBe(true);
   });
 
+  it('uses the royalty type saved for an Airport Authority', () => {
+    const authority = {
+      airportCommercial: { ownership: 'aai' as const, revenueShareMechanism: 'net' as const },
+      royaltyMaster: {
+        gross: { scheduledInternational: { percent: 18 } },
+        net: { scheduledInternational: { percent: 9 }, scheduledDomestic: { percent: 4 } },
+      },
+    };
+    expect(stationRoyaltyOnGross(authority, new Date('2026-09-15'))).toBe(false);
+    expect(stationFlightConcessionPercents(authority, new Date('2026-09-15'))).toEqual({
+      int: 9,
+      dom: 4,
+      ga: undefined,
+      gaDom: undefined,
+      gaInt: undefined,
+    });
+  });
+
+  it('keeps an Airport Authority on the gross card when no royalty type is saved', () => {
+    const authority = {
+      airportCommercial: { ownership: 'aai' as const },
+      royaltyMaster: {
+        gross: { scheduledInternational: { percent: 18 } },
+        net: { scheduledInternational: { percent: 9 } },
+      },
+    };
+    expect(stationRoyaltyOnGross(authority, new Date('2026-09-15'))).toBe(true);
+    expect(stationFlightConcessionPercents(authority, new Date('2026-09-15'))?.int).toBe(18);
+  });
+
   it('reads the private-airport side saved on Royalty Setup', () => {
     expect(stationFlightConcessionPercents(settings, new Date('2026-09-15'))).toEqual({
       int: 5,
@@ -127,6 +157,29 @@ describe('station flight concession', () => {
       ),
     ).toBe(5);
     expect(preparationFlightConcessionSector({ sourceType: 'raf' })).toBe('GA');
+  });
+
+  it('uses the international royalty for an international airline flight tagged International-Domestic', () => {
+    const percents = { int: 15, dom: 3, ga: 15, gaDom: 15, gaInt: 15 };
+    const line = {
+      sourceRef: { operationalSnapshot: { categoryOfFlight: 'International-Domestic' } },
+    };
+    expect(
+      resolveLineFeeConcessionPercent(line, {
+        category: 'Int',
+        categories: ['Int'],
+        stationFlightConcession: percents,
+        concessionRates: { int: 1, dom: 2 },
+      }),
+    ).toBe(15);
+    expect(
+      resolveLineFeeConcessionPercent(line, {
+        category: 'Both',
+        categories: ['Dom', 'Int'],
+        stationFlightConcession: percents,
+        concessionRates: { int: 1, dom: 2 },
+      }),
+    ).toBe(3);
   });
 
   it('keeps a September royalty fee for an ADS invoice regenerated in October', () => {

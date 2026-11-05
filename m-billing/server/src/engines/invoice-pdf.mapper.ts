@@ -15,6 +15,7 @@ import {
   type InvoiceConcessionTotals,
 } from '../utils/invoice-concession.util';
 import {
+  isInternationalOnlyAirline,
   pickCategoryOfFlight,
   resolveInvoiceFlightCategory,
 } from '../utils/invoice-flight-category.util';
@@ -329,11 +330,24 @@ function mapLine(
     charged = round2(chargedRaw);
     unitPrice = storedUnitPrice;
   } else {
-    // BHS: Charged always equals Used. When a chargeable % applies to the unit price
-    // (e.g. 50% short ground time), the reduced rate prints in Rate/Unit rather than
-    // shrinking Charged to a factor (2 flights at 50% used to print as Charged 1).
-    charged = flightQty;
-    unitPrice = storedUnitPrice;
+    const packageRate = positiveNumber(ref.bhsPackageRate);
+    const replacementPercent = Number(ref.concessionPercent ?? 0);
+    const divertedFactor =
+      ref.concessionAppliedToUnitPrice === true &&
+      /diverted/i.test(`${line.description ?? ''}`) &&
+      packageRate != null &&
+      replacementPercent > 0 &&
+      replacementPercent < 100;
+    if (divertedFactor) {
+      // Diverted handling keeps the package rate in Rate/Unit. Charged is the
+      // contract fraction (25% prints as 0.25) and Amount is rate × charged.
+      charged = round2(flightQty * (replacementPercent / 100));
+      unitPrice = packageRate;
+    } else {
+      // Other BHS percents stay inside Rate/Unit so Charged remains the flight count.
+      charged = flightQty;
+      unitPrice = storedUnitPrice;
+    }
   }
 
   const base: InvoicePdfLineInput = {
@@ -460,6 +474,8 @@ export type BuildInvoicePdfInputParams = {
   serviceCatalog?: ServiceCatalogLike[];
   /** Active contract category ('Dom' | 'Int') — fallback for legacy invoice lines. */
   contractCategory?: string;
+  /** Contract sector list. An international-only airline always prints International. */
+  contractCategories?: Array<string | null | undefined> | null;
   concessionFeePercent?: number;
   concessionTotals?: InvoiceConcessionTotals;
   irn?: string;
@@ -691,7 +707,12 @@ export function buildInvoicePdfInput(params: BuildInvoicePdfInputParams): Invoic
 
   const totalInclTax = round2(concessionTotals.totalInclTax);
 
-  const flightCategory = inferFlightCategory(lines, serviceCatalog, params.contractCategory);
+  const flightCategory = inferFlightCategory(
+    lines,
+    serviceCatalog,
+    params.contractCategory,
+    params.contractCategories,
+  );
   const irn = params.irn?.trim() || undefined;
 
   return {
@@ -784,7 +805,10 @@ function inferFlightCategory(
   lines: InvoiceLineLike[],
   catalog: ServiceCatalogLike[] | undefined,
   contractCategory: string | undefined,
+  contractCategories?: Array<string | null | undefined> | null,
 ): string {
+  const airline = { category: contractCategory, categories: contractCategories };
+  if (isInternationalOnlyAirline(airline)) return 'International';
   const fromLines = resolveInvoiceFlightCategory(
     lines.flatMap((line) => {
       const ref = line.sourceRef ?? {};
@@ -797,7 +821,7 @@ function inferFlightCategory(
   );
   if (fromLines) return fromLines;
 
-  const fromContract = resolveInvoiceFlightCategory([contractCategory]);
+  const fromContract = resolveInvoiceFlightCategory([contractCategory], airline);
   if (fromContract) return fromContract;
 
   const code = lines.find((l) => l.serviceCode)?.serviceCode;

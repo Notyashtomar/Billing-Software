@@ -56,18 +56,22 @@ export function preparationInvoiceCategory(
   return 'OTHER';
 }
 
-export function preparationInvoiceGroupKey(record: {
-  customerCode: string;
-  billingPeriodStart?: Date | string;
-  billingPeriodEnd?: Date | string;
-  sourceType?: string;
-  operationalSnapshot?: Record<string, unknown> | null;
-  sourceRef?: { operationalSnapshot?: Record<string, unknown> | null } | null;
-}): string {
+export function preparationInvoiceGroupKey(
+  record: {
+    customerCode: string;
+    billingPeriodStart?: Date | string;
+    billingPeriodEnd?: Date | string;
+    sourceType?: string;
+    operationalSnapshot?: Record<string, unknown> | null;
+    sourceRef?: { operationalSnapshot?: Record<string, unknown> | null } | null;
+  },
+  opts?: { internationalAirline?: boolean },
+): string {
   const start = toYmd(record.billingPeriodStart);
   const end = toYmd(record.billingPeriodEnd);
   const category = preparationInvoiceCategory(record.sourceType);
-  const sector = preparationFlightConcessionSector(record);
+  let sector = preparationFlightConcessionSector(record);
+  if (opts?.internationalAirline && (sector === 'DOM' || sector === 'INT')) sector = 'INT';
   return `${String(record.customerCode ?? '').toUpperCase()}|${start}|${end}|${category}|${sector}`;
 }
 

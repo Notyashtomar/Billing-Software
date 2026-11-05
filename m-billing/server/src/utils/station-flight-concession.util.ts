@@ -1,4 +1,5 @@
 import { normalizeFlightCategory } from './aircraft-type-match.util';
+import { isInternationalOnlyAirline } from './invoice-flight-category.util';
 
 export type FlightConcessionSector = 'DOM' | 'INT' | 'GA' | 'GA_DOM' | 'GA_INT';
 
@@ -91,8 +92,8 @@ function hasPercent(percents: StationFlightConcessionPercents): boolean {
 
 /**
  * Station Royalty Setup fees that invoices apply by flight category.
- * A private airport uses the side chosen in Configure rules.
- * An Airport Authority uses Royalty on Gross when that side has a fee, otherwise Royalty on Net.
+ * A station uses the royalty type chosen in Configure rules.
+ * An Airport Authority with no type saved yet uses Royalty on Gross when that side has a fee, otherwise Royalty on Net.
  */
 export function stationFlightConcessionPercents(
   settings: StationConcessionSettings | null | undefined,
@@ -108,8 +109,9 @@ export function stationFlightConcessionPercents(
   const net = rangesOverlap(master.net, periodFrom, periodTo) ? sidePercents(master.net) : {};
   const ownership = String(settings?.airportCommercial?.ownership ?? '').toLowerCase();
   const mechanism = String(settings?.airportCommercial?.revenueShareMechanism ?? '').toLowerCase();
+  const mechanismChosen = mechanism === 'net' || mechanism === 'gross';
   const preferred =
-    ownership === 'private' && (mechanism === 'net' || mechanism === 'gross')
+    mechanismChosen && (ownership === 'private' || ownership === 'aai')
       ? mechanism === 'net'
         ? net
         : gross
@@ -123,8 +125,8 @@ export function stationFlightConcessionPercents(
 
 /**
  * True when Exclusive invoices gross up the station percent: amount × p / (100 − p).
- * A private airport follows Configure rules even when the royalty card dates miss the invoice month.
- * An Airport Authority follows whichever royalty card covers the invoice.
+ * The royalty type chosen in Configure rules is used even when the royalty card dates miss the invoice month.
+ * An Airport Authority with no type saved yet follows whichever royalty card covers the invoice.
  */
 export function stationRoyaltyOnGross(
   settings: StationConcessionSettings | null | undefined,
@@ -133,7 +135,9 @@ export function stationRoyaltyOnGross(
 ): boolean {
   const ownership = String(settings?.airportCommercial?.ownership ?? '').toLowerCase();
   const mechanism = String(settings?.airportCommercial?.revenueShareMechanism ?? '').toLowerCase();
-  if (ownership === 'private') return mechanism === 'gross';
+  if (ownership === 'private' || mechanism === 'gross' || mechanism === 'net') {
+    return mechanism === 'gross';
+  }
 
   const master = settings?.royaltyMaster;
   if (!master) return false;
@@ -189,6 +193,22 @@ export function preparationFlightConcessionSector(record: {
   if (sector === 'DOM' || sector === 'GA_DOM') return 'GA_DOM';
   if (sector === 'INT' || sector === 'GA_INT') return 'GA_INT';
   return 'GA';
+}
+
+/**
+ * An international-only airline keeps the international royalty on a flight
+ * tagged Domestic or International-Domestic. General aviation stays on its own fee.
+ */
+export function concessionSectorForAirline(
+  sector: FlightConcessionSector,
+  contract?: {
+    category?: string | null;
+    categories?: Array<string | null | undefined> | null;
+  } | null,
+): FlightConcessionSector {
+  if (!isInternationalOnlyAirline(contract)) return sector;
+  if (sector === 'DOM' || sector === 'INT') return 'INT';
+  return sector;
 }
 
 export function stationPercentForSector(

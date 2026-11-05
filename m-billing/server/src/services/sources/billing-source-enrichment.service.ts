@@ -24,7 +24,6 @@ import {
 import { reportDateYmd } from '../../utils/invoicing-flight-report.mapper';
 import {
   bakedAnnualSteps,
-  basePriceBeforeIncrease,
   pickAnnualIncrease,
   priceWithAnnualIncrease,
 } from '../../utils/clause-annual-increase.util';
@@ -812,21 +811,17 @@ export class BillingSourceEnrichmentService {
     const clauseRows = (rulesContract as { clauses?: Parameters<typeof pickAnnualIncrease>[0] } | null)
       ?.clauses;
     const annual = pickAnnualIncrease(clauseRows, 'BHS');
-    const bhsBase = annual
-      ? basePriceBeforeIncrease(
-          cache.bhsEntriesByCustomer.get(rulesOwner) ?? [],
-          bhsPackage,
-          annual.validFrom,
-        )
-      : null;
+    // Listed card price holds for the year that starts on the rate card's from-date.
+    // The clause increase begins on the next anniversary, so a card from 1 Jan 2026
+    // stays unchanged through 2026.
     const bhsPackagePrice =
       bhsPackagePriceRaw == null
         ? null
         : priceWithAnnualIncrease(bhsPackagePriceRaw, clauseRows, billingDate, 'BHS', {
-            basePrice: bhsBase,
             bakedSteps: annual
               ? bakedAnnualSteps(bhsPackage?.remarks ?? undefined, annual.percent, annual.validFrom)
               : 0,
+            cardValidFrom: bhsPackage?.validFrom,
           });
 
     const unitPriceFromRateCard = unitPriceForBillingCurrency(

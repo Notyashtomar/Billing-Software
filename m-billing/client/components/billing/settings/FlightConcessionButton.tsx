@@ -83,10 +83,9 @@ export function FlightConcessionButton({ api }: { api: BillingApi }) {
     };
   }, [open, api]);
 
-  const ownership = commercial?.ownership;
   const mechanism = commercial?.revenueShareMechanism;
   const invoiceSide: 'net' | 'gross' | null =
-    ownership === 'private' && (mechanism === 'net' || mechanism === 'gross')
+    mechanism === 'net' || mechanism === 'gross'
       ? mechanism
       : master.gross
         ? 'gross'

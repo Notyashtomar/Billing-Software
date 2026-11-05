@@ -2421,7 +2421,7 @@ export function ContractFormDialog({
                       open={showReturnToRampConcession}
                       onToggle={() => setShowReturnToRampConcession((open) => !open)}
                       title="Return to ramp percentage"
-                      description="Applied additionally when the flight returns to ramp."
+                      description="A return-to-ramp flight is charged this percent of the BHS package rate."
                     >
                       <div className={cn(contractUi.nestedCard, 'grid gap-4 sm:grid-cols-2')}>
                         <ContractField
