@@ -6,7 +6,9 @@ import type {
   BillingContractDocument,
 } from '../schemas/billing.schemas';
 import { normalizeFlightCategory } from './aircraft-type-match.util';
+import { isInternationalOnlyAirline } from './invoice-flight-category.util';
 import {
+  concessionSectorForAirline,
   flightConcessionSectorFromText,
   stationPercentForSector,
 } from './station-flight-concession.util';
@@ -146,6 +148,9 @@ export type InvoiceChargeContractShape = {
     gaDom?: number;
     gaInt?: number;
   } | null;
+  /** Contract category. An international-only airline always uses the international royalty. */
+  category?: string | null;
+  categories?: Array<string | null | undefined> | null;
 };
 
 export type InvoiceLineConcessionInput = {
@@ -1039,12 +1044,17 @@ export function resolveLineFeeConcessionPercent(
   const categoryLower = categoryRaw.toLowerCase();
   const isDiverted = isDivertedFlightSnapshot(line);
   const normalized = normalizeFlightCategory(categoryRaw);
+  const internationalAirline = isInternationalOnlyAirline(contract);
   const isDom =
-    normalized === 'Dom' ||
-    (/domestic/.test(categoryLower) && !/international/.test(categoryLower));
+    !internationalAirline &&
+    (normalized === 'Dom' ||
+      (/domestic/.test(categoryLower) && !/international/.test(categoryLower)));
   const isCargo = /cargo/.test(categoryLower);
 
-  const sector = flightConcessionSectorFromText(categoryRaw, handlingRaw);
+  const sector = concessionSectorForAirline(
+    flightConcessionSectorFromText(categoryRaw, handlingRaw),
+    contract,
+  );
   const rawRates = contract?.concessionRates;
   const explicitDiverted = isDiverted
     ? isDom

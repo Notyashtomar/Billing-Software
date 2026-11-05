@@ -67,7 +67,8 @@ export function preparationInvoiceGroupKey(record: {
   const start = toYmd(record.billingPeriodStart);
   const end = toYmd(record.billingPeriodEnd);
   const category = preparationInvoiceCategory(record.sourceType);
-  const sector = preparationFlightConcessionSector(record);
+  let sector = preparationFlightConcessionSector(record);
+  if (opts?.internationalAirline && (sector === 'DOM' || sector === 'INT')) sector = 'INT';
   return `${String(record.customerCode ?? '').toUpperCase()}|${start}|${end}|${category}|${sector}`;
 }
 

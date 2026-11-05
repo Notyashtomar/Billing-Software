@@ -1,4 +1,5 @@
 import { normalizeFlightCategory } from './aircraft-type-match.util';
+import { isInternationalOnlyAirline } from './invoice-flight-category.util';
 
 export type FlightConcessionSector = 'DOM' | 'INT' | 'GA' | 'GA_DOM' | 'GA_INT';
 
@@ -189,6 +190,22 @@ export function preparationFlightConcessionSector(record: {
   if (sector === 'DOM' || sector === 'GA_DOM') return 'GA_DOM';
   if (sector === 'INT' || sector === 'GA_INT') return 'GA_INT';
   return 'GA';
+}
+
+/**
+ * An international-only airline keeps the international royalty on a flight
+ * tagged Domestic or International-Domestic. General aviation stays on its own fee.
+ */
+export function concessionSectorForAirline(
+  sector: FlightConcessionSector,
+  contract?: {
+    category?: string | null;
+    categories?: Array<string | null | undefined> | null;
+  } | null,
+): FlightConcessionSector {
+  if (!isInternationalOnlyAirline(contract)) return sector;
+  if (sector === 'DOM' || sector === 'INT') return 'INT';
+  return sector;
 }
 
 export function stationPercentForSector(
