@@ -30,6 +30,8 @@ export interface InvoicePdfBankDetails {
   swiftCode?: string;
   ifscCode?: string;
   micr?: string;
+  /** PAN shown in the bank block; the builder falls back to the company PAN. */
+  beneficiaryPan?: string;
 }
 
 export interface InvoicePdfContactRow {

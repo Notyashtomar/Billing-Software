@@ -88,6 +88,7 @@ type SettingsLike = {
     swiftCode?: string;
     ifscCode?: string;
     micr?: string;
+    beneficiaryPan?: string;
   };
 };
 
@@ -314,9 +315,7 @@ function mapLine(
   const aircraftType = pickRef(ref, 'aircraftType', 'aircraft') ?? pickRef(snap, 'aircraftType', 'aircraft', 'ACType');
   const amount = line.lineAmountExclTax > 0 ? line.lineAmountExclTax : 0;
   const storedUnitPrice = line.unitPrice > 0 ? line.unitPrice : 0;
-  const packageRate = positiveNumber(ref.bhsPackageRate) ?? storedUnitPrice;
   const flightQty = line.quantity > 0 ? line.quantity : 0;
-  const concessionAppliedToUnitPrice = ref.concessionAppliedToUnitPrice === true;
 
   let charged: number;
   let unitPrice: number;
@@ -330,11 +329,10 @@ function mapLine(
       positiveNumber(pickRef(ref, 'chargedQuantity', 'charged')) ?? flightQty;
     charged = round2(chargedRaw);
     unitPrice = storedUnitPrice;
-  } else if (concessionAppliedToUnitPrice && packageRate > 0) {
-    // When chargeable %, keep Rate/Unit as full package and show Charged as factor (e.g. 50% → 0.5).
-    charged = round2((flightQty * storedUnitPrice) / packageRate);
-    unitPrice = packageRate;
   } else {
+    // BHS: Charged always equals Used. When a chargeable % applies to the unit price
+    // (e.g. 50% short ground time), the reduced rate prints in Rate/Unit rather than
+    // shrinking Charged to a factor (2 flights at 50% used to print as Charged 1).
     charged = flightQty;
     unitPrice = storedUnitPrice;
   }

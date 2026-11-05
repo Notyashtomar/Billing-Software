@@ -83,6 +83,7 @@ type SettingsDoc = {
     accountNumber?: string;
     ifscCode?: string;
     swiftCode?: string;
+    beneficiaryPan?: string;
     chequePayableText?: string;
   };
   airportCommercial?: AirportCommercial & {
@@ -125,6 +126,7 @@ export function StationProfilePage({ api }: Props) {
     accountNumber: '',
     ifscCode: '',
     swiftCode: '',
+    beneficiaryPan: '',
     chequePayableText: '',
   });
 
@@ -163,6 +165,7 @@ export function StationProfilePage({ api }: Props) {
         accountNumber: doc.bankDetails?.accountNumber ?? '',
         ifscCode: doc.bankDetails?.ifscCode ?? '',
         swiftCode: doc.bankDetails?.swiftCode ?? '',
+        beneficiaryPan: doc.bankDetails?.beneficiaryPan ?? '',
         chequePayableText: doc.bankDetails?.chequePayableText ?? '',
       });
     } catch (e) {
@@ -204,6 +207,7 @@ export function StationProfilePage({ api }: Props) {
           accountNumber: form.accountNumber || undefined,
           ifscCode: form.ifscCode || undefined,
           swiftCode: form.swiftCode || undefined,
+          beneficiaryPan: form.beneficiaryPan.trim().toUpperCase() || undefined,
           chequePayableText: form.chequePayableText || undefined,
         },
       });
@@ -455,6 +459,18 @@ export function StationProfilePage({ api }: Props) {
               id="swiftCode"
               value={form.swiftCode}
               onChange={(v) => setForm((f) => ({ ...f, swiftCode: v }))}
+            />
+          </FieldGroup>
+          <FieldGroup
+            label="Beneficiary PAN"
+            htmlFor="beneficiaryPan"
+            hint="Prints as Beneficiary's PAN in the invoice bank block. Leave blank to use the company PAN."
+          >
+            <TextInput
+              id="beneficiaryPan"
+              value={form.beneficiaryPan}
+              onChange={(v) => setForm((f) => ({ ...f, beneficiaryPan: v.toUpperCase() }))}
+              placeholder="AAAAA0000A"
             />
           </FieldGroup>
           <div className="sm:col-span-2">
