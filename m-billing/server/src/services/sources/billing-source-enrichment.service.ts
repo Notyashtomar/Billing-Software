@@ -78,6 +78,7 @@ import {
   resolveAdsPricingFromContractRule,
 } from '../../shared/ads-equipment-inclusion.util';
 import { lookupRafAdhocRate } from '../../shared/raf-adhoc-lookup';
+import { serviceCodeContainsParticular } from '../../utils/rate-card-service-match.util';
 
 type EnrichmentCache = {
   customersByCode: Map<string, BillingCustomer & { _id?: unknown }>;
@@ -513,8 +514,8 @@ export class BillingSourceEnrichmentService {
         serviceCodes.includes(code) ||
         (particularKey.length > 0 &&
           (particularKey.includes(codeKey) ||
-            codeKey.includes(particularKey.slice(0, 12)) ||
-            particularKey === codeKey))
+            particularKey === codeKey ||
+            serviceCodeContainsParticular(codeKey, particularKey)))
       );
     };
 
@@ -533,8 +534,16 @@ export class BillingSourceEnrichmentService {
           new Date(b.validFrom).getTime() - new Date(a.validFrom).getTime(),
       );
 
+    // A turnaround has no equipment particular. "Scheduled Flight" must not
+    // fall through onto "Non Scheduled Flight - WCHC" and similar cards.
+    const scheduledTurnaround = serviceCode === 'Scheduled Flight';
+
     // ADS / equipment / RAF cleaning: also match by particular / equipment name on serviceCode.
-    if (candidates.length === 0 && (scopeWanted === 'exclusive' || scopeWanted === 'inclusive')) {
+    if (
+      !scheduledTurnaround &&
+      candidates.length === 0 &&
+      (scopeWanted === 'exclusive' || scopeWanted === 'inclusive')
+    ) {
       candidates = customerRateCards
         .filter(
           (rateCard) =>
@@ -550,7 +559,7 @@ export class BillingSourceEnrichmentService {
     }
 
     // RAF / cleaning labels (Deep Cleaning, …) often differ slightly from catalog codes.
-    if (candidates.length === 0 && particularKey.length > 0) {
+    if (!scheduledTurnaround && candidates.length === 0 && particularKey.length > 0) {
       candidates = customerRateCards
         .filter(
           (rateCard) =>

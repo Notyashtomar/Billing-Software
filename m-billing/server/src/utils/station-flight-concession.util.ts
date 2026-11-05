@@ -1,11 +1,14 @@
 import { normalizeFlightCategory } from './aircraft-type-match.util';
 
-export type FlightConcessionSector = 'DOM' | 'INT' | 'GA';
+export type FlightConcessionSector = 'DOM' | 'INT' | 'GA' | 'GA_DOM' | 'GA_INT';
 
 export type StationFlightConcessionPercents = {
   dom?: number;
   int?: number;
+  /** Older single General Aviation fee. Used when a GA flight has no domestic or international side. */
   ga?: number;
+  gaDom?: number;
+  gaInt?: number;
 };
 
 type RoyaltyFee = {
@@ -20,6 +23,8 @@ type RoyaltySide = {
   scheduledInternational?: RoyaltyFee;
   scheduledDomestic?: RoyaltyFee;
   generalAviation?: RoyaltyFee;
+  generalAviationDomestic?: RoyaltyFee;
+  generalAviationInternational?: RoyaltyFee;
 };
 
 export type StationConcessionSettings = {
@@ -64,15 +69,24 @@ function feePercent(fee: RoyaltyFee | undefined): number | undefined {
 }
 
 function sidePercents(side: RoyaltySide | undefined): StationFlightConcessionPercents {
+  const ga = feePercent(side?.generalAviation);
   return {
     int: feePercent(side?.scheduledInternational),
     dom: feePercent(side?.scheduledDomestic),
-    ga: feePercent(side?.generalAviation),
+    ga,
+    gaDom: feePercent(side?.generalAviationDomestic) ?? ga,
+    gaInt: feePercent(side?.generalAviationInternational) ?? ga,
   };
 }
 
 function hasPercent(percents: StationFlightConcessionPercents): boolean {
-  return percents.dom != null || percents.int != null || percents.ga != null;
+  return (
+    percents.dom != null ||
+    percents.int != null ||
+    percents.ga != null ||
+    percents.gaDom != null ||
+    percents.gaInt != null
+  );
 }
 
 /**
@@ -133,7 +147,7 @@ export function stationRoyaltyOnGross(
   return false;
 }
 
-/** Scheduled domestic, scheduled international, or general aviation. */
+/** Scheduled domestic, scheduled international, or general aviation domestic / international. */
 export function flightConcessionSectorFromText(...values: unknown[]): FlightConcessionSector {
   const raw = values
     .map((value) => String(value ?? '').trim())
@@ -141,15 +155,20 @@ export function flightConcessionSectorFromText(...values: unknown[]): FlightConc
     .join(' ');
   const lower = raw.toLowerCase();
   if (!lower) return 'INT';
-  if (/general\s*aviation|\bga\b|non[-\s]?scheduled|charter/.test(lower)) return 'GA';
+  const isGa = /general\s*aviation|\bga\b|non[-\s]?scheduled|charter/.test(lower);
   const hasDom = /\bdomestic\b|\bdom\b/.test(lower);
   const hasInt = /\binternational\b|\bint\b/.test(lower);
+  let scheduled: 'DOM' | 'INT' | null = null;
   if (hasDom && hasInt) {
-    const departure = normalizeFlightCategory(raw);
-    return departure === 'Dom' ? 'DOM' : 'INT';
+    scheduled = normalizeFlightCategory(raw) === 'Dom' ? 'DOM' : 'INT';
+  } else if (hasDom) scheduled = 'DOM';
+  else if (hasInt) scheduled = 'INT';
+  if (isGa) {
+    if (scheduled === 'DOM') return 'GA_DOM';
+    if (scheduled === 'INT') return 'GA_INT';
+    return 'GA';
   }
-  if (hasDom) return 'DOM';
-  return 'INT';
+  return scheduled ?? 'INT';
 }
 
 export function preparationFlightConcessionSector(record: {
@@ -157,9 +176,8 @@ export function preparationFlightConcessionSector(record: {
   operationalSnapshot?: Record<string, unknown> | null;
   sourceRef?: { operationalSnapshot?: Record<string, unknown> | null } | null;
 }): FlightConcessionSector {
-  if (String(record.sourceType ?? '').trim().toLowerCase() === 'raf') return 'GA';
   const snap = record.operationalSnapshot ?? record.sourceRef?.operationalSnapshot ?? {};
-  return flightConcessionSectorFromText(
+  const sector = flightConcessionSectorFromText(
     snap.categoryOfFlight,
     snap.Cate_of_Flight,
     snap.flightCategory,
@@ -167,6 +185,10 @@ export function preparationFlightConcessionSector(record: {
     snap.typeOfFlight,
     snap.TypeOfFlight,
   );
+  if (String(record.sourceType ?? '').trim().toLowerCase() !== 'raf') return sector;
+  if (sector === 'DOM' || sector === 'GA_DOM') return 'GA_DOM';
+  if (sector === 'INT' || sector === 'GA_INT') return 'GA_INT';
+  return 'GA';
 }
 
 export function stationPercentForSector(
@@ -175,6 +197,8 @@ export function stationPercentForSector(
 ): number | undefined {
   if (!percents) return undefined;
   if (sector === 'DOM') return percents.dom;
+  if (sector === 'GA_DOM') return percents.gaDom ?? percents.ga;
+  if (sector === 'GA_INT') return percents.gaInt ?? percents.ga;
   if (sector === 'GA') return percents.ga;
   return percents.int;
 }

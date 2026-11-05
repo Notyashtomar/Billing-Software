@@ -17,12 +17,17 @@ import {
 } from './AirportRulesWizard';
 
 type Side = 'net' | 'gross';
-type ConcessionKind = 'scheduledInternational' | 'scheduledDomestic' | 'generalAviation';
+type ConcessionKind =
+  | 'scheduledInternational'
+  | 'scheduledDomestic'
+  | 'generalAviationDomestic'
+  | 'generalAviationInternational';
 
 const CONCESSION_KINDS: { key: ConcessionKind; label: string }[] = [
   { key: 'scheduledInternational', label: 'Concession fee for Scheduled International flights' },
   { key: 'scheduledDomestic', label: 'Concession fee for Scheduled Domestic flights' },
-  { key: 'generalAviation', label: 'Concession fee for General Aviation flights' },
+  { key: 'generalAviationDomestic', label: 'Concession fee for GA-Domestic flights' },
+  { key: 'generalAviationInternational', label: 'Concession fee for GA-International flights' },
 ];
 
 type Fee = {
@@ -32,6 +37,8 @@ type Fee = {
 type SideConcessions = {
   effectiveFrom?: string;
   effectiveTo?: string;
+  /** Saved before GA was split. Shown on both GA rows until the station saves again. */
+  generalAviation?: Fee;
 } & Partial<Record<ConcessionKind, Fee>>;
 
 type RoyaltyMaster = {
@@ -52,7 +59,7 @@ function guideFor(
   mag: boolean,
 ): string {
   const fees =
-    'Each card asks for a concession fee for scheduled international flights, scheduled domestic flights, and general aviation flights. Those three fees share one validity. Invoices use the fee that matches each flight category. Domestic and international flights are raised as separate invoices.';
+    'Each card asks for a concession fee for scheduled international flights, scheduled domestic flights, GA-Domestic flights, and GA-International flights. Those fees share one validity. Invoices use the fee that matches each flight category. Domestic and international flights are raised as separate invoices.';
   if (!ownership) {
     return `Set the station as a private airport or an Airport Authority on Airport Setup first. ${fees}`;
   }
@@ -81,10 +88,10 @@ function readSide(value: unknown): SideConcessions | undefined {
   const side: SideConcessions = {};
   let effectiveFrom = dateInput(row.effectiveFrom);
   let effectiveTo = dateInput(row.effectiveTo);
-  for (const kind of CONCESSION_KINDS) {
-    const raw = row[kind.key];
+  for (const key of [...CONCESSION_KINDS.map((kind) => kind.key), 'generalAviation' as const]) {
+    const raw = row[key];
     const percent = readPercent(raw);
-    if (percent != null) side[kind.key] = { percent };
+    if (percent != null) side[key] = { percent };
     if (raw && typeof raw === 'object') {
       const nested = raw as Record<string, unknown>;
       effectiveFrom = effectiveFrom || dateInput(nested.effectiveFrom);
@@ -93,7 +100,10 @@ function readSide(value: unknown): SideConcessions | undefined {
   }
   if (effectiveFrom) side.effectiveFrom = effectiveFrom;
   if (effectiveTo) side.effectiveTo = effectiveTo;
-  return side.effectiveFrom || side.effectiveTo || CONCESSION_KINDS.some((kind) => side[kind.key])
+  return side.effectiveFrom ||
+    side.effectiveTo ||
+    side.generalAviation ||
+    CONCESSION_KINDS.some((kind) => side[kind.key])
     ? side
     : undefined;
 }
@@ -493,7 +503,11 @@ function RoyaltyCard({
       <p className="text-base font-semibold text-[color:var(--billing-heading)]">{title}</p>
       <dl className="mt-3 grid gap-3 text-sm">
         {CONCESSION_KINDS.map((kind) => {
-          const concession = concessions?.[kind.key];
+          const concession =
+            concessions?.[kind.key] ??
+            (kind.key === 'generalAviationDomestic' || kind.key === 'generalAviationInternational'
+              ? concessions?.generalAviation
+              : undefined);
           return (
             <div key={kind.key} className="flex items-baseline justify-between gap-4">
               <dt className="text-[color:var(--billing-text-muted)]">{kind.label}</dt>
@@ -535,11 +549,23 @@ function RoyaltyForm({
     concessions: { effectiveFrom: string; effectiveTo: string } & Record<ConcessionKind, Fee>,
   ) => Promise<void>;
 }) {
+  const savedGa = initial?.generalAviation?.percent;
   const [percents, setPercents] = useState<Record<ConcessionKind, string>>(() => ({
     scheduledInternational:
       initial?.scheduledInternational?.percent != null ? String(initial.scheduledInternational.percent) : '',
     scheduledDomestic: initial?.scheduledDomestic?.percent != null ? String(initial.scheduledDomestic.percent) : '',
-    generalAviation: initial?.generalAviation?.percent != null ? String(initial.generalAviation.percent) : '',
+    generalAviationDomestic:
+      initial?.generalAviationDomestic?.percent != null
+        ? String(initial.generalAviationDomestic.percent)
+        : savedGa != null
+          ? String(savedGa)
+          : '',
+    generalAviationInternational:
+      initial?.generalAviationInternational?.percent != null
+        ? String(initial.generalAviationInternational.percent)
+        : savedGa != null
+          ? String(savedGa)
+          : '',
   }));
   const [effectiveFrom, setEffectiveFrom] = useState(initial?.effectiveFrom ?? '');
   const [effectiveTo, setEffectiveTo] = useState(initial?.effectiveTo ?? '');
@@ -597,7 +623,8 @@ function RoyaltyForm({
               {title}
             </h2>
             <p className="mt-1 text-xs text-[color:var(--billing-text-muted)]">
-              Three concession fees at this station, with one validity for all of them.
+              Scheduled and General Aviation concession fees at this station, with one validity for all of them.
+              GA-Domestic and GA-International are saved separately.
             </p>
           </div>
           <button type="button" className="text-sm text-[color:var(--billing-text-muted)]" onClick={onClose}>

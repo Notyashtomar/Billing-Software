@@ -42,7 +42,8 @@ function storeRoyaltySide(side: RoyaltySideDto) {
     effectiveTo: new Date(side.effectiveTo),
     scheduledInternational: { percent: side.scheduledInternational.percent },
     scheduledDomestic: { percent: side.scheduledDomestic.percent },
-    generalAviation: { percent: side.generalAviation.percent },
+    generalAviationDomestic: { percent: side.generalAviationDomestic.percent },
+    generalAviationInternational: { percent: side.generalAviationInternational.percent },
   };
 }
 
