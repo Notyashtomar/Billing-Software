@@ -1502,21 +1502,44 @@ export function InvoiceDraftsPage({ api }: Props) {
                     ({airlinePageInvoices.length} draft{airlinePageInvoices.length === 1 ? '' : 's'})
                   </span>
                 </label>
-                {selectedRows.length > 0 ? (
-                  <div className="flex items-center gap-2" aria-live="polite">
-                    <span className={`${billingUi.badgeInfo} normal-case tabular-nums`}>
-                      {selectedRows.length} draft{selectedRows.length === 1 ? '' : 's'} selected
-                    </span>
+                <div className="flex flex-wrap items-center gap-2" aria-live="polite">
+                  {selectedRows.length > 0 ? (
+                    <>
+                      <span className={`${billingUi.badgeInfo} normal-case tabular-nums`}>
+                        {selectedRows.length} draft{selectedRows.length === 1 ? '' : 's'} selected
+                      </span>
+                      <button
+                        type="button"
+                        onClick={clearSelection}
+                        disabled={bulkBusy}
+                        className={`${billingUi.btnGhost} min-h-8 px-2 py-1 text-xs`}
+                      >
+                        Clear
+                      </button>
+                    </>
+                  ) : null}
+                  {selectedMonth ? (
                     <button
                       type="button"
-                      onClick={clearSelection}
-                      disabled={bulkBusy}
-                      className={`${billingUi.btnGhost} min-h-8 px-2 py-1 text-xs`}
+                      onClick={() => void downloadAllMonthInvoices(selectedMonth)}
+                      disabled={
+                        downloadingMonthKey != null || bulkBusy || selectedMonth.invoices.length === 0
+                      }
+                      title={`Merge every ${selectedCategory ?? ''} draft for ${selectedMonth.label} into one PDF`}
+                      aria-label={`Download all ${selectedMonth.invoices.length} drafts as one PDF`}
+                      className={`${billingUi.btnSecondary} min-h-9 px-3 py-1.5 text-xs`}
                     >
-                      Clear
+                      {downloadingMonthKey === selectedMonth.key ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                      ) : (
+                        <Download className="h-3.5 w-3.5" aria-hidden />
+                      )}
+                      {downloadingMonthKey === selectedMonth.key
+                        ? 'Preparing PDF…'
+                        : `Download all as one PDF (${selectedMonth.invoices.length})`}
                     </button>
-                  </div>
-                ) : null}
+                  ) : null}
+                </div>
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {filteredAirlineGroups.map((airline, index) => {
