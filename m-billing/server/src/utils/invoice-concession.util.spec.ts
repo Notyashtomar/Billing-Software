@@ -52,6 +52,42 @@ describe('exclusive BHS invoice concession', () => {
     expect(totals.grossAmount).toBe(19060.65);
   });
 
+  it('keeps the saved invoice percent when some lines carry zero fee percent', () => {
+    const totals = calculateInvoiceConcessionFromLines(
+      57_890,
+      [
+        {
+          serviceCode: 'Scheduled Flight',
+          quantity: 62,
+          lineAmountExclTax: 39_060,
+          sourceType: 'scheduled_flight',
+          sourceRef: { categoryOfFlight: 'International', concessionFeePercent: 15 },
+        },
+        {
+          serviceCode: 'Scheduled Flight',
+          quantity: 28,
+          lineAmountExclTax: 17_640,
+          sourceType: 'scheduled_flight',
+          sourceRef: { categoryOfFlight: 'International', concessionFeePercent: 15 },
+        },
+        {
+          serviceCode: 'Scheduled Flight',
+          quantity: 1,
+          lineAmountExclTax: 1_190,
+          sourceType: 'scheduled_flight',
+          sourceRef: { categoryOfFlight: 'International', concessionFeePercent: 0 },
+        },
+      ],
+      {
+        bhsConcessionCoverage: 'non_comprehensive',
+        concessionRates: { int: 15 },
+      },
+      { currencyCode: 'USD' },
+    );
+    expect(totals.concessionFeePercent).toBe(15);
+    expect(totals.concessionFeeAmount).toBe(8_683.5);
+  });
+
   it('converts INR ceiling to USD per flight using invoice currency factor', () => {
     const factor = 95.4509;
     const perFlightUsd = resolveCeilingRatePerFlightInBillingCurrency(

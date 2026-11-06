@@ -36,7 +36,18 @@ function resolveBillingFlightNo(
     if (arrival.toUpperCase() === departure.toUpperCase()) return arrival;
     return `${arrival}/${departure}`;
   }
-  return pick(m.DepartureFltNo, m.ArrivalFltNo, t.FlightNo, dailyData?.flightNo);
+  return pick(
+    m.DepartureFltNo,
+    m.ArrivalFltNo,
+    m.FlightNo,
+    m.flightNo,
+    t.FlightNo,
+    t.flightNo,
+    r.FlightNo,
+    l.FlightNo,
+    dailyData?.flightNo,
+    dailyData?.FlightNo,
+  );
 }
 
 function pick(...vals: unknown[]): string {

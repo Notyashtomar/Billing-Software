@@ -60,10 +60,26 @@ export function resolveKnownBillingCustomerCode(input: {
     .map((code) => normalizeBillingCustomerCode(code))
     .filter((code): code is string => Boolean(code));
   const operationalName = String(input.operationalName ?? '');
+  const cargoHint = /\bcargo\b|\bfreight\b/i.test(operationalName);
   for (const code of flight) {
     if (direct.includes(code) || !input.isKnown(code)) continue;
     const savedName = input.customerName?.(code) ?? '';
     if (sameBillingAirlineName(savedName, operationalName)) return code;
+    // FHR sometimes stores airline code with a cargo suffix (EYF) while the
+    // saved billing customer is the base carrier (EY). Prefer the known base
+    // code when the flight number already resolves to it.
+    if (
+      cargoHint &&
+      direct.some(
+        (raw) =>
+          raw !== code &&
+          raw.startsWith(code) &&
+          raw.length === code.length + 1 &&
+          /[FC]$/i.test(raw),
+      )
+    ) {
+      return code;
+    }
   }
 
   return direct[0] ?? flight[0] ?? '';
