@@ -51,6 +51,12 @@ export class BillingContractsController {
     return this.contractsService.list(station, customerCode);
   }
 
+  /** Active contracts that overlap another active contract for the same airline/sector/dates. */
+  @Get('overlaps')
+  listOverlaps(@CurrentBillingStation() station: StationScopeContext) {
+    return this.contractsService.listOverlaps(station);
+  }
+
   @Post('bulk-delete')
   bulkRemove(
     @CurrentBillingStation() station: StationScopeContext,

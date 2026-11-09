@@ -8,6 +8,7 @@ export type BillingAppNavLink = {
 };
 
 export const BILLING_MASTER_NAV: readonly BillingAppNavLink[] = [
+  { href: '/billing/aera-tariff', label: 'AERA Tariff' },
   { href: '/billing/aircraft-master', label: 'Aircraft Master' },
   { href: '/billing/settings', label: 'Airport Setup' },
   { href: '/billing/contracts', label: 'Contracts' },

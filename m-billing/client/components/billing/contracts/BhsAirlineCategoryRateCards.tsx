@@ -326,6 +326,21 @@ export function BhsAirlineCategoryRateCards({
                             INC
                           </span>
                         ) : null}
+                        {row.entry.exceedsAeraCeiling ? (
+                          <span
+                            className="inline-flex rounded border border-red-200 bg-red-50 px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-red-800"
+                            title={row.entry.aeraWarning || 'Above the AERA ceiling for this aircraft code and year'}
+                          >
+                            AERA
+                          </span>
+                        ) : row.entry.aeraCeiling != null ? (
+                          <span
+                            className="text-[10px] text-gray-400"
+                            title={`AERA ceiling ${row.entry.aeraCeiling.toLocaleString('en-IN')} (FY ${row.entry.aeraFinancialYear}, Code ${row.entry.aeraAircraftCode})`}
+                          >
+                            ≤{row.entry.aeraCeiling.toLocaleString('en-IN')}
+                          </span>
+                        ) : null}
                       </div>
                     </td>
                   ) : null}

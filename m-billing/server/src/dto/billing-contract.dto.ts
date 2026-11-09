@@ -564,6 +564,11 @@ export class CreateBillingContractDto {
   @IsBoolean()
   extendedRoyaltyEnabled?: boolean;
 
+  /** Concession percent applies to the invoice amount (default) or to the AERA ceiling per flight. */
+  @IsOptional()
+  @IsIn(['invoice_amount', 'aera_ceiling'])
+  concessionBase?: 'invoice_amount' | 'aera_ceiling';
+
   @IsOptional()
   @IsString()
   bhsConcessionNote?: string;
@@ -731,6 +736,11 @@ export class UpdateBillingContractDto {
   @IsOptional()
   @IsBoolean()
   extendedRoyaltyEnabled?: boolean;
+
+  /** Concession percent applies to the invoice amount (default) or to the AERA ceiling per flight. */
+  @IsOptional()
+  @IsIn(['invoice_amount', 'aera_ceiling'])
+  concessionBase?: 'invoice_amount' | 'aera_ceiling';
 
   @IsOptional()
   @IsString()

@@ -480,6 +480,16 @@ export function ContractFormDialog({
   const [bhsConcessionCoverage, setBhsConcessionCoverage] =
     useState<BhsPricingMode>('comprehensive');
   const [loadedMixedCoverage, setLoadedMixedCoverage] = useState(false);
+  /** Airline-specific: concession percent applied to the AERA ceiling rate instead of the billed amount. */
+  const [aeraConcessionEnabled, setAeraConcessionEnabled] = useState(false);
+  const [aeraConcessionIntPercent, setAeraConcessionIntPercent] = useState('');
+  const [aeraConcessionDomPercent, setAeraConcessionDomPercent] = useState('');
+  const [aeraConcessionBaseline, setAeraConcessionBaseline] = useState('');
+  const aeraConcessionSnapshot = JSON.stringify({
+    aeraConcessionEnabled,
+    aeraConcessionIntPercent,
+    aeraConcessionDomPercent,
+  });
   const isEdit = Boolean(record);
 
   const selectedCustomer = useMemo(
@@ -543,7 +553,9 @@ export function ContractFormDialog({
     ],
   );
 
-  const isDirty = Boolean(baselineSnapshot) && currentSnapshot !== baselineSnapshot;
+  const isDirty =
+    Boolean(baselineSnapshot) &&
+    (currentSnapshot !== baselineSnapshot || aeraConcessionSnapshot !== aeraConcessionBaseline);
 
   const validationErrors = useMemo(
     () => ({
@@ -962,6 +974,21 @@ export function ContractFormDialog({
           : 'comprehensive';
       setLoadedMixedCoverage(record.bhsConcessionCoverage === 'mixed');
       setBhsConcessionCoverage(nextBhsCoverage);
+      const nextAeraEnabled = record.concessionBase === 'aera_ceiling';
+      const nextAeraInt =
+        nextAeraEnabled && record.concessionRates?.int != null ? String(record.concessionRates.int) : '';
+      const nextAeraDom =
+        nextAeraEnabled && record.concessionRates?.dom != null ? String(record.concessionRates.dom) : '';
+      setAeraConcessionEnabled(nextAeraEnabled);
+      setAeraConcessionIntPercent(nextAeraInt);
+      setAeraConcessionDomPercent(nextAeraDom);
+      setAeraConcessionBaseline(
+        JSON.stringify({
+          aeraConcessionEnabled: nextAeraEnabled,
+          aeraConcessionIntPercent: nextAeraInt,
+          aeraConcessionDomPercent: nextAeraDom,
+        }),
+      );
       setBaselineSnapshot(
         buildEditableSnapshot({
           form: nextForm,
@@ -1032,6 +1059,16 @@ export function ContractFormDialog({
       setRoeEditor(null);
       setLoadedMixedCoverage(false);
       setBhsConcessionCoverage('comprehensive');
+      setAeraConcessionEnabled(false);
+      setAeraConcessionIntPercent('');
+      setAeraConcessionDomPercent('');
+      setAeraConcessionBaseline(
+        JSON.stringify({
+          aeraConcessionEnabled: false,
+          aeraConcessionIntPercent: '',
+          aeraConcessionDomPercent: '',
+        }),
+      );
       setBaselineSnapshot(
         buildEditableSnapshot({
           form: nextForm,
@@ -1335,6 +1372,37 @@ export function ContractFormDialog({
 
       const wasExclusive = record?.bhsConcessionCoverage === 'non_comprehensive';
       let savedId = record?._id;
+
+      // Airline-specific "x% of the AERA ceiling rate" concession.
+      const aeraInt = aeraConcessionIntPercent.trim() === '' ? null : Number(aeraConcessionIntPercent);
+      const aeraDom = aeraConcessionDomPercent.trim() === '' ? null : Number(aeraConcessionDomPercent);
+      const aeraActive = aeraConcessionEnabled && bhsConcessionCoverage === 'non_comprehensive';
+      if (aeraActive) {
+        const bad = (v: number | null) => v != null && (!Number.isFinite(v) || v < 0 || v > 100);
+        if (bad(aeraInt) || bad(aeraDom)) {
+          setError('AERA concession percents must be between 0 and 100.');
+          setSaving(false);
+          return;
+        }
+        if (aeraInt == null && aeraDom == null) {
+          setError('Enter the AERA concession percent for international and/or domestic flights.');
+          setSaving(false);
+          return;
+        }
+      }
+      const aeraConcessionPayload: Record<string, unknown> = aeraActive
+        ? {
+            concessionBase: 'aera_ceiling',
+            concessionRatesOverrideStation: true,
+            concessionRates: {
+              ...(record?.concessionRates ?? {}),
+              ...(aeraInt != null ? { int: aeraInt } : {}),
+              ...(aeraDom != null ? { dom: aeraDom } : {}),
+            },
+          }
+        : record?.concessionBase === 'aera_ceiling'
+          ? { concessionBase: 'invoice_amount', concessionRatesOverrideStation: false }
+          : { concessionBase: 'invoice_amount' };
       const fortnightRangesPayload = parseContractFortnightRanges(fortnightBillingRanges);
       const fortnightPartCountPayload = Number(fortnightBillingPartCount);
       const monthsForSave = (
@@ -1373,6 +1441,7 @@ export function ContractFormDialog({
           bhsVolumeSchedules: volumePayload,
           bhsConcessionCoverage,
           extendedRoyaltyEnabled: false,
+          ...aeraConcessionPayload,
           fortnightBillingEnabled,
           fortnightEdgeDayCap,
           additionalCustomerCodes: additionalCustomerCodes.filter(
@@ -1420,6 +1489,7 @@ export function ContractFormDialog({
           bhsVolumeSchedules: volumePayload,
           bhsConcessionCoverage,
           extendedRoyaltyEnabled: false,
+          ...aeraConcessionPayload,
           fortnightBillingEnabled,
           fortnightEdgeDayCap,
           additionalCustomerCodes: additionalCustomerCodes.filter(
@@ -2065,6 +2135,58 @@ export function ContractFormDialog({
                         </span>
                       </label>
                     </div>
+                    {bhsConcessionCoverage === 'non_comprehensive' ? (
+                      <div className="mt-3 grid gap-3">
+                        <ContractToggleCard
+                          checked={aeraConcessionEnabled}
+                          onChange={(checked) => setAeraConcessionEnabled(checked)}
+                          disabled={saving}
+                          title="Concession is a percent of the AERA ceiling rate (this airline only)"
+                          description="For SGHAs worded “x% of the AERA ceiling rate”. The percent below is applied to the AERA maximum for each flight’s aircraft code, flight type and financial year (Master → AERA Tariff) instead of the discounted handling rate. Other airlines on this station keep the Royalty Setup percent on the invoice amount."
+                        />
+                        {aeraConcessionEnabled ? (
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <ContractField
+                              label="International flights — % of AERA ceiling"
+                              htmlFor="aeraConcessionIntPercent"
+                            >
+                              <ContractInput
+                                id="aeraConcessionIntPercent"
+                                type="number"
+                                min={0}
+                                max={100}
+                                step="0.01"
+                                value={aeraConcessionIntPercent}
+                                onChange={(e) => setAeraConcessionIntPercent(e.target.value)}
+                                placeholder="e.g. 24"
+                                disabled={saving}
+                              />
+                            </ContractField>
+                            <ContractField
+                              label="Domestic flights — % of AERA ceiling"
+                              htmlFor="aeraConcessionDomPercent"
+                            >
+                              <ContractInput
+                                id="aeraConcessionDomPercent"
+                                type="number"
+                                min={0}
+                                max={100}
+                                step="0.01"
+                                value={aeraConcessionDomPercent}
+                                onChange={(e) => setAeraConcessionDomPercent(e.target.value)}
+                                placeholder="Leave blank if not applicable"
+                                disabled={saving}
+                              />
+                            </ContractField>
+                            <p className="text-xs text-[color:var(--billing-text-muted)] sm:col-span-2">
+                              Example: KLM at Hyderabad — 24% × AERA Code E international full handling
+                              (₹2,16,575 in FY 2025-26) = ₹51,978 per flight, whatever the negotiated rate.
+                              Flights with no matching AERA rate fall back to the percent of the invoice amount.
+                            </p>
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : null}
                   </fieldset>
 
                   <fieldset className="min-w-0 rounded-xl border border-[color:var(--billing-border)] bg-[color:var(--billing-surface-muted)]/60 p-4">

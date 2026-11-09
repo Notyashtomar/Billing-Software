@@ -13,6 +13,13 @@ export type BhsPackagePriceRow = {
   validFrom?: Date | string;
   /** Band / package wording when aircraftType holds the real aircraft name. */
   remarks?: string | null;
+  /** Yearly increase already applied to `price` (replaces the CYI remark tag). */
+  annualIncreaseApplied?: {
+    contractNumber?: string | null;
+    validFrom: Date | string;
+    percent: number;
+    steps: number;
+  } | null;
   /** Missing means scheduled, so older cards keep pricing turnaround flights. */
   flightOperation?: 'scheduled' | 'additional' | null;
   incrementalFlightsActive?: boolean | null;

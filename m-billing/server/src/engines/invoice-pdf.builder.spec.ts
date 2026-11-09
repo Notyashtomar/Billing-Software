@@ -137,11 +137,13 @@ describe('layoutInvoiceHeaderGrid', () => {
     expect(long.billBodyH).toBeGreaterThan(short.billBodyH);
     expect(long.billToH).toBeCloseTo(long.billAddressH + long.sacRowH, 5);
 
-    // Bill To top || Flight Category top (seller ends at Description bottom).
+    // Bill To top || Flight Category top (seller ends at Description bottom,
+    // stretched only by the seller block's own overflow).
     expect(short.sellerH).toBeCloseTo(
-      short.topMetaHs.reduce((s, h) => s + h, 0),
+      short.topMetaHs.reduce((s, h) => s + h, 0) + short.sellerExtraH,
       5,
     );
+    expect(short.sellerExtraH).toBeGreaterThanOrEqual(0);
     expect(short.billAlignRightRows[0][0]).toBe('Flight Category');
     expect(short.topRightMetaRows[4][0]).toBe('Description of Services');
 

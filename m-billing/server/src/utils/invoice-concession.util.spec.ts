@@ -1,5 +1,4 @@
 import {
-  EXCLUSIVE_BHS_INVOICE_CONCESSION_PERCENT,
   calculateInvoiceConcessionFromLines,
   invalidateInvoiceContractCache,
   isOriginateOrTerminateFlight,
@@ -16,7 +15,125 @@ import {
   roundBillingMoney,
   roundCeilingConcessionTotal,
   roundCeilingRatePerFlight,
+  lateArrivalMinutes,
+  lateDepartureMinutes,
 } from './invoice-concession.util';
+
+/** Sample exclusive percent used by the fixtures below (saved on the contract, never a code default). */
+const EXCLUSIVE_BHS_INVOICE_CONCESSION_PERCENT = 18;
+
+describe('concession on the AERA ceiling (KLM HYD pattern)', () => {
+  const contract = {
+    bhsConcessionCoverage: 'non_comprehensive',
+    concessionBase: 'aera_ceiling',
+    concessionRates: { int: 24 },
+    concessionRatesOverrideStation: true,
+  } as never;
+  const klmLine = (flights: number, withCeiling = true) => ({
+    serviceCode: 'BHS',
+    sourceType: 'scheduled_flight',
+    quantity: flights,
+    unitPrice: 155400,
+    lineAmountExclTax: 155400 * flights,
+    sourceRef: {
+      flightCount: flights,
+      concessionFeePercent: 24,
+      ...(withCeiling ? { aeraCeiling: 216575, aeraFinancialYear: '2025-26' } : {}),
+    },
+  });
+
+  it('charges 24% of the AERA ceiling per flight, not of the discounted rate', () => {
+    const totals = calculateInvoiceConcessionFromLines(155400, [klmLine(1)], contract, { currencyCode: 'INR' });
+    expect(totals.concessionFeeAmount).toBe(51978);
+    // Not a percent of the invoice amount → no percent is printed on the invoice.
+    expect(totals.concessionFeePercent).toBe(0);
+    expect(totals.grossAmount).toBe(207378);
+    const month = calculateInvoiceConcessionFromLines(155400 * 12, [klmLine(12)], contract, { currencyCode: 'INR' });
+    expect(month.concessionFeeAmount).toBe(51978 * 12);
+  });
+
+  it('stays a flat 24% of the ceiling at a Royalty-on-Gross station (no p/(100−p) gross-up)', () => {
+    const grossStation = { ...(contract as object), extendedRoyaltyEnabled: true } as never;
+    const totals = calculateInvoiceConcessionFromLines(155400 * 13, [klmLine(13)], grossStation, { currencyCode: 'INR' });
+    expect(totals.concessionFeeAmount).toBe(51978 * 13);
+    expect(totals.concessionFeePercent).toBe(0);
+  });
+
+  it('falls back to the invoice amount when a line has no stamped ceiling', () => {
+    const totals = calculateInvoiceConcessionFromLines(155400, [klmLine(1, false)], contract, { currencyCode: 'INR' });
+    expect(totals.concessionFeeAmount).toBe(37296);
+  });
+
+  it('is ignored for contracts on the default base', () => {
+    const normal = { ...(contract as object), concessionBase: 'invoice_amount' } as never;
+    const totals = calculateInvoiceConcessionFromLines(155400, [klmLine(1)], normal, { currencyCode: 'INR' });
+    expect(totals.concessionFeeAmount).toBe(37296);
+  });
+
+  it('is per airline: other contracts on the same station keep the station percent on the invoice amount', () => {
+    const otherAirline = {
+      bhsConcessionCoverage: 'non_comprehensive',
+      stationFlightConcession: { int: 24, dom: 3 },
+    } as never;
+    const line = { ...klmLine(1), sourceRef: { flightCount: 1, aeraCeiling: 216575 } };
+    const totals = calculateInvoiceConcessionFromLines(155400, [line], otherAirline, { currencyCode: 'INR' });
+    expect(totals.concessionFeeAmount).toBe(37296);
+  });
+});
+
+describe('late arrival / departure clock', () => {
+  const line = (snap: Record<string, unknown>) => ({
+    sourceRef: { operationalSnapshot: snap },
+  });
+
+  it('counts a normal delay and reads an early arrival as zero', () => {
+    expect(
+      lateArrivalMinutes(
+        line({ staDate: '2026-09-10', staTime: '10:00', ataDate: '2026-09-10', ataTime: '11:30' }),
+      ),
+    ).toBe(90);
+    expect(
+      lateArrivalMinutes(
+        line({ staDate: '2026-09-10', staTime: '23:15', ataDate: '2026-09-10', ataTime: '22:57' }),
+      ),
+    ).toBe(0);
+  });
+
+  it('rolls a midnight crossing forward when the ATA date was not advanced', () => {
+    // STA 23:30, landed 00:20 next day but the sheet kept the same date → 50 min late.
+    expect(
+      lateArrivalMinutes(
+        line({ staDate: '2026-09-10', staTime: '23:30', ataDate: '2026-09-10', ataTime: '00:20' }),
+      ),
+    ).toBe(50);
+  });
+
+  it('does not bill an early arrival before midnight as a 23-hour delay', () => {
+    // STA 00:30, landed 23:50 the previous evening but the sheet kept the STA date.
+    const early = line({
+      staDate: '2026-09-11',
+      staTime: '00:30',
+      ataDate: '2026-09-11',
+      ataTime: '23:50',
+    });
+    expect(lateArrivalMinutes(early)).toBe(0);
+    // A recorded FHR delay decides the ambiguous case either way.
+    expect(lateArrivalMinutes(line({ ...early.sourceRef.operationalSnapshot, delayOnSta: '00:00' }))).toBe(0);
+    expect(
+      lateArrivalMinutes(line({ ...early.sourceRef.operationalSnapshot, delayOnSta: '23:20' })),
+    ).toBe(1400);
+  });
+
+  it('applies the same rule to departures and falls back to the recorded delay', () => {
+    expect(
+      lateDepartureMinutes(
+        line({ stdDate: '2026-09-10', stdTime: '08:00', atdDate: '2026-09-10', atdTime: '08:45' }),
+      ),
+    ).toBe(45);
+    expect(lateDepartureMinutes(line({ delayOnStd: '01:10' }))).toBe(70);
+    expect(lateDepartureMinutes(line({}))).toBeNull();
+  });
+});
 
 describe('exclusive BHS invoice concession', () => {
   const exclusiveContract = {
@@ -763,9 +880,17 @@ describe('ferryKindFromFhrDocument', () => {
   it('applies the FILO percent when the snapshot is stamped from FHR', () => {
     const percent = resolveLineConcessionPercent(
       { sourceRef: { operationalSnapshot: { ferryKind: 'filo', categoryOfFlight: 'Dom' } } },
-      { concessionRates: { filoChargesPercent: 90, dom: 100 } },
+      { conditionalCharges: { filoChargesPercent: 90 }, concessionRates: { dom: 100 } },
     );
     expect(percent).toBe(90);
+  });
+
+  it('ignores conditional percents that were saved on the fee block (no legacy fallback)', () => {
+    const percent = resolveLineConcessionPercent(
+      { sourceRef: { operationalSnapshot: { ferryKind: 'filo', categoryOfFlight: 'Dom' } } },
+      { concessionRates: { filoChargesPercent: 90, dom: 100 } as never },
+    );
+    expect(percent).toBe(0);
   });
 });
 

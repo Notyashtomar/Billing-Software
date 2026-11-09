@@ -335,9 +335,15 @@ function mapLine(
   } else {
     const packageRate = positiveNumber(ref.bhsPackageRate);
     const replacementPercent = Number(ref.concessionPercent ?? 0);
+    // Explicit scenario on the line wins; description text is only for lines
+    // composed before the field existed.
+    const isDivertedLine =
+      ref.flightScenario != null
+        ? ref.flightScenario === 'diverted'
+        : /diverted/i.test(`${line.description ?? ''}`);
     const divertedFactor =
       ref.concessionAppliedToUnitPrice === true &&
-      /diverted/i.test(`${line.description ?? ''}`) &&
+      isDivertedLine &&
       packageRate != null &&
       replacementPercent > 0 &&
       replacementPercent < 100;

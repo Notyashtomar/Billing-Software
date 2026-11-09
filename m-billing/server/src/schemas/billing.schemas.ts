@@ -299,6 +299,13 @@ export class BillingContract {
   @Prop({ default: false })
   extendedRoyaltyEnabled?: boolean;
 
+  /**
+   * Base for the concession percent: the billed handling amount (default) or
+   * the AERA ceiling rate per flight (contracts worded "x% of AERA ceiling rate").
+   */
+  @Prop({ enum: ['invoice_amount', 'aera_ceiling'], default: 'invoice_amount' })
+  concessionBase?: 'invoice_amount' | 'aera_ceiling';
+
   /** Print USD invoices with an INR column. Off leaves the existing one-currency invoice. */
   @Prop({ default: false })
   inrUsdInvoiceEnabled?: boolean;
@@ -568,6 +575,17 @@ export class BillingContract {
         effectiveMonth: { type: String },
         category: { type: String },
         remarks: { type: String },
+        /** Yearly increase already applied to the unit price (replaces CYI remark tag). */
+        annualIncreaseApplied: {
+          type: {
+            contractNumber: { type: String },
+            validFrom: { type: String },
+            percent: { type: Number },
+            steps: { type: Number },
+          },
+          _id: false,
+          required: false,
+        },
       },
     ],
     default: [],
@@ -588,6 +606,12 @@ export class BillingContract {
     category?: string;
     remarks?: string;
     effectiveMonth?: string;
+    annualIncreaseApplied?: {
+      contractNumber?: string;
+      validFrom: string;
+      percent: number;
+      steps: number;
+    };
   }>;
 
   @Prop()
@@ -678,6 +702,23 @@ export class BillingRateCard {
   @Prop({ trim: true })
   remarks?: string;
 
+  /** Yearly increase already applied to the unit price (replaces the CYI remark tag). */
+  @Prop({
+    type: {
+      contractNumber: { type: String },
+      validFrom: { type: String },
+      percent: { type: Number },
+      steps: { type: Number },
+    },
+    _id: false,
+  })
+  annualIncreaseApplied?: {
+    contractNumber?: string;
+    validFrom: string;
+    percent: number;
+    steps: number;
+  };
+
   /** Inclusive = covered in BHS package; exclusive = billed separately (visible under ADS). */
   @Prop({ enum: ['inclusive', 'exclusive'], default: 'inclusive' })
   billingScope?: string;
@@ -735,6 +776,27 @@ export class BillingPriceCardAirline {
 
   @Prop({ trim: true })
   remarks?: string;
+
+  /**
+   * Yearly (CPI) increase already applied to `price`. Set by the rate-increase
+   * script; replaces the legacy `CYI:` tag in remarks so the figure survives a
+   * remark edit.
+   */
+  @Prop({
+    type: {
+      contractNumber: { type: String },
+      validFrom: { type: String },
+      percent: { type: Number },
+      steps: { type: Number },
+    },
+    _id: false,
+  })
+  annualIncreaseApplied?: {
+    contractNumber?: string;
+    validFrom: string;
+    percent: number;
+    steps: number;
+  };
 
   @Prop({ required: true, trim: true })
   aircraftType: string;
@@ -1308,6 +1370,17 @@ export class BillingInvoiceHeader {
   /** Invoice family for draft grouping / UI: BHS | ADS | RAF | OTHER */
   @Prop({ trim: true, uppercase: true })
   invoiceCategory?: string;
+
+  /**
+   * True when at least one line bills a per-flight price above the AERA
+   * ceiling for that aircraft code and financial year. Set on every recalc.
+   */
+  @Prop({ default: false })
+  aeraCeilingExceeded?: boolean;
+
+  /** Lines flagged above the AERA ceiling (lineNo list) for the draft UI. */
+  @Prop({ type: [Number], default: [] })
+  aeraCeilingExceededLines?: number[];
 
   /** Shared by ADS drafts created by splitting one combined draft. */
   @Prop({ trim: true })

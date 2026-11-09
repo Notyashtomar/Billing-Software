@@ -29,6 +29,11 @@ import { sanitizeBhsVolumeSchedules } from '../utils/bhs-volume-schedule.util';
 import { normalizeContractFortnightBillingConfig } from '../utils/contract-fortnight-billing.util';
 import { invalidateInvoiceContractCache } from '../utils/invoice-concession.util';
 import {
+  describeContractOverlap,
+  findOverlappingContracts,
+  type ContractScopeRow,
+} from '../utils/contract-overlap.util';
+import {
   StationScope,
   successResponse,
   type StationScopeContext,
@@ -184,6 +189,16 @@ export class BillingContractsService {
     });
     if (exists) throw new ConflictException('Contract number already exists');
 
+    await this.assertNoActiveContractOverlap(ctx, {
+      contractNumber: dto.contractNumber,
+      customerCode: dto.customerCode,
+      stationCode,
+      status: 'active',
+      categories: normalizeContractSectors(dto.categories, dto.category),
+      priceValidFrom: dto.priceValidFrom,
+      priceValidTo: dto.priceValidTo,
+    });
+
     const clauses = normalizeContractClauses(dto.clauses, {
       xxlnClause: dto.xxlnClause,
       delayClause: dto.delayClause,
@@ -338,6 +353,9 @@ export class BillingContractsService {
     if (dto.extendedRoyaltyEnabled !== undefined) {
       doc.extendedRoyaltyEnabled = Boolean(dto.extendedRoyaltyEnabled);
     }
+    if (dto.concessionBase !== undefined) {
+      doc.concessionBase = dto.concessionBase === 'aera_ceiling' ? 'aera_ceiling' : 'invoice_amount';
+    }
     if (dto.bhsConcessionNote !== undefined) doc.bhsConcessionNote = dto.bhsConcessionNote;
     if (dto.cancellationWithinHours !== undefined) {
       doc.cancellationWithinHours = dto.cancellationWithinHours;
@@ -437,6 +455,20 @@ export class BillingContractsService {
       }
     }
     if (dto.status) doc.status = dto.status;
+
+    // Only a change to the contract's scope (dates, sectors, activation) can
+    // create a second active contract for the same flights — check just then,
+    // so editing rates on a contract that already overlaps is not blocked.
+    const scopeTouched =
+      dto.priceValidFrom !== undefined ||
+      dto.priceValidTo !== undefined ||
+      dto.categories !== undefined ||
+      dto.category !== undefined ||
+      (dto.status !== undefined && dto.status === 'active');
+    if (scopeTouched && doc.status === 'active') {
+      await this.assertNoActiveContractOverlap(ctx, doc.toObject() as ContractScopeRow);
+    }
+
     await doc.save();
     invalidateInvoiceContractCache();
 
@@ -477,6 +509,10 @@ export class BillingContractsService {
       actor,
       'contract_activate',
     );
+    await this.assertNoActiveContractOverlap(ctx, {
+      ...(doc.toObject() as ContractScopeRow),
+      status: 'active',
+    });
     doc.status = 'active';
     await doc.save();
 
@@ -491,6 +527,56 @@ export class BillingContractsService {
     });
 
     return successResponse(doc.toObject());
+  }
+
+  /**
+   * Reject a save that would leave two active contracts covering the same
+   * airline, sector and dates on this station.
+   */
+  private async assertNoActiveContractOverlap(
+    ctx: StationScopeContext,
+    candidate: ContractScopeRow,
+  ): Promise<void> {
+    const customerCode = String(candidate.customerCode ?? '').trim().toUpperCase();
+    if (!customerCode) return;
+    const others = await this.contractModel
+      .find(
+        StationScope.filter(
+          { customerCode, status: 'active' },
+          ctx,
+        ),
+      )
+      .select('_id contractNumber customerCode stationCode status category categories priceValidFrom priceValidTo')
+      .lean<ContractScopeRow[]>();
+    const overlaps = findOverlappingContracts(candidate, others);
+    if (overlaps.length > 0) {
+      throw new ConflictException(describeContractOverlap(candidate, overlaps));
+    }
+  }
+
+  /** Active contracts on this station that overlap another active contract for the same airline. */
+  async listOverlaps(ctx: StationScopeContext) {
+    const rows = await this.contractModel
+      .find(StationScope.filter({ status: 'active' }, ctx))
+      .select('_id contractNumber customerCode stationCode status category categories priceValidFrom priceValidTo')
+      .lean<ContractScopeRow[]>();
+    const result: Array<{
+      contractId: string;
+      contractNumber: string;
+      customerCode: string;
+      overlapsWith: string[];
+    }> = [];
+    for (const row of rows) {
+      const overlaps = findOverlappingContracts(row, rows);
+      if (overlaps.length === 0) continue;
+      result.push({
+        contractId: String(row._id ?? ''),
+        contractNumber: String(row.contractNumber ?? ''),
+        customerCode: String(row.customerCode ?? ''),
+        overlapsWith: overlaps.map((other) => String(other.contractNumber ?? '')),
+      });
+    }
+    return successResponse(result);
   }
 
   async remove(ctx: StationScopeContext, id: string, actor: BillingActor) {

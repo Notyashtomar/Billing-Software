@@ -37,6 +37,7 @@ const BILLING_PAGES: BwmsAppPageDef[] = [
   { id: 'conversion-rates', label: 'ROE Master', href: '/billing/conversion-rates' },
   { id: 'settings', label: 'Airport Setup', href: '/billing/settings' },
   { id: 'royalty-setup', label: 'Royalty Setup', href: '/billing/royalty-setup' },
+  { id: 'aera-tariff', label: 'AERA Tariff', href: '/billing/aera-tariff' },
   { id: 'aircraft-master', label: 'Aircraft Master', href: '/billing/aircraft-master' },
   { id: 'equipment-master', label: 'Equipment Master', href: '/billing/equipment-master' },
   { id: 'prep-dashboard', label: 'Workflow dashboard', href: '/billing/prep-dashboard' },

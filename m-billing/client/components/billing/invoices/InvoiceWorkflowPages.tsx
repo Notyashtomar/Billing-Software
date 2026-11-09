@@ -3291,6 +3291,19 @@ export function InvoiceDetailPage({ api, id }: Props & { id: string }) {
         </div>
       ) : null}
 
+      {header.aeraCeilingExceeded ? (
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
+          <span className="font-semibold">Above AERA ceiling.</span>{' '}
+          {header.aeraCeilingExceededLines?.length
+            ? `Line${header.aeraCeilingExceededLines.length === 1 ? '' : 's'} ${header.aeraCeilingExceededLines.join(', ')} bill${header.aeraCeilingExceededLines.length === 1 ? 's' : ''} a per-flight price higher than the AERA maximum for that aircraft code and financial year.`
+            : 'A line bills a per-flight price higher than the AERA maximum.'}{' '}
+          Check the rate card before this invoice is sent.{' '}
+          <Link href="/billing/aera-tariff" className="font-medium underline">
+            Open AERA Tariff
+          </Link>
+        </div>
+      ) : null}
+
       <div className="mb-4 flex gap-1 rounded-lg border border-gray-200 bg-white p-1">
         {tabs.map((t) => (
           <button

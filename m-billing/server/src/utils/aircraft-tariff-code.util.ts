@@ -101,7 +101,35 @@ export function resolveAircraftTariffCode(
       }
     }
   }
-  return parentLetter || null;
+  if (parentLetter) return parentLetter;
+
+  // Family fallback: the flight says only "B777" / "B787" and the master row of
+  // that name has no letter. Use the letter the family's variants agree on
+  // (777-200, 777-300ER, B777-300ER … → E). Mixed families (777-8 is F) take the
+  // letter carried by most variants.
+  return familyLetter(flightKeys, rows);
+}
+
+function familyLetter(flightKeys: string[], rows: AircraftMasterTariffRow[]): string | null {
+  const votes = new Map<string, number>();
+  for (const row of rows) {
+    const letter = rowLetter(row);
+    if (!letter) continue;
+    const rowKeys = lookupKeys(String(row.aircraftType ?? ''));
+    const isVariant = rowKeys.some((key) =>
+      flightKeys.some((flightKey) => key.startsWith(flightKey) && key.length > flightKey.length),
+    );
+    if (isVariant) votes.set(letter, (votes.get(letter) ?? 0) + 1);
+  }
+  let bestLetter = '';
+  let bestVotes = 0;
+  for (const [letter, count] of votes) {
+    if (count > bestVotes) {
+      bestVotes = count;
+      bestLetter = letter;
+    }
+  }
+  return bestLetter || null;
 }
 
 /** Rate-card aircraft type that is only an ICAO letter, e.g. "Code C" or "C". */

@@ -310,6 +310,8 @@ export interface BillingContract {
   bhsConcessionCoverage?: 'comprehensive' | 'non_comprehensive' | 'mixed';
   /** Exclusive pricing only: royalty uses 18/(100−18) instead of 18/100. */
   extendedRoyaltyEnabled?: boolean;
+  /** Percent applies to the billed amount (default) or to the AERA ceiling rate per flight. */
+  concessionBase?: 'invoice_amount' | 'aera_ceiling';
   bhsConcessionNote?: string;
   /**
    * Fixed ceiling charge per scheduled flight. Applied on the airline invoice
@@ -462,6 +464,13 @@ export interface BillingPriceCardAirline {
   active: boolean;
   createdAt?: string;
   updatedAt?: string;
+  /** AERA ceiling check added by the server on list / save (BHS rows only). */
+  aeraCeiling?: number | null;
+  aeraFinancialYear?: string | null;
+  aeraAircraftCode?: string | null;
+  aeraOrderNumber?: string | null;
+  exceedsAeraCeiling?: boolean;
+  aeraWarning?: string;
 }
 
 export interface BillingRafAdhocRate {
@@ -698,6 +707,9 @@ export interface BillingInvoiceHeader {
   billingPeriodLabel?: string;
   /** Invoice family: BHS | ADS | RAF | MAAS | CUSTOM | OTHER */
   invoiceCategory?: string;
+  /** True when a line bills above the AERA ceiling for its aircraft code and FY. */
+  aeraCeilingExceeded?: boolean;
+  aeraCeilingExceededLines?: number[];
   /** Present when an ADS draft was separated into line combinations. */
   adsSplitFamilyId?: string;
   adsSplitGroupKey?: string;

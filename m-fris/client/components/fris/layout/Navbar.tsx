@@ -196,6 +196,7 @@ function mayUseBillingHref(href: string): boolean {
   }
   if (
     path === '/billing/royalty-setup' ||
+    path === '/billing/aera-tariff' ||
     path === '/billing/aircraft-master' ||
     path === '/billing/equipment-master'
   ) {
@@ -261,6 +262,8 @@ function billingDropdownIcon(href: string): React.ReactNode {
       return <Settings className={cls} />;
     case '/billing/royalty-setup':
       return <Percent className={cls} />;
+    case '/billing/aera-tariff':
+      return <Shield className={cls} />;
     case '/billing/aircraft-master':
       return <Plane className={cls} />;
     case '/billing/preparation':
