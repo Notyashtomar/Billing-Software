@@ -28,6 +28,8 @@ export const BillingDocType = {
   AircraftMaster: 'aircraft_master',
   EquipmentMaster: 'equipment_master',
   UldSheet: 'uld_sheet',
+  /** AERA ground-handling tariff order (ceiling rates) for a station. */
+  AeraTariff: 'aera_tariff',
 } as const;
 
 export type BillingDocTypeValue = (typeof BillingDocType)[keyof typeof BillingDocType];

@@ -3,6 +3,7 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
@@ -32,6 +33,23 @@ import {
   isDelhiStation,
   planDelhiInternationalCategoryUpdates,
 } from '../utils/delhi-international-price-card';
+import {
+  checkPriceCardAgainstAera,
+  type AeraPriceCardCheck,
+  type AeraPriceCardRowInput,
+} from '../utils/aera-price-card-check.util';
+import type { AircraftMasterTariffRow } from '../utils/aircraft-tariff-code.util';
+import { BillingAeraTariffService } from './billing-aera-tariff.service';
+import { BillingAircraftMasterService } from './billing-aircraft-master.service';
+
+const EMPTY_AERA_CHECK: AeraPriceCardCheck = {
+  aeraCeiling: null,
+  aeraFinancialYear: null,
+  aeraAircraftCode: null,
+  aeraOrderNumber: null,
+  exceedsAeraCeiling: false,
+  aeraWarning: '',
+};
 
 type TwinKey = {
   customerCode: string;
@@ -58,7 +76,43 @@ export class BillingPriceCardAirlinesService {
     @InjectModel(BillingContract.name)
     private readonly contractModel: Model<BillingContractDocument>,
     private readonly auditEngine: AuditEngineService,
+    @Optional() private readonly aeraTariff?: BillingAeraTariffService,
+    @Optional() private readonly aircraftMaster?: BillingAircraftMasterService,
   ) {}
+
+  /**
+   * Annotate BHS rows with the AERA ceiling for their aircraft code / sector / FY.
+   * Warning only — saving above the ceiling is allowed, the UI shows the message.
+   */
+  private async withAeraChecks<T extends AeraPriceCardRowInput>(
+    stationCode: string,
+    rows: T[],
+  ): Promise<Array<T & AeraPriceCardCheck>> {
+    if (!this.aeraTariff || rows.length === 0) {
+      return rows.map((row) => ({ ...row, ...EMPTY_AERA_CHECK }));
+    }
+    try {
+      const probeDate = rows
+        .map((row) => (row.validFrom ? new Date(row.validFrom) : null))
+        .filter((d): d is Date => Boolean(d) && !Number.isNaN(d!.getTime()))
+        .sort((a, b) => b.getTime() - a.getTime())[0] ?? new Date();
+      const order = await this.aeraTariff.activeOrderFor(stationCode, probeDate);
+      if (!order) return rows.map((row) => ({ ...row, ...EMPTY_AERA_CHECK }));
+      const master = this.aircraftMaster ? (await this.aircraftMaster.list()).data ?? [] : [];
+      const masterRows: AircraftMasterTariffRow[] = master.map((row) => ({
+        aircraftType: row.aircraftType,
+        icaoCode: row.icaoCode,
+        categoryCode: row.categoryCode,
+        stationCode: row.stationCode,
+      }));
+      return rows.map((row) => ({
+        ...row,
+        ...checkPriceCardAgainstAera({ ...row, stationCode }, order, masterRows),
+      }));
+    } catch {
+      return rows.map((row) => ({ ...row, ...EMPTY_AERA_CHECK }));
+    }
+  }
 
   async list(ctx: StationScopeContext, query: ListBillingPriceCardAirlinesQueryDto) {
     const stationCode = StationScope.require(ctx);
@@ -85,10 +139,11 @@ export class BillingPriceCardAirlinesService {
       filter.customerCode = query.customerCode.trim().toUpperCase();
     }
 
-    const items = await this.entryModel
+    const rows = await this.entryModel
       .find(filter)
       .sort({ airlineName: 1, aircraftType: 1 })
       .lean();
+    const items = await this.withAeraChecks(stationCode, rows);
 
     return successResponse({ items, total: items.length });
   }
@@ -405,7 +460,12 @@ export class BillingPriceCardAirlinesService {
       changes: { handlingType, rowCount: created.length },
     });
 
-    return successResponse({ items: created, total: created.length });
+    const items = await this.withAeraChecks(stationCode, created as AeraPriceCardRowInput[]);
+    return successResponse({
+      items,
+      total: items.length,
+      aeraWarnings: items.filter((row) => row.exceedsAeraCeiling).map((row) => row.aeraWarning),
+    });
   }
 
   async update(
@@ -496,7 +556,8 @@ export class BillingPriceCardAirlinesService {
       changes: { before, after: doc.toObject() },
     });
 
-    return successResponse(doc.toObject());
+    const [annotated] = await this.withAeraChecks(doc.stationCode, [doc.toObject() as AeraPriceCardRowInput]);
+    return successResponse(annotated ?? doc.toObject());
   }
 
   async remove(ctx: StationScopeContext, id: string, actor: BillingActor) {

@@ -78,6 +78,7 @@ import {
 } from '../../shared/ads-equipment-inclusion.util';
 import { lookupRafAdhocRate } from '../../shared/raf-adhoc-lookup';
 import { serviceCodeContainsParticular } from '../../utils/rate-card-service-match.util';
+import { classifyFlightScenarioForPreparation } from '../../utils/invoice-concession.util';
 
 type EnrichmentCache = {
   customersByCode: Map<string, BillingCustomer & { _id?: unknown }>;
@@ -719,6 +720,7 @@ export class BillingSourceEnrichmentService {
           price: entry.price,
           validFrom: entry.validFrom,
           remarks: entry.remarks,
+          annualIncreaseApplied: entry.annualIncreaseApplied,
           flightOperation: entry.flightOperation,
           incrementalFlightsActive: entry.incrementalFlightsActive,
           incrementalPrice: entry.incrementalPrice,
@@ -819,7 +821,7 @@ export class BillingSourceEnrichmentService {
         ? null
         : priceWithAnnualIncrease(bhsPackagePriceRaw, clauseRows, billingDate, 'BHS', {
             bakedSteps: annual
-              ? bakedAnnualSteps(bhsPackage?.remarks ?? undefined, annual.percent, annual.validFrom)
+              ? bakedAnnualSteps(bhsPackage, annual.percent, annual.validFrom)
               : 0,
             cardValidFrom: bhsPackage?.validFrom,
           });
@@ -984,7 +986,10 @@ export class BillingSourceEnrichmentService {
               {
                 bakedSteps: adsAnnual
                   ? bakedAnnualSteps(
-                      rulePricing.remarks,
+                      {
+                        annualIncreaseApplied: rulePricing.annualIncreaseApplied,
+                        remarks: rulePricing.remarks,
+                      },
                       adsAnnual.percent,
                       adsAnnual.validFrom,
                     )
@@ -1081,11 +1086,37 @@ export class BillingSourceEnrichmentService {
       !/^[A-Z0-9]{2,3}$/i.test(rawOperationalName) &&
       rawOperationalName.toUpperCase() !== customerCode;
 
+    // Explicit scenario + tariff code are derived once here and stored on the
+    // record, so invoice-time rules read a field instead of sniffing free text.
+    const isFlightRow = !isAds && !isRaf;
+    const flightScenario = isFlightRow
+      ? classifyFlightScenarioForPreparation({
+          sourceRef: input.sourceRef as Record<string, unknown>,
+          operationalData: input.operationalData,
+        })
+      : undefined;
+    const flightAircraftText = String(
+      input.operationalData.aircraftType ??
+        input.operationalData.TypeCraft ??
+        input.operationalData.aircraft ??
+        '',
+    ).trim();
+    const aircraftTariffCode =
+      isFlightRow && flightAircraftText
+        ? resolveAircraftTariffCode(
+            flightAircraftText,
+            cache.aircraftMaster,
+            cache.stationCode,
+          ) || undefined
+        : undefined;
+
     const operationalData: Record<string, unknown> = {
       ...input.operationalData,
       ...(flightNo
         ? { flightNo, flightNoEquipmentNo: flightNo }
         : {}),
+      ...(flightScenario ? { flightScenario } : {}),
+      ...(aircraftTariffCode ? { aircraftTariffCode } : {}),
       isCancelled: cancelled,
       cancelled,
       customerCode,

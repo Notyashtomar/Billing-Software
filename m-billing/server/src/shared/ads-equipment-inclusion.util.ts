@@ -28,6 +28,13 @@ export type AdsEquipmentInclusionRule = {
   category?: string;
   effectiveMonth?: string;
   remarks?: string;
+  /** Yearly increase already applied to the unit price (replaces CYI remark tag). */
+  annualIncreaseApplied?: {
+    contractNumber?: string | null;
+    validFrom: string;
+    percent: number;
+    steps: number;
+  } | null;
 };
 
 export type AdsEquipmentInclusionContract = {
@@ -646,6 +653,7 @@ export type AdsContractRulePricing = {
   uom: string;
   serviceCode: string;
   remarks?: string;
+  annualIncreaseApplied?: AdsEquipmentInclusionRule['annualIncreaseApplied'];
 };
 
 /**
@@ -736,6 +744,7 @@ export function resolveAdsPricingFromContractRule(
     unitPrice: match.excluded ? 0 : unitPrice,
     uom,
     remarks: String(rule.remarks ?? ''),
+    annualIncreaseApplied: rule.annualIncreaseApplied ?? undefined,
     serviceCode: isWchrSCombinedAdsService(
       rule.serviceCode,
       opts.serviceCode,

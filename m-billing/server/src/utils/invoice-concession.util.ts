@@ -1,26 +1,49 @@
-import { Model } from 'mongoose';
-import type { StationScopeContext } from '../common/station-scope';
-import { fixedStationScope, StationScope } from '../common/station-scope';
-import type {
-  BillingContract,
-  BillingContractDocument,
-} from '../schemas/billing.schemas';
 import { normalizeFlightCategory } from './aircraft-type-match.util';
+import {
+  classifyFlightScenarioFromText,
+  FLIGHT_SCENARIO_FIELD,
+  isDivertedText,
+  isReturnToRampText,
+  isStandbyText,
+  isTechnicalText,
+  readStoredFlightScenario,
+  type FlightScenario,
+} from './flight-scenario.util';
 import { isInternationalOnlyAirline } from './invoice-flight-category.util';
+import {
+  actualGroundMinutes,
+  clockMinutes,
+  flightSnapshotBlob,
+  hasActualClock,
+  lateArrivalMinutes,
+  lateDepartureMinutes,
+  parseLocalDateTime,
+  pickFlightText,
+  snapshotDateTime,
+  type InvoiceLineConcessionInput,
+} from './flight-snapshot-clock.util';
+
 import {
   concessionSectorForAirline,
   flightConcessionSectorFromText,
   stationPercentForSector,
 } from './station-flight-concession.util';
 
+// Re-exported so existing importers keep working after these helpers moved out.
+export {
+  actualGroundMinutes,
+  lateArrivalMinutes,
+  lateDepartureMinutes,
+  type InvoiceLineConcessionInput,
+} from './flight-snapshot-clock.util';
+export {
+  invalidateInvoiceContractCache,
+  resolveActiveContractForInvoice,
+  type InvoiceContractLookup,
+} from './invoice-contract-lookup.util';
+
 export const INVOICE_CGST_PERCENT = 9;
 export const INVOICE_SGST_PERCENT = 9;
-
-/**
- * Historical Chennai exclusive rate. Invoices do not use this number.
- * Exclusive concession is the percent saved on that station's contract.
- */
-export const EXCLUSIVE_BHS_INVOICE_CONCESSION_PERCENT = 18;
 
 /** Normal exclusive royalty is amount × percent/100. Extended is amount × percent/(100−percent). */
 export function exclusiveRoyaltyRate(extended: boolean, percent = 0): number {
@@ -68,25 +91,18 @@ export type ContractConcessionScenarioKey =
   | 'DomCargo'
   | 'IntCargo';
 
+/** Concessions-page fee % by sector (additive after Total Amount). */
 export type ContractConcessionRatesShape = {
   int?: number | null;
   dom?: number | null;
   divertedDom?: number | null;
   divertedInt?: number | null;
-  returnToRamp?: number | null;
-  cancellationWithinHoursPercent?: number | null;
-  technicalHandlingChargesPercent?: number | null;
-  standbyChargesPercent?: number | null;
-  filoLifoChargesPercent?: number | null;
-  filoChargesPercent?: number | null;
-  lifoChargesPercent?: number | null;
-  ronAdditionalPercent?: number | null;
-  lateArrivalAdditionalPercent?: number | null;
-  extraGroundTimeAdditionalPercent?: number | null;
-  delayChargesPercent?: number | null;
   domesticCargo?: number | null;
   internationalCargo?: number | null;
 };
+
+/** Fee scenarios a Concessions-page percent can apply to. */
+export type ContractFeeScenarioKey = 'Int' | 'Dom' | 'DivDom' | 'DivInt' | 'DomCargo' | 'IntCargo';
 
 /** Contracts-page conditional chargeable % of BHS package. */
 export type ContractConditionalChargesShape = {
@@ -128,6 +144,13 @@ export type InvoiceChargeContractShape = {
   bhsConcessionCoverage?: 'comprehensive' | 'non_comprehensive' | 'mixed' | null;
   extendedRoyaltyEnabled?: boolean | null;
   /**
+   * What the concession percent is applied to. `invoice_amount` (default) uses
+   * the billed handling amount. `aera_ceiling` uses the AERA ceiling rate per
+   * flight (e.g. KLM HYD: "24% of the AERA ceiling rate") — the engine stamps
+   * `aeraCeiling` on each line; lines without it fall back to the invoice amount.
+   */
+  concessionBase?: 'invoice_amount' | 'aera_ceiling' | null;
+  /**
    * Station Royalty Setup fees. When set, a plain scheduled or general-aviation
    * flight uses this percent instead of the contract fee for that category.
    */
@@ -155,17 +178,6 @@ export type InvoiceChargeContractShape = {
   categories?: Array<string | null | undefined> | null;
 };
 
-export type InvoiceLineConcessionInput = {
-  lineAmountExclTax?: number;
-  quantity?: number;
-  unitPrice?: number;
-  serviceCode?: string;
-  description?: string;
-  sourceType?: string;
-  preparationRecordIds?: unknown[];
-  sourceRef?: Record<string, unknown>;
-};
-
 /** Ceiling is a contract charge, not a flight particular. */
 export function isCeilingParticularLine(line: InvoiceLineConcessionInput): boolean {
   if (String(line.serviceCode ?? '').trim().toUpperCase() === 'CEILING') return true;
@@ -191,56 +203,6 @@ export function roundCeilingConcessionTotal(n: number): number {
 function positiveRate(value: unknown): number {
   const n = Number(value);
   return Number.isFinite(n) && n > 0 ? n : 0;
-}
-
-function calendarYmd(value: unknown): string {
-  if (value instanceof Date && !Number.isNaN(value.getTime())) {
-    const year = value.getFullYear();
-    const month = String(value.getMonth() + 1).padStart(2, '0');
-    const day = String(value.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  }
-  const text = String(value ?? '').trim();
-  if (!text) return '';
-  const iso = text.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
-  const dmy = text.match(/^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{4})$/);
-  if (!dmy) return '';
-  return `${dmy[3]}-${dmy[2].padStart(2, '0')}-${dmy[1].padStart(2, '0')}`;
-}
-
-function clockHm(value: unknown): string {
-  if (value instanceof Date && !Number.isNaN(value.getTime())) {
-    return `${String(value.getHours()).padStart(2, '0')}:${String(value.getMinutes()).padStart(2, '0')}:${String(value.getSeconds()).padStart(2, '0')}`;
-  }
-  if (typeof value === 'number' && Number.isFinite(value) && value >= 0 && value < 1) {
-    const totalMinutes = Math.round(value * 24 * 60);
-    const hours = Math.floor(totalMinutes / 60) % 24;
-    const minutes = totalMinutes % 60;
-    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`;
-  }
-  const text = String(value ?? '').trim();
-  if (!text) return '';
-  const iso = text.match(/T(\d{1,2}):(\d{2})(?::(\d{2}))?/);
-  if (iso && /^\d{4}-\d{2}-\d{2}T/.test(text)) {
-    return `${iso[1].padStart(2, '0')}:${iso[2]}:${iso[3] ?? '00'}`;
-  }
-  const hm = text.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?/);
-  if (!hm) return '';
-  const hours = Number(hm[1]);
-  const minutes = Number(hm[2]);
-  if (hours > 23 || minutes > 59) return '';
-  return `${String(hours).padStart(2, '0')}:${hm[2]}:${hm[3] ?? '00'}`;
-}
-
-function parseLocalDateTime(dateYmd: string, timeText: string): Date | null {
-  const ymd = calendarYmd(dateYmd);
-  const time = clockHm(timeText);
-  if (!ymd || !/^\d{4}-\d{2}-\d{2}$/.test(ymd) || !time) return null;
-  const [year, month, day] = ymd.split('-').map(Number);
-  const match = time.match(/^(\d{2}):(\d{2}):(\d{2})$/);
-  if (!match || [year, month, day].some((n) => !Number.isFinite(n))) return null;
-  return new Date(year, month - 1, day, Number(match[1]), Number(match[2]), Number(match[3]));
 }
 
 function resolveRateOrDefault(
@@ -274,67 +236,68 @@ function pickStoredConcessionPercent(
   return null;
 }
 
-function pickFlightText(
-  snap: Record<string, unknown>,
-  ref: Record<string, unknown>,
-  keys: string[],
-): string {
-  for (const key of keys) {
-    const fromSnap = snap[key];
-    if (fromSnap != null && String(fromSnap).trim()) return String(fromSnap).trim();
-    const fromRef = ref[key];
-    if (fromRef != null && String(fromRef).trim()) return String(fromRef).trim();
-  }
-  return '';
+/**
+ * Scenario for a line: the explicit `flightScenario` saved at preparation time
+ * wins; text matching is only the fallback for records that predate the field.
+ */
+export function resolveLineFlightScenario(line: InvoiceLineConcessionInput): FlightScenario {
+  const blob = flightSnapshotBlob(line);
+  const stored = readStoredFlightScenario(blob.snap, blob.ref);
+  if (stored) return stored;
+  return classifyFlightScenarioFromText({
+    allText: blob.allText,
+    handlingCorpus: blob.handlingCorpus,
+    categoryLower: blob.categoryRaw.toLowerCase(),
+    snap: blob.snap,
+  });
 }
 
-function flightSnapshotBlob(line: InvoiceLineConcessionInput): {
-  ref: Record<string, unknown>;
-  snap: Record<string, unknown>;
-  handlingRaw: string;
-  categoryRaw: string;
-  allText: string;
-  handlingCorpus: string;
-} {
-  const ref = line.sourceRef ?? {};
-  const snap = (ref.operationalSnapshot as Record<string, unknown> | undefined) ?? ref;
-  const handlingParts = [
-    'typeOfHandling',
-    'TypeofHandling',
-    'typeofHandling',
-    'flightType',
-    'ops',
-    'opsType',
-    'typeOfFlight',
-    'Typeofflight',
-  ].map((key) => pickFlightText(snap, ref, [key]));
-  const handlingCorpus = collectFhrHandlingText(snap, ref).toLowerCase();
-  // Prefer primary Type of Handling for non-divert labels, but keep all parts for scenario detection.
-  const handlingRaw = (handlingParts.find(Boolean) || handlingCorpus || '').toLowerCase();
-  const categoryRaw = pickFlightText(snap, ref, [
-    'categoryOfFlight',
-    'Cate_of_Flight',
-    'flightCategory',
-    'turnaroundStatus',
-  ]);
-  const remarks = pickFlightText(snap, ref, ['remarks', 'Remarks']);
-  // FHR often stores "Diverted Flight" on ops/typeOfFlight while typeOfHandling stays Additional/Turnaround.
-  const allText = [
-    ...handlingParts,
-    handlingCorpus,
-    categoryRaw,
-    remarks,
-    String(snap.sourceType ?? ref.sourceType ?? ''),
-  ]
-    .filter(Boolean)
-    .join(' ')
-    .toLowerCase();
-  return { ref, snap, handlingRaw, categoryRaw, allText, handlingCorpus };
+/**
+ * Text-only classification used when a preparation record is (re)built.
+ * Never reads a stored scenario, so a refresh always re-derives from source data.
+ */
+export function classifyFlightScenarioForPreparation(input: {
+  sourceRef?: Record<string, unknown> | null;
+  operationalData: Record<string, unknown>;
+}): FlightScenario {
+  const snapshot: Record<string, unknown> = { ...input.operationalData };
+  delete snapshot[FLIGHT_SCENARIO_FIELD];
+  const blob = flightSnapshotBlob({
+    sourceRef: { ...(input.sourceRef ?? {}), operationalSnapshot: snapshot },
+  } as InvoiceLineConcessionInput);
+  return classifyFlightScenarioFromText({
+    allText: blob.allText,
+    handlingCorpus: blob.handlingCorpus,
+    categoryLower: blob.categoryRaw.toLowerCase(),
+    snap: blob.snap,
+  });
 }
 
 function isDivertedFlightSnapshot(line: InvoiceLineConcessionInput): boolean {
-  const { allText } = flightSnapshotBlob(line);
-  return /\bdivert/.test(allText) || /\bdiversion\b/.test(allText);
+  const blob = flightSnapshotBlob(line);
+  const stored = readStoredFlightScenario(blob.snap, blob.ref);
+  if (stored) return stored === 'diverted';
+  return isDivertedText(blob);
+}
+
+function isTechnicalFlightSnapshot(line: InvoiceLineConcessionInput): boolean {
+  const blob = flightSnapshotBlob(line);
+  const stored = readStoredFlightScenario(blob.snap, blob.ref);
+  if (stored) return stored === 'technical';
+  return isTechnicalText({
+    handlingCorpus: blob.handlingCorpus,
+    categoryLower: blob.categoryRaw.toLowerCase(),
+  });
+}
+
+function isStandbyFlightSnapshot(line: InvoiceLineConcessionInput): boolean {
+  const blob = flightSnapshotBlob(line);
+  const stored = readStoredFlightScenario(blob.snap, blob.ref);
+  if (stored) return stored === 'standby';
+  return isStandbyText({
+    handlingCorpus: blob.handlingCorpus,
+    categoryLower: blob.categoryRaw.toLowerCase(),
+  });
 }
 
 type DivertedUnitChargeKey =
@@ -396,38 +359,6 @@ function isCancelledFlightSnapshot(
     Boolean(snap.flightCancelled) ||
     String(snap.flightStatus ?? '').trim().toLowerCase() === 'cancelled'
   );
-}
-
-const FHR_REMARK_KEY = /remark/i;
-const FHR_SKIP_KEY =
-  /^(sta|std|ata|atd|date|time|serial|regn|route|flightno|customer|airline|mtow|terminal|entry)/i;
-
-/** Handling phrases anywhere in the FHR snapshot. Remarks stay out so a note cannot reprice the flight. */
-function collectFhrHandlingText(
-  snap: Record<string, unknown>,
-  ref: Record<string, unknown>,
-): string {
-  const parts: string[] = [];
-  const visit = (value: unknown, key: string | null, depth: number) => {
-    if (depth > 5 || parts.length > 60) return;
-    if (key && (FHR_REMARK_KEY.test(key) || FHR_SKIP_KEY.test(key))) return;
-    if (typeof value === 'string') {
-      const text = value.trim();
-      if (text && text.length <= 180) parts.push(text);
-      return;
-    }
-    if (!value || typeof value !== 'object') return;
-    if (Array.isArray(value)) {
-      for (const item of value.slice(0, 30)) visit(item, key, depth + 1);
-      return;
-    }
-    for (const [childKey, child] of Object.entries(value as Record<string, unknown>)) {
-      visit(child, childKey, depth + 1);
-    }
-  };
-  visit(snap, null, 0);
-  visit(ref, null, 0);
-  return parts.join(' ');
 }
 
 function ferryKindFromText(handling: string): 'filo' | 'lifo' | null {
@@ -538,172 +469,8 @@ function ferryHandlingKind(line: InvoiceLineConcessionInput): 'filo' | 'lifo' | 
   return ferryKindFromText(header) ?? ferryKindFromText(handlingCorpus);
 }
 
-function clockMinutes(date: Date): number {
-  return date.getHours() * 60 + date.getMinutes();
-}
-
-function pickFlightRaw(
-  snap: Record<string, unknown>,
-  ref: Record<string, unknown>,
-  keys: string[],
-): unknown {
-  for (const key of keys) {
-    const fromSnap = snap[key];
-    if (fromSnap != null && String(fromSnap).trim() !== '') return fromSnap;
-    const fromRef = ref[key];
-    if (fromRef != null && String(fromRef).trim() !== '') return fromRef;
-  }
-  return null;
-}
-
-const ATA_DATE_KEYS = ['ataDate', 'ATADate', 'ATA Date', 'actualArrivalDate'];
-const ATA_TIME_KEYS = [
-  'ataTime',
-  'ATATime',
-  'ATA Time',
-  'actualArrivalTime',
-  'actualTimeOfArrival',
-];
-const ATD_DATE_KEYS = ['atdDate', 'ATDDate', 'ATD Date', 'actualDepartureDate'];
-const ATD_TIME_KEYS = [
-  'atdTime',
-  'ATDTime',
-  'ATD Time',
-  'actualDepartureTime',
-  'actualTimeOfDeparture',
-];
-const FLIGHT_DATE_KEYS = [
-  'staDate',
-  'STADate',
-  'STA Date',
-  'stdDate',
-  'STDDate',
-  'STD Date',
-  'flightDate',
-  'billingDateYmd',
-];
-
-function movementInstant(
-  snap: Record<string, unknown>,
-  ref: Record<string, unknown>,
-  dateKeys: string[],
-  timeKeys: string[],
-  fallbackDateKeys: string[] = [],
-): Date | null {
-  const dateRaw = pickFlightRaw(snap, ref, dateKeys);
-  const timeRaw = pickFlightRaw(snap, ref, timeKeys);
-  let ymd = calendarYmd(dateRaw);
-  let hm = clockHm(timeRaw);
-  if (!ymd && timeRaw != null) ymd = calendarYmd(timeRaw);
-  if (!hm && dateRaw != null) hm = clockHm(dateRaw);
-  if (!ymd && fallbackDateKeys.length > 0) {
-    ymd = calendarYmd(pickFlightRaw(snap, ref, fallbackDateKeys));
-  }
-  if (!ymd || !hm) return null;
-  return parseLocalDateTime(ymd, hm);
-}
-
-function snapshotDateTime(
-  snap: Record<string, unknown>,
-  ref: Record<string, unknown>,
-  dateKeys: string[],
-  timeKeys: string[],
-): Date | null {
-  return movementInstant(snap, ref, dateKeys, timeKeys);
-}
-
-/**
- * Ground time is actual departure minus actual arrival.
- * Overnight turns (departure clock before arrival) roll into the next day.
- */
-export function actualGroundMinutes(line: InvoiceLineConcessionInput): number | null {
-  const { snap, ref } = flightSnapshotBlob(line);
-  const ata = movementInstant(snap, ref, ATA_DATE_KEYS, ATA_TIME_KEYS, FLIGHT_DATE_KEYS);
-  const atd = movementInstant(snap, ref, ATD_DATE_KEYS, ATD_TIME_KEYS, [
-    'stdDate',
-    'STDDate',
-    'STD Date',
-    ...FLIGHT_DATE_KEYS,
-  ]);
-  if (!ata || !atd) return null;
-  let end = atd.getTime();
-  if (end < ata.getTime()) end += 24 * 60 * 60 * 1000;
-  const minutes = (end - ata.getTime()) / 60000;
-  return Number.isFinite(minutes) && minutes >= 0 ? minutes : null;
-}
-
 function groundMinutesOf(line: InvoiceLineConcessionInput): number | null {
   return actualGroundMinutes(line);
-}
-
-function durationMinutes(value: unknown): number | null {
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  const text = String(value ?? '').trim();
-  if (!text) return null;
-  const parts = text.split(':');
-  if (parts.length >= 2 && parts.every((part) => /^\d+(\.\d+)?$/.test(part))) {
-    const [hours, minutes, seconds] = parts.map(Number);
-    return hours * 60 + minutes + (seconds ?? 0) / 60;
-  }
-  const n = Number(text);
-  return Number.isFinite(n) ? n : null;
-}
-
-/**
- * Minutes the actual movement ran past the scheduled one.
- * Early movements are 0 (not late). Only a real midnight crossing — actual clock
- * more than 12 h "before" schedule because the date did not roll — adds a day;
- * otherwise an ATA of 22:57 against an STA of 23:15 would read as 23 h 42 m late.
- */
-function minutesPastSchedule(scheduled: Date, actual: Date): number | null {
-  const dayMs = 24 * 60 * 60 * 1000;
-  let diff = actual.getTime() - scheduled.getTime();
-  if (diff < -dayMs / 2) diff += dayMs;
-  if (!Number.isFinite(diff)) return null;
-  return Math.max(0, diff / 60000);
-}
-
-function lateArrivalMinutes(line: InvoiceLineConcessionInput): number | null {
-  const { snap, ref } = flightSnapshotBlob(line);
-  const sta = snapshotDateTime(
-    snap,
-    ref,
-    ['staDate', 'STADate'],
-    ['staTime', 'STATime'],
-  );
-  const ata = snapshotDateTime(
-    snap,
-    ref,
-    ['ataDate', 'ATADate'],
-    ['ataTime', 'ATATime'],
-  );
-  if (sta && ata) {
-    const minutes = minutesPastSchedule(sta, ata);
-    if (minutes != null) return minutes;
-  }
-  return durationMinutes(snap.delayOnSta ?? snap.arrivalDelay ?? snap.ActualDelay);
-}
-
-/** ATD later than STD, in minutes. */
-function lateDepartureMinutes(line: InvoiceLineConcessionInput): number | null {
-  const { snap, ref } = flightSnapshotBlob(line);
-  const std = snapshotDateTime(
-    snap,
-    ref,
-    ['stdDate', 'STDDate'],
-    ['stdTime', 'STDTime'],
-  );
-  const atd = snapshotDateTime(
-    snap,
-    ref,
-    ['atdDate', 'ATDDate'],
-    ['atdTime', 'ATDTime'],
-  );
-  if (std && atd) {
-    const minutes = minutesPastSchedule(std, atd);
-    if (minutes != null) return minutes;
-  }
-  return durationMinutes(snap.delayOnStd ?? snap.departureDelay);
 }
 
 /**
@@ -749,19 +516,6 @@ function matchesRemainOvernight(line: InvoiceLineConcessionInput): boolean {
   return overnightArrival && depart <= 6 * 60;
 }
 
-function hasActualClock(
-  line: InvoiceLineConcessionInput,
-  timeKeys: string[],
-): boolean {
-  const { snap, ref } = flightSnapshotBlob(line);
-  return timeKeys.some((key) => {
-    const raw = snap[key] ?? ref[key];
-    if (raw == null) return false;
-    const text = String(raw).trim().toLowerCase();
-    return Boolean(text) && text !== '-' && text !== 'null' && text !== 'n/a';
-  });
-}
-
 const ORIGINATE_TERMINATE_LABEL_KEYS = [
   'TypeofHandling',
   'typeOfHandling',
@@ -798,13 +552,10 @@ export function isOriginateOrTerminateFlight(line: InvoiceLineConcessionInput): 
 }
 
 function isReturnToRampFlightSnapshot(line: InvoiceLineConcessionInput): boolean {
-  const { snap, allText } = flightSnapshotBlob(line);
-  return (
-    Boolean(snap.returnToRamp) ||
-    Boolean(snap.return_to_ramp) ||
-    /\breturn to ramp\b/.test(allText) ||
-    /\brtr\b/.test(allText)
-  );
+  const blob = flightSnapshotBlob(line);
+  const stored = readStoredFlightScenario(blob.snap, blob.ref);
+  if (stored) return stored === 'returnToRamp';
+  return isReturnToRampText(blob);
 }
 
 /** True when cancellation falls inside the contract hours window (STA − intimation). */
@@ -867,27 +618,15 @@ function hasExplicitConcessionRate(value: unknown): boolean {
   return value != null && String(value).trim() !== '' && Number.isFinite(Number(value));
 }
 
+/**
+ * Contracts-page conditional charges (chargeable % of the BHS package).
+ * These live only on `conditionalCharges`; `concessionRates` holds the
+ * Concessions-page fee percents (Dom / Int / diverted / cargo) and nothing else.
+ */
 function resolveConditionalCharges(
   contract?: InvoiceChargeContractShape | null,
 ): ContractConditionalChargesShape {
-  const charges = contract?.conditionalCharges;
-  if (charges && Object.keys(charges).length > 0) return charges;
-  // Legacy: RTR / cancel / tech / standby lived on concessionRates before the split.
-  // Never fall back diverted* from concessionRates (those are Concessions-page fees).
-  const rates = contract?.concessionRates ?? {};
-  return {
-    returnToRamp: rates.returnToRamp,
-    cancellationWithinHoursPercent: rates.cancellationWithinHoursPercent,
-    technicalHandlingChargesPercent: rates.technicalHandlingChargesPercent,
-    standbyChargesPercent: rates.standbyChargesPercent,
-    filoLifoChargesPercent: rates.filoLifoChargesPercent,
-    filoChargesPercent: rates.filoChargesPercent,
-    lifoChargesPercent: rates.lifoChargesPercent,
-    ronAdditionalPercent: rates.ronAdditionalPercent,
-    lateArrivalAdditionalPercent: rates.lateArrivalAdditionalPercent,
-    extraGroundTimeAdditionalPercent: rates.extraGroundTimeAdditionalPercent,
-    delayChargesPercent: rates.delayChargesPercent,
-  };
+  return contract?.conditionalCharges ?? {};
 }
 
 /**
@@ -1024,19 +763,13 @@ export function resolveLineConcessionPercent(
     return rates.CancellationWithinHoursPercent;
   }
 
-  const { handlingCorpus, categoryRaw } = flightSnapshotBlob(line);
-  const categoryLower = categoryRaw.toLowerCase();
   const ferryPercent = ferryReplacementPercent(line, contract);
   if (ferryPercent != null) return ferryPercent;
 
   const divertedUnit = divertedUnitPricePercent(line, contract);
   const returnToRamp = positiveRate(resolveConditionalCharges(contract).returnToRamp);
-  const isTechnicalHandling =
-    /technical/.test(handlingCorpus) ||
-    /\btech\b/.test(handlingCorpus) ||
-    /technical/.test(categoryLower);
-  const isStandby =
-    /stand[\s-]?by/.test(handlingCorpus) || /stand[\s-]?by/.test(categoryLower);
+  const isTechnicalHandling = isTechnicalFlightSnapshot(line);
+  const isStandby = isStandbyFlightSnapshot(line);
 
   if (divertedUnit.diverted) return divertedUnit.percent ?? 0;
   if (returnToRamp > 0 && isReturnToRampFlightSnapshot(line)) return returnToRamp;
@@ -1111,7 +844,7 @@ export function legacyConcessionPercentFromContract(
 
 export function resolveConcessionRatesByScenario(
   contract?: InvoiceChargeContractShape | null,
-): Record<ContractConcessionScenarioKey, number> {
+): Record<ContractFeeScenarioKey, number> {
   const legacy = legacyConcessionPercentFromContract(contract);
   const rates = contract?.concessionRates ?? {};
   return {
@@ -1119,17 +852,6 @@ export function resolveConcessionRatesByScenario(
     Dom: positiveRate(rates.dom) || legacy,
     DivDom: positiveRate(rates.divertedDom) || legacy,
     DivInt: positiveRate(rates.divertedInt) || legacy,
-    ReturnToRamp: positiveRate(rates.returnToRamp) || legacy,
-    OriginateTerminatePercent: 0,
-    CancellationWithinHoursPercent:
-      positiveRate(rates.cancellationWithinHoursPercent) || legacy,
-    TechnicalHandlingChargesPercent:
-      positiveRate(rates.technicalHandlingChargesPercent) || legacy,
-    StandbyChargesPercent: positiveRate(rates.standbyChargesPercent) || legacy,
-    FiloLifoChargesPercent: positiveRate(rates.filoLifoChargesPercent) || legacy,
-    FiloChargesPercent: positiveRate(rates.filoChargesPercent) || legacy,
-    LifoChargesPercent: positiveRate(rates.lifoChargesPercent) || legacy,
-    DelayChargesPercent: positiveRate(rates.delayChargesPercent) || legacy,
     DomCargo: positiveRate(rates.domesticCargo),
     IntCargo: positiveRate(rates.internationalCargo),
   };
@@ -1147,7 +869,7 @@ export function inferConcessionScenarioFromLine(
     return 'CancellationWithinHoursPercent';
   }
 
-  const { handlingCorpus, categoryRaw } = flightSnapshotBlob(line);
+  const { categoryRaw } = flightSnapshotBlob(line);
   const categoryLower = categoryRaw.toLowerCase();
   if (
     isReturnToRampFlightSnapshot(line) &&
@@ -1163,12 +885,8 @@ export function inferConcessionScenarioFromLine(
     return 'LifoChargesPercent';
   }
   const isDiverted = isDivertedFlightSnapshot(line);
-  const isTechnicalHandling =
-    /technical/.test(handlingCorpus) ||
-    /\btech\b/.test(handlingCorpus) ||
-    /technical/.test(categoryLower);
-  const isStandby =
-    /stand[\s-]?by/.test(handlingCorpus) || /stand[\s-]?by/.test(categoryLower);
+  const isTechnicalHandling = isTechnicalFlightSnapshot(line);
+  const isStandby = isStandbyFlightSnapshot(line);
 
   const normalized = normalizeFlightCategory(categoryRaw);
   const isDom =
@@ -1635,6 +1353,45 @@ function exclusivePercentConcession(
   return { amount: roundBillingMoney(amount), labelPercent };
 }
 
+/**
+ * Concession computed on the AERA ceiling instead of the billed amount:
+ * Σ (ceiling per flight × flights × percent). Returns null when any flight
+ * line has no stamped ceiling, so the caller keeps the normal calculation.
+ *
+ * The percent is applied flat (24% of the ceiling is ₹51,978, as the SGHA
+ * states); the Royalty-on-Gross gross-up p/(100−p) is not applied here because
+ * the ceiling already is the gross figure the airport operator benchmarks.
+ */
+export function aeraCeilingBasedConcession(
+  particulars: InvoiceLineConcessionInput[],
+  contract: InvoiceChargeContractShape | null | undefined,
+  _extendedRoyalty: boolean,
+): { amount: number; labelPercent: number; ceilingBase: number } | null {
+  const flightLines = particulars.filter((line) => isBhsFlightLine(line) && lineExclAmount(line) > 0);
+  if (flightLines.length === 0) return null;
+  let amount = 0;
+  let ceilingBase = 0;
+  const percents = new Set<number>();
+  for (const line of flightLines) {
+    const ref = (line.sourceRef ?? {}) as Record<string, unknown>;
+    const ceiling = Number(ref.aeraCeiling);
+    if (!Number.isFinite(ceiling) || ceiling <= 0) return null;
+    const flights = lineFlightCount(line);
+    if (flights <= 0) return null;
+    const stored = pickStoredConcessionPercent(ref);
+    const pct = stored != null ? stored : resolveLineFeeConcessionPercent(line, contract);
+    if (pct > 0) percents.add(roundBillingMoney(pct));
+    const base = ceiling * flights;
+    ceilingBase += base;
+    amount += base * (pct / 100);
+  }
+  return {
+    amount: roundBillingMoney(amount),
+    labelPercent: percents.size === 1 ? [...percents][0] : 0,
+    ceilingBase: roundBillingMoney(ceilingBase),
+  };
+}
+
 function exclusiveWithMagFloor(
   percentAmount: number,
   labelPercent: number,
@@ -1780,12 +1537,23 @@ export function calculateInvoiceConcessionFromLines(
   const nonBhs = isNonBhsInvoiceConcession(options);
   const magFloorRaw = Number(options?.magFloorAmount);
   const magFloor = Number.isFinite(magFloorRaw) && magFloorRaw >= 0 ? magFloorRaw : null;
+  // Airline contract worded "x% of the AERA ceiling rate" (per airline, not per station).
+  const aeraBased =
+    contract?.concessionBase === 'aera_ceiling' && !nonBhs
+      ? aeraCeilingBasedConcession(particulars, contract, usesExtendedRoyalty(contract))
+      : null;
   if (options?.concessionPercentOverride != null && Number.isFinite(typedConcession)) {
     const pct = Math.min(100, Math.max(0, typedConcession));
     concessionFeePercentFinal = pct;
     concessionFeeAmount = roundBillingMoney(
       subtotal * exclusiveRoyaltyRate(usesExtendedRoyalty(contract), pct),
     );
+  } else if (aeraBased) {
+    // Contract says the royalty is a percent of the AERA ceiling, not of the discounted rate.
+    // The fee is not a percent of the invoice amount, so no percent is shown on the invoice.
+    concessionFeeAmount =
+      magFloor != null ? roundBillingMoney(Math.max(aeraBased.amount, magFloor)) : aeraBased.amount;
+    concessionFeePercentFinal = 0;
   } else if (isInclusiveBhsConcessionContract(contract)) {
     concessionFeeAmount = 0;
     concessionFeePercentFinal = 0;
@@ -1861,92 +1629,6 @@ export function concessionPercentFromContract(
   contract?: { royaltyAtGross?: number | null } | null,
 ): number {
   return legacyConcessionPercentFromContract(contract);
-}
-
-type InvoiceContractLookup = {
-  contractId?: unknown;
-  customerCode: string;
-  documentDate: Date | string;
-  /** Invoice / prep station. Wins over an unscoped admin session. */
-  stationCode?: string | null;
-};
-
-function billingStationCode(value: unknown): string {
-  return String(value ?? '').trim().toUpperCase();
-}
-
-/** Station the invoice must bill against. Never "any station". */
-function stationForInvoiceContract(
-  ctx: StationScopeContext,
-  header: InvoiceContractLookup,
-): string {
-  const fromHeader = billingStationCode(header.stationCode);
-  const fromCtx = billingStationCode(ctx.stationCode);
-  if (!ctx.crossStation) return fromCtx || fromHeader;
-  return fromHeader || fromCtx;
-}
-
-const contractLookupCache = new Map<
-  string,
-  { at: number; value: (BillingContract & { _id?: unknown }) | null }
->();
-
-/** Drop cached contracts so the next invoice rebuild reads the concession page. */
-export function invalidateInvoiceContractCache(): void {
-  contractLookupCache.clear();
-}
-
-export async function resolveActiveContractForInvoice(
-  contractModel: Model<BillingContractDocument>,
-  ctx: StationScopeContext,
-  header: InvoiceContractLookup,
-): Promise<(BillingContract & { _id?: unknown }) | null> {
-  const stationCode = stationForInvoiceContract(ctx, header);
-  const cacheKey = `${stationCode}|${String(header.contractId ?? '')}|${header.customerCode}|${String(header.documentDate ?? '').slice(0, 10)}`;
-  const cached = contractLookupCache.get(cacheKey);
-  if (cached && Date.now() - cached.at < 30_000) return cached.value;
-
-  const store = (value: (BillingContract & { _id?: unknown }) | null) => {
-    contractLookupCache.set(cacheKey, { at: Date.now(), value });
-    return value;
-  };
-
-  if (!stationCode) return store(null);
-
-  const stationCtx = fixedStationScope(stationCode);
-
-  if (header.contractId) {
-    const byId = await contractModel.findById(header.contractId).lean();
-    if (byId && billingStationCode(byId.stationCode) === stationCode) {
-      StationScope.assertOwnership(byId, stationCtx);
-      return store(byId);
-    }
-  }
-
-  const billingDate =
-    header.documentDate instanceof Date
-      ? header.documentDate
-      : new Date(header.documentDate);
-  if (Number.isNaN(billingDate.getTime())) return null;
-
-  return store(
-    await contractModel
-      .findOne(
-        StationScope.filter(
-          {
-            $or: [
-              { customerCode: header.customerCode.toUpperCase() },
-              { additionalCustomerCodes: header.customerCode.toUpperCase() },
-            ],
-            priceValidFrom: { $lte: billingDate },
-            priceValidTo: { $gte: billingDate },
-          },
-          stationCtx,
-        ),
-      )
-      .sort({ priceValidFrom: -1 })
-      .lean(),
-  );
 }
 
 /**
