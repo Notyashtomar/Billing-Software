@@ -108,6 +108,15 @@ type CustomerLike = {
   /** When true, print VAT number on the invoice. */
   showVatOnInvoice?: boolean;
   vatNumber?: string;
+  intermediaryAccountEnabled?: boolean;
+  intermediaryAccount?: {
+    bankName?: string;
+    branchAddress?: string;
+    beneficiaryName?: string;
+    accountNumber?: string;
+    swiftCode?: string;
+    ifscCode?: string;
+  };
 };
 
 type ServiceCatalogLike = {
@@ -543,6 +552,15 @@ export function buildInvoicePdfInput(params: BuildInvoicePdfInputParams): Invoic
     settings?.companyLegalEntity,
   );
   const bankDetails = resolveInvoiceBankDefaults(header.stationCode, settings?.bankDetails);
+  if (customer?.intermediaryAccountEnabled === true && customer.intermediaryAccount) {
+    const extra = customer.intermediaryAccount;
+    bankDetails.intermediaryBankName = extra.bankName?.trim() || undefined;
+    bankDetails.intermediaryBranchAddress = extra.branchAddress?.trim() || undefined;
+    bankDetails.intermediaryBeneficiaryName = extra.beneficiaryName?.trim() || undefined;
+    bankDetails.intermediaryAccountNumber = extra.accountNumber?.trim() || undefined;
+    bankDetails.intermediarySwiftCode = extra.swiftCode?.trim() || undefined;
+    bankDetails.intermediaryIfscCode = extra.ifscCode?.trim() || undefined;
+  }
   const airport = resolveAirportConfig(header.stationCode);
   const catalogSac = mappedLines.find((l) => l.sacCode)?.sacCode;
   const headerCategory = normalizeInvoiceCategoryCode(header.invoiceCategory);
@@ -573,9 +591,16 @@ export function buildInvoicePdfInput(params: BuildInvoicePdfInputParams): Invoic
     }
     if (primarySource) billTo.addressLines = splitAddress(primarySource);
     billTo.secondaryAddressLines = splitAddress(secondaryRaw);
-  } else if (header.customerAddress?.trim()) {
-    billTo.addressLines = splitAddress(header.customerAddress);
-  } else if (!billTo.addressLines.length) {
+  } else {
+    const liveAddress =
+      customer?.address?.trim() || customer?.globalDimension2?.trim() || '';
+    if (liveAddress) {
+      billTo.addressLines = splitAddress(liveAddress);
+    } else if (header.customerAddress?.trim()) {
+      billTo.addressLines = splitAddress(header.customerAddress);
+    }
+  }
+  if (!secondaryOn && !billTo.addressLines.length) {
     const staticBillTo = resolveCustomerBillToDefaults(
       header.stationCode,
       header.customerCode,

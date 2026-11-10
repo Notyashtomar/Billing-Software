@@ -17,6 +17,7 @@ export type AnnualClause = {
 export type AnnualPriceScope = 'BHS' | 'ADS';
 
 type Metric = {
+  label: string;
   percent: number;
   amount: number;
   validFrom: string;
@@ -80,6 +81,7 @@ export function pickAnnualIncrease(clauses: AnnualClause[] | undefined, scope: A
     if (!(percent > 0) || !validFrom) continue;
     const validTo = ymd(clause.validTo);
     return {
+      label: String(clause.label ?? '').trim() || 'Current-year rates',
       percent,
       amount: Number(clause.amount) > 0 ? Number(clause.amount) : 0,
       validFrom,
@@ -201,5 +203,40 @@ export function priceWithAnnualIncrease(
   }
   if (steps >= 1 && metric.amount > 0) price = roundRupee(price + metric.amount);
   return price;
+}
+
+/** Clause and arithmetic behind `priceWithAnnualIncrease`, for the invoice rate path. */
+export type AnnualIncreaseExplanation = {
+  label: string;
+  percent: number;
+  validFrom: string;
+  /** First date this card actually increases. May be later than the clause date. */
+  increaseStarts: string;
+  steps: number;
+  listedPrice: number;
+  priceAfter: number;
+};
+
+export function explainAnnualIncrease(
+  storedPrice: number,
+  clauses: AnnualClause[] | undefined,
+  billingDate: Date | string,
+  scope: AnnualPriceScope,
+  opts?: { bakedSteps?: number; cardValidFrom?: Date | string | null },
+): AnnualIncreaseExplanation | null {
+  if (!(storedPrice > 0)) return null;
+  const metric = pickAnnualIncrease(clauses, scope);
+  if (!metric) return null;
+  const billing = ymd(billingDate);
+  const increaseStarts = increaseStartForRateCard(metric.validFrom, opts?.cardValidFrom);
+  return {
+    label: metric.label,
+    percent: metric.percent,
+    validFrom: metric.validFrom,
+    increaseStarts,
+    steps: annualSteps(increaseStarts, metric.validTo, billing),
+    listedPrice: storedPrice,
+    priceAfter: priceWithAnnualIncrease(storedPrice, clauses, billingDate, scope, opts),
+  };
 }
 

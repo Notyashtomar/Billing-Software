@@ -110,6 +110,32 @@ export class BillingCustomer {
   @Prop({ trim: true, uppercase: true })
   vatNumber?: string;
 
+  /**
+   * When true, the invoice bank block also prints this airline's intermediary
+   * (correspondent) account. Off for airlines that pay the station escrow account only.
+   */
+  @Prop({ default: false })
+  intermediaryAccountEnabled?: boolean;
+
+  @Prop({
+    type: {
+      bankName: { type: String, trim: true },
+      branchAddress: { type: String, trim: true },
+      beneficiaryName: { type: String, trim: true },
+      accountNumber: { type: String, trim: true },
+      swiftCode: { type: String, trim: true },
+      ifscCode: { type: String, trim: true },
+    },
+  })
+  intermediaryAccount?: {
+    bankName?: string;
+    branchAddress?: string;
+    beneficiaryName?: string;
+    accountNumber?: string;
+    swiftCode?: string;
+    ifscCode?: string;
+  };
+
   /** Airline annexure PDFs, one file each for ADS and BHS invoices. */
   @Prop({
     type: {

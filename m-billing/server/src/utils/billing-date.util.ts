@@ -177,3 +177,33 @@ export function normalizeBillingScheduledDateBasis(
   if (raw === 'atd-date' || raw === 'exported-date') return raw;
   return 'schedule-date';
 }
+
+/**
+ * FHR documents are indexed by scheduled arrival (`staDates` / STADate).
+ * An ATD-date bill can still depart inside the window when the arrival was
+ * months earlier, so that basis also matches the departure date itself.
+ */
+export function scheduledFlightFhrDateMatch(
+  dateBasis: BillingScheduledDateBasis,
+  staDateCandidates: string[],
+  atdDateCandidates: string[],
+): Record<string, unknown> {
+  const clauses: Record<string, unknown>[] = [
+    { staDates: { $in: staDateCandidates } },
+    { 'mainDetails.STADate': { $in: staDateCandidates } },
+    { 'mainDetails.staDate': { $in: staDateCandidates } },
+    { 'mainDetails.STA_Date': { $in: staDateCandidates } },
+    { 'terminalDetails.STADate': { $in: staDateCandidates } },
+    { 'terminalDetails.staDate': { $in: staDateCandidates } },
+    { 'terminalDetails.STA_Date': { $in: staDateCandidates } },
+  ];
+  if (dateBasis === 'atd-date') {
+    clauses.push(
+      { 'mainDetails.ATDDate': { $in: atdDateCandidates } },
+      { 'mainDetails.atdDate': { $in: atdDateCandidates } },
+      { 'terminalDetails.ATDDate': { $in: atdDateCandidates } },
+      { 'terminalDetails.atdDate': { $in: atdDateCandidates } },
+    );
+  }
+  return { $or: clauses };
+}

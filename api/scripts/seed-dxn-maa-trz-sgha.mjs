@@ -345,11 +345,11 @@ const contracts = [
     to: '2028-05-14',
     openEnded: false,
     coverage: 'comprehensive',
-    concessionNote: 'The appendix total already includes the airport concession. Code C concession in the table is Rs 705 on a base of Rs 23,500. Q400 concession is Rs 450 on a base of Rs 15,000. Tax is extra.',
+    concessionNote: 'Paragraph 1.3: the invoice unit is Appendix I column A and excludes the airport concession. Code C is Rs 23,500. Q400 is Rs 15,000. The concession column (Rs 705 / Rs 450) is not added to the unit price. Tax is extra.',
     conditional: { technicalHandlingChargesPercent: 50, returnToRamp: 0 },
     bhs: [
-      { aircraft: ['B737', 'A320'], category: 'Dom', price: 24205, remarks: 'Code C domestic turnaround. Base Rs 23,500 plus concession Rs 705. The saved price is the inclusive total. No passenger or crew transport is included for Code C.' },
-      { aircraft: ['Q400'], category: 'Dom', price: 15450, remarks: 'Base Rs 15,000 plus concession Rs 450. Four passenger trips are included for every Q400 turnaround at MAA.' },
+      { aircraft: ['B737', 'A320'], category: 'Dom', price: 23500, remarks: 'Code C domestic turnaround. Appendix I column A, Rs 23,500. The Rs 705 concession column is not part of the unit price. No passenger or crew transport is included for Code C.' },
+      { aircraft: ['Q400'], category: 'Dom', price: 15000, remarks: 'Appendix I column A, Rs 15,000. The Rs 450 concession column is not part of the unit price. Four passenger trips are included for every Q400 turnaround at MAA.' },
     ],
     rules: [
       rule('Ambulift', 2500, 'INR', 'Per Lift', {}),
@@ -369,7 +369,7 @@ const contracts = [
     ],
     clauses: [
       clause('Term', 'Chennai, 15 May 2025 to 14 May 2028. The first year is fixed, then 5% a year. Appendix I also says the yearly CPI revision will not be less than 5%.'),
-      clause('1.1', 'Rates are exclusive of GST. The appendix total includes concession.'),
+      clause('1.1', 'Basic handling on the invoice is Appendix I column A, exclusive of the airport concession (paragraph 1.3) and exclusive of GST. Code C is Rs 23,500. Q400 is Rs 15,000.'),
       clause('3.1', 'Technical landing for a non-commercial purpose is 50% when there is no significant change of load, and 75% when there is.'),
       clause('3.2', 'Return to ramp is not charged extra when there is no physical change of load and no ground-support equipment is used. Equipment that is used is charged from the additional-service list.'),
       clause('Excess baggage', '10% of the amount collected.'),

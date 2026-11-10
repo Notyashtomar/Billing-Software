@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { useRouter } from 'next/navigation';
 import {
   Dialog,
   DialogContent,
@@ -416,7 +415,6 @@ export function ContractFormDialog({
   record,
   focusCondition,
 }: Props) {
-  const router = useRouter();
   const [form, setForm] = useState(emptyForm);
   const [clauses, setClauses] = useState<BillingContractClause[]>(defaultContractClauses());
   const [customers, setCustomers] = useState<BillingCustomer[]>([]);
@@ -1370,9 +1368,6 @@ export function ContractFormDialog({
         })),
       }));
 
-      const wasExclusive = record?.bhsConcessionCoverage === 'non_comprehensive';
-      let savedId = record?._id;
-
       // Airline-specific "x% of the AERA ceiling rate" concession.
       const aeraInt = aeraConcessionIntPercent.trim() === '' ? null : Number(aeraConcessionIntPercent);
       const aeraDom = aeraConcessionDomPercent.trim() === '' ? null : Number(aeraConcessionDomPercent);
@@ -1506,19 +1501,11 @@ export function ContractFormDialog({
           ...pdfPayload,
         };
 
-        const created = await api.createContract(body);
-        const createdId = (created as { data?: { _id?: string } }).data?._id;
-        if (createdId) savedId = createdId;
+        await api.createContract(body);
       }
-
-      const turnedExclusive =
-        bhsConcessionCoverage === 'non_comprehensive' && !wasExclusive && Boolean(savedId);
 
       onOpenChange(false);
       onSaved();
-      if (turnedExclusive && savedId) {
-        router.push(`/billing/concessions?setup=${encodeURIComponent(savedId)}`);
-      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save contract');
     } finally {

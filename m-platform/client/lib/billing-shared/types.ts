@@ -113,6 +113,16 @@ export interface BillingCustomer {
   /** When true, print VAT number on this airline's invoices. */
   showVatOnInvoice?: boolean;
   vatNumber?: string;
+  /** When true, the invoice also prints this airline's intermediary account. */
+  intermediaryAccountEnabled?: boolean;
+  intermediaryAccount?: {
+    bankName?: string;
+    branchAddress?: string;
+    beneficiaryName?: string;
+    accountNumber?: string;
+    swiftCode?: string;
+    ifscCode?: string;
+  };
   /** Saved annexure PDFs. The invoice page opens the file for ADS or BHS. */
   annexures?: {
     ads?: BillingCustomerAnnexureFile;
