@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { FieldGroup, TextArea, TextInput } from '../settings/SettingsFormFields';
+import { billingUi } from '../billingUi';
 import type { BillingApi } from '@/lib/billing-api';
 import type { BillingCustomer } from '@/lib/billing-shared/types';
 
@@ -197,10 +198,10 @@ export function CustomerFormDialog({ api, open, onOpenChange, onSaved, record }:
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[min(90vh,40rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-lg">
+      <DialogContent className="billing-app flex max-h-[min(90vh,40rem)] flex-col gap-0 overflow-hidden !bg-[color:var(--billing-surface)] p-0 text-[color:var(--billing-text)] sm:max-w-lg">
         <DialogHeader className="shrink-0 border-b border-[color:var(--billing-border)] px-6 py-4 pr-12 text-left">
-          <DialogTitle>{isEdit ? 'Edit customer' : 'New customer'}</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className="text-[color:var(--billing-heading)]">{isEdit ? 'Edit customer' : 'New customer'}</DialogTitle>
+          <DialogDescription className="text-[color:var(--billing-text-muted)]">
             Airline billing master for your logged-in station.
           </DialogDescription>
         </DialogHeader>
@@ -213,7 +214,7 @@ export function CustomerFormDialog({ api, open, onOpenChange, onSaved, record }:
             {error ? (
               <div
                 role="alert"
-                className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800"
+                className={billingUi.alertDanger}
               >
                 {error}
               </div>
@@ -274,13 +275,13 @@ export function CustomerFormDialog({ api, open, onOpenChange, onSaved, record }:
               />
             </FieldGroup>
 
-            <label className="flex cursor-pointer items-start gap-2 text-sm text-gray-800">
+            <label className="flex cursor-pointer items-start gap-2 text-sm text-[color:var(--billing-text-secondary)]">
               <input
                 id="secondaryAddressEnabled"
                 type="checkbox"
                 role="switch"
                 aria-checked={form.secondaryAddressEnabled}
-                className="mt-0.5 h-4 w-4"
+                className={`mt-0.5 ${billingUi.checkbox}`}
                 checked={form.secondaryAddressEnabled}
                 onChange={(e) =>
                   setForm((f) => ({
@@ -292,7 +293,7 @@ export function CustomerFormDialog({ api, open, onOpenChange, onSaved, record }:
               />
               <span>
                 Add a second bill-to address
-                <span className="mt-0.5 block text-xs font-normal text-gray-500">
+                <span className="mt-0.5 block text-xs font-normal text-[color:var(--billing-text-muted)]">
                   Off: one address on the invoice. On: a second address prints under the first, with the same line breaks.
                 </span>
               </span>
@@ -320,7 +321,7 @@ export function CustomerFormDialog({ api, open, onOpenChange, onSaved, record }:
                 onChange={(e) =>
                   setForm((f) => ({ ...f, currencyCode: e.target.value as 'INR' | 'USD' }))
                 }
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                className={billingUi.select}
               >
                 <option value="INR">INR</option>
                 <option value="USD">USD</option>
@@ -376,8 +377,8 @@ export function CustomerFormDialog({ api, open, onOpenChange, onSaved, record }:
               />
             </FieldGroup>
 
-            <fieldset className="space-y-3 rounded-lg border border-gray-200 p-3">
-              <legend className="px-1 text-sm font-medium text-gray-800">Invoice tax numbers</legend>
+            <fieldset className="space-y-3 rounded-[var(--billing-radius-lg)] border border-[color:var(--billing-border)] p-3">
+              <legend className="px-1 text-sm font-medium text-[color:var(--billing-text-secondary)]">Invoice tax numbers</legend>
               <FieldGroup label="MSME number" htmlFor="msmeNumber">
                 <TextInput
                   id="msmeNumber"
@@ -386,15 +387,15 @@ export function CustomerFormDialog({ api, open, onOpenChange, onSaved, record }:
                   placeholder="UDYAM-DL-00-0000000"
                   autoComplete="off"
                 />
-                <p className="mt-1 text-xs text-gray-500">
+                <p className={`mt-1 ${billingUi.hint}`}>
                   Customer&apos;s MSME / Udyam number. Prints in the MSME row below GSTIN/UIN on the invoice.
                 </p>
               </FieldGroup>
-              <label className="flex cursor-pointer items-start gap-2 text-sm text-gray-800">
+              <label className="flex cursor-pointer items-start gap-2 text-sm text-[color:var(--billing-text-secondary)]">
                 <input
                   id="showPanOnInvoice"
                   type="checkbox"
-                  className="mt-0.5 h-4 w-4"
+                  className={`mt-0.5 ${billingUi.checkbox}`}
                   checked={form.showPanOnInvoice}
                   onChange={(e) =>
                     setForm((f) => ({ ...f, showPanOnInvoice: e.target.checked }))
@@ -402,7 +403,7 @@ export function CustomerFormDialog({ api, open, onOpenChange, onSaved, record }:
                 />
                 <span>
                   Show PAN on invoices
-                  <span className="mt-0.5 block text-xs font-normal text-gray-500">
+                  <span className="mt-0.5 block text-xs font-normal text-[color:var(--billing-text-muted)]">
                     When checked, enter the PAN. It prints on BHS, ADS, and RAF invoices.
                   </span>
                 </span>
@@ -418,11 +419,11 @@ export function CustomerFormDialog({ api, open, onOpenChange, onSaved, record }:
                   />
                 </FieldGroup>
               ) : null}
-              <label className="flex cursor-pointer items-start gap-2 text-sm text-gray-800">
+              <label className="flex cursor-pointer items-start gap-2 text-sm text-[color:var(--billing-text-secondary)]">
                 <input
                   id="showVatOnInvoice"
                   type="checkbox"
-                  className="mt-0.5 h-4 w-4"
+                  className={`mt-0.5 ${billingUi.checkbox}`}
                   checked={form.showVatOnInvoice}
                   onChange={(e) =>
                     setForm((f) => ({ ...f, showVatOnInvoice: e.target.checked }))
@@ -430,7 +431,7 @@ export function CustomerFormDialog({ api, open, onOpenChange, onSaved, record }:
                 />
                 <span>
                   Show VAT on invoices
-                  <span className="mt-0.5 block text-xs font-normal text-gray-500">
+                  <span className="mt-0.5 block text-xs font-normal text-[color:var(--billing-text-muted)]">
                     When checked, enter the VAT number. It prints beside PAN on the invoice.
                   </span>
                 </span>
@@ -525,7 +526,7 @@ export function CustomerFormDialog({ api, open, onOpenChange, onSaved, record }:
                   onChange={(e) =>
                     setForm((f) => ({ ...f, blocked: e.target.value === 'yes' }))
                   }
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                  className={billingUi.select}
                 >
                   <option value="no">No</option>
                   <option value="yes">Yes</option>
@@ -538,7 +539,7 @@ export function CustomerFormDialog({ api, open, onOpenChange, onSaved, record }:
                   onChange={(e) =>
                     setForm((f) => ({ ...f, active: e.target.value === 'yes' }))
                   }
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                  className={billingUi.select}
                 >
                   <option value="yes">Yes</option>
                   <option value="no">No</option>
@@ -551,14 +552,14 @@ export function CustomerFormDialog({ api, open, onOpenChange, onSaved, record }:
             <button
               type="button"
               onClick={() => onOpenChange(false)}
-              className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium hover:bg-gray-50"
+              className={billingUi.btnSecondary}
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={saving || (isEdit && !record)}
-              className="rounded-lg bg-[#1C0770] px-4 py-2 text-sm font-medium text-white hover:bg-[#150558] disabled:opacity-50"
+              className={billingUi.btnPrimary}
             >
               {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Create customer'}
             </button>
