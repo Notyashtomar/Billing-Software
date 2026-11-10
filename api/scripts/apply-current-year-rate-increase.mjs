@@ -224,7 +224,21 @@ function policyFor(contract) {
   };
 }
 
-function alreadyMarked(remarks, policy) {
+/**
+ * Applied increases are stored as a real field (`annualIncreaseApplied`) so a
+ * remark edit cannot drop them. The CYI remark tag is kept for readability and
+ * for rows written before the field existed.
+ */
+function alreadyMarked(row, policy) {
+  const remarks = typeof row === 'string' ? row : row?.remarks;
+  const applied = typeof row === 'string' ? null : row?.annualIncreaseApplied;
+  if (
+    applied &&
+    String(applied.contractNumber || '') === String(policy.contractNumber || '') &&
+    String(applied.validFrom || '') === policy.windowYmd
+  ) {
+    return true;
+  }
   return String(remarks || '').includes(`${MARK}${policy.contractNumber}:${policy.windowYmd}:`);
 }
 
@@ -232,6 +246,15 @@ function mark(remarks, policy) {
   const tag = `${MARK}${policy.contractNumber}:${policy.windowYmd}:${policy.percent}%x${policy.steps}`;
   const text = String(remarks || '').trim();
   return text ? `${text} ${tag}` : tag;
+}
+
+function appliedIncrease(policy) {
+  return {
+    contractNumber: policy.contractNumber,
+    validFrom: policy.windowYmd,
+    percent: policy.percent,
+    steps: policy.steps,
+  };
 }
 
 function overlapsContract(cardFrom, cardTo, policy) {
@@ -279,7 +302,7 @@ async function main() {
     const cardTo = card.validTo instanceof Date ? card.validTo : new Date(card.validTo);
     const policy = options.find((item) => overlapsContract(cardFrom, cardTo, item));
     if (!policy) continue;
-    if (alreadyMarked(card.remarks, policy)) continue;
+    if (alreadyMarked(card, policy)) continue;
     if (policy.escalatedBands.has(Math.round(Number(card.price)))) continue;
     if (cardTo < policy.windowStart) continue;
 
@@ -289,7 +312,12 @@ async function main() {
     if (cardFrom >= policy.windowStart) {
       if (!DRY) {
         await col.updateOne({ _id: card._id }, {
-          $set: { price: nextPrice, remarks: mark(card.remarks, policy), updatedAt: new Date() },
+          $set: {
+            price: nextPrice,
+            remarks: mark(card.remarks, policy),
+            annualIncreaseApplied: appliedIncrease(policy),
+            updatedAt: new Date(),
+          },
         });
       }
       priceCards += 1;
@@ -306,6 +334,7 @@ async function main() {
         price: nextPrice,
         validFrom: policy.windowStart,
         remarks: mark(card.remarks, policy),
+        annualIncreaseApplied: appliedIncrease(policy),
         createdAt: new Date(),
         updatedAt: new Date(),
       });
@@ -322,7 +351,7 @@ async function main() {
   for (const card of rateRows) {
     const policy = policyById.get(String(card.contractId || ''));
     if (!policy) continue;
-    if (alreadyMarked(card.remarks, policy)) continue;
+    if (alreadyMarked(card, policy)) continue;
     const cardFrom = card.validFrom instanceof Date ? card.validFrom : new Date(card.validFrom);
     const cardTo = card.validTo instanceof Date ? card.validTo : new Date(card.validTo || policy.priceValidTo);
     if (cardTo < policy.windowStart) continue;
@@ -339,6 +368,7 @@ async function main() {
             unitPriceINR: nextInr || undefined,
             unitPriceUSD: nextUsd || undefined,
             remarks: mark(card.remarks, policy),
+            annualIncreaseApplied: appliedIncrease(policy),
             updatedAt: new Date(),
           },
         });
@@ -358,6 +388,7 @@ async function main() {
         unitPriceUSD: nextUsd || copy.unitPriceUSD,
         validFrom: policy.windowStart,
         remarks: mark(card.remarks, policy),
+        annualIncreaseApplied: appliedIncrease(policy),
         createdAt: new Date(),
         updatedAt: new Date(),
       });
@@ -371,7 +402,7 @@ async function main() {
     const ads = contract.adsEquipmentRules || [];
     let changed = false;
     const nextRules = ads.map((rule) => {
-      if (alreadyMarked(rule.remarks, policy)) return rule;
+      if (alreadyMarked(rule, policy)) return rule;
       const inr = Number(rule.unitPriceINR || 0);
       const usd = Number(rule.unitPriceUSD || 0);
       if (!(inr > 0) && !(usd > 0)) return rule;
@@ -382,6 +413,7 @@ async function main() {
         unitPriceINR: inr > 0 ? roundMoney(inr * policy.factor, 'INR') : rule.unitPriceINR,
         unitPriceUSD: usd > 0 ? roundMoney(usd * policy.factor, 'USD') : rule.unitPriceUSD,
         remarks: mark(rule.remarks, policy),
+        annualIncreaseApplied: appliedIncrease(policy),
       };
     });
 

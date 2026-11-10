@@ -94,6 +94,7 @@ import { BillingCutoverController } from './controllers/billing-cutover.controll
 import { BillingKycController } from './controllers/billing-kyc.controller';
 import { BillingAircraftMasterController } from './controllers/billing-aircraft-master.controller';
 import { BillingEquipmentMasterController } from './controllers/billing-equipment-master.controller';
+import { BillingAeraTariffController } from './controllers/billing-aera-tariff.controller';
 import { BillingKycInviteController } from './controllers/billing-kyc-invite.controller';
 import { BillingPreparationService } from './services/billing-preparation.service';
 import { BillingKycService } from './services/billing-kyc.service';
@@ -113,6 +114,7 @@ import { BillingMisAdsService } from './services/billing-mis-ads.service';
 import { BillingIndexMigrationService } from './services/billing-index-migration.service';
 import { BillingAircraftMasterService } from './services/billing-aircraft-master.service';
 import { BillingEquipmentMasterService } from './services/billing-equipment-master.service';
+import { BillingAeraTariffService } from './services/billing-aera-tariff.service';
 import { LegacyNavBridgeService } from './services/legacy-nav-bridge.service';
 import { TaxEngineService } from './engines/tax-engine.service';
 import { CurrencyEngineService } from './engines/currency-engine.service';
@@ -183,6 +185,7 @@ import type { StationScopeContext } from 'src/common/station/station-scope';
     BillingKycController,
     BillingAircraftMasterController,
     BillingEquipmentMasterController,
+    BillingAeraTariffController,
   ],
   providers: [
     { provide: APP_FILTER, useClass: BillingForbiddenErrorFilter },
@@ -272,6 +275,7 @@ import type { StationScopeContext } from 'src/common/station/station-scope';
     BillingIndexMigrationService,
     BillingAircraftMasterService,
     BillingEquipmentMasterService,
+    BillingAeraTariffService,
     LegacyNavBridgeService,
   ],
   exports: [

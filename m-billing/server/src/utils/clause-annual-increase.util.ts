@@ -42,14 +42,6 @@ function addYears(iso: string, years: number): string {
   return date.toISOString().slice(0, 10);
 }
 
-function dayBefore(iso: string): string {
-  const match = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (!match) return iso;
-  const date = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
-  date.setUTCDate(date.getUTCDate() - 1);
-  return date.toISOString().slice(0, 10);
-}
-
 function roundRupee(amount: number): number {
   return Math.round(amount);
 }
@@ -97,14 +89,73 @@ export function pickAnnualIncrease(clauses: AnnualClause[] | undefined, scope: A
   return null;
 }
 
-/** How many yearly steps were already written into a saved price (CYI tag). */
-export function bakedAnnualSteps(remarks: string | undefined, percent: number, validFrom: string): number {
-  const match = String(remarks ?? '').match(/CYI:[^:\s]+:(\d{4}-\d{2}-\d{2}):([\d.]+)%x(\d+)/);
-  if (!match) return 0;
-  if (match[1] !== validFrom) return 0;
-  if (Number(match[2]) !== percent) return 0;
-  const steps = Number(match[3]);
-  return Number.isFinite(steps) && steps > 0 ? steps : 0;
+/**
+ * Yearly increase already written into a saved price.
+ * Stored as a real field on the card / rule; the `CYI:` remark tag is the
+ * legacy encoding and is only read when the field is missing.
+ */
+export type AppliedAnnualIncrease = {
+  contractNumber?: string | null;
+  /** First day of the increase window the saved price belongs to. */
+  validFrom: string;
+  percent: number;
+  steps: number;
+};
+
+export const ANNUAL_INCREASE_REMARK_TAG = /CYI:([^:\s]*):(\d{4}-\d{2}-\d{2}):([\d.]+)%x(\d+)/;
+
+/** Parse the legacy `CYI:<contract>:<ymd>:<pct>%x<steps>` tag from a remark. */
+export function parseAnnualIncreaseRemark(remarks: string | null | undefined): AppliedAnnualIncrease | null {
+  const match = String(remarks ?? '').match(ANNUAL_INCREASE_REMARK_TAG);
+  if (!match) return null;
+  const steps = Number(match[4]);
+  const percent = Number(match[3]);
+  if (!Number.isFinite(steps) || steps <= 0 || !Number.isFinite(percent)) return null;
+  return {
+    contractNumber: match[1] || null,
+    validFrom: match[2],
+    percent,
+    steps,
+  };
+}
+
+function normalizeAppliedIncrease(value: unknown): AppliedAnnualIncrease | null {
+  if (!value || typeof value !== 'object') return null;
+  const row = value as Record<string, unknown>;
+  const validFrom = ymd(row.validFrom as string | Date | undefined);
+  const percent = Number(row.percent);
+  const steps = Number(row.steps);
+  if (!validFrom || !Number.isFinite(percent) || !Number.isFinite(steps) || steps <= 0) return null;
+  return {
+    contractNumber: row.contractNumber == null ? null : String(row.contractNumber),
+    validFrom,
+    percent,
+    steps,
+  };
+}
+
+/** Applied increase from the structured field first, then the legacy remark tag. */
+export function readAppliedAnnualIncrease(
+  row: { annualIncreaseApplied?: unknown; remarks?: string | null } | null | undefined,
+): AppliedAnnualIncrease | null {
+  if (!row) return null;
+  return normalizeAppliedIncrease(row.annualIncreaseApplied) ?? parseAnnualIncreaseRemark(row.remarks);
+}
+
+/** How many yearly steps were already written into a saved price (field or CYI tag). */
+export function bakedAnnualSteps(
+  source: string | { annualIncreaseApplied?: unknown; remarks?: string | null } | null | undefined,
+  percent: number,
+  validFrom: string,
+): number {
+  const applied =
+    typeof source === 'string' || source == null
+      ? parseAnnualIncreaseRemark(source ?? undefined)
+      : readAppliedAnnualIncrease(source);
+  if (!applied) return 0;
+  if (applied.validFrom !== validFrom) return 0;
+  if (applied.percent !== percent) return 0;
+  return applied.steps > 0 ? applied.steps : 0;
 }
 
 /**
@@ -152,34 +203,3 @@ export function priceWithAnnualIncrease(
   return price;
 }
 
-export type BasePriceRow = {
-  aircraftType?: string;
-  category?: string;
-  price?: number | null;
-  validFrom?: Date | string;
-  validTo?: Date | string;
-  remarks?: string | null;
-};
-
-/** Annex price: the card still in force the day before the increase starts. */
-export function basePriceBeforeIncrease(
-  rows: BasePriceRow[],
-  selected: { aircraftType?: string; category?: string } | null,
-  validFrom: string,
-): number | null {
-  if (!selected || !validFrom) return null;
-  const on = dayBefore(validFrom);
-  const aircraft = String(selected.aircraftType ?? '').trim().toUpperCase();
-  const category = String(selected.category ?? '').trim().toUpperCase();
-  const hits = rows.filter((row) => {
-    if (!(Number(row.price) > 0)) return false;
-    if (aircraft && String(row.aircraftType ?? '').trim().toUpperCase() !== aircraft) return false;
-    if (category && String(row.category ?? '').trim().toUpperCase() !== category) return false;
-    const from = ymd(row.validFrom);
-    const to = ymd(row.validTo);
-    return Boolean(from && to && from <= on && to >= on);
-  });
-  if (hits.length === 0) return null;
-  hits.sort((a, b) => ymd(b.validFrom).localeCompare(ymd(a.validFrom)));
-  return Number(hits[0].price);
-}

@@ -667,7 +667,12 @@ export class BillingInvoiceDraftsService {
         }
 
         const existingDraft = mergeOpenDraft
-          ? await this.findOpenDraftForPeriod(ctx, composed)
+          ? await this.findOpenDraftForPeriod(
+              ctx,
+              composed,
+              rateGroup,
+              internationalCustomers.has(customerCode),
+            )
           : null;
 
         if (existingDraft) {
@@ -1462,17 +1467,27 @@ export class BillingInvoiceDraftsService {
       );
     }
 
-    const records: BillingPreparationRecordDocument[] = [...linked];
+    const allRecords: BillingPreparationRecordDocument[] = [...linked];
     if (String(header.invoiceCategory ?? '').trim().toUpperCase() === 'ADS') {
       const extras = await this.ingestUnsentAdsUsageForDraft(ctx, header, actor);
-      const seen = new Set(records.map((record) => String(record._id)));
+      const seen = new Set(allRecords.map((record) => String(record._id)));
       for (const extra of extras) {
         const id = String(extra._id);
         if (seen.has(id)) continue;
         seen.add(id);
-        records.push(extra);
+        allRecords.push(extra);
       }
     }
+
+    // One invoice per flight category. Domestic and international carry different
+    // Royalty Master percents, so a draft that still mixes them (created before the
+    // sector split) is divided here: the largest sector stays on this draft, every
+    // other sector becomes its own draft.
+    const { keep: records, spun } = await this.splitRecordsByInvoiceSector(
+      ctx,
+      header,
+      allRecords,
+    );
 
     await this.rebuildDraftFromPreparationRecords(
       ctx,
@@ -1489,7 +1504,102 @@ export class BillingInvoiceDraftsService {
       },
     );
 
-    return this.findOne(ctx, id);
+    const splitDraftIds: string[] = [];
+    for (const group of spun) {
+      const spunHeader = await this.createBareDraftHeader(ctx, header, group);
+      await this.rebuildDraftFromPreparationRecords(
+        ctx,
+        spunHeader,
+        group,
+        header.documentDate,
+        actor,
+        {
+          recomputeInvoice: true,
+          recomputeFromPreparation: true,
+          customerCode: header.customerCode,
+          source: 'invoice-detail-recompute-button',
+          splitFromDraftId: String(header._id),
+          ignoredMasters: [...BILLING_INVOICE_IGNORED_MASTERS],
+        },
+      );
+      splitDraftIds.push(String(spunHeader._id));
+    }
+    if (splitDraftIds.length > 0) {
+      await this.audit(ctx, header._id, 'updated', actor, {
+        splitByFlightCategory: true,
+        newDraftIds: splitDraftIds,
+      });
+    }
+
+    const result = await this.findOne(ctx, id);
+    return splitDraftIds.length > 0
+      ? { ...result, splitDraftIds }
+      : result;
+  }
+
+  /**
+   * Group linked preparation rows by invoice sector (Dom / Int / GA …) using the
+   * same key as Create drafts. Returns the largest group to keep on the current
+   * header and the remaining groups to spin into separate drafts.
+   */
+  private async splitRecordsByInvoiceSector(
+    ctx: StationScopeContext,
+    header: BillingInvoiceHeaderDocument,
+    records: BillingPreparationRecordDocument[],
+  ): Promise<{
+    keep: BillingPreparationRecordDocument[];
+    spun: BillingPreparationRecordDocument[][];
+  }> {
+    if (records.length < 2) return { keep: records, spun: [] };
+    const contract = await resolveActiveContractForInvoice(this.contractModel, ctx, {
+      contractId: header.contractId,
+      customerCode: header.customerCode,
+      documentDate: header.documentDate,
+      stationCode: header.stationCode ?? ctx.stationCode,
+    });
+    const internationalAirline = isInternationalOnlyAirline(contract);
+    const groups = groupBy(records, (row) =>
+      preparationInvoiceGroupKey(row, { internationalAirline }),
+    );
+    if (groups.size <= 1) return { keep: records, spun: [] };
+    const ordered = [...groups.values()].sort((a, b) => b.length - a.length);
+    return { keep: ordered[0], spun: ordered.slice(1) };
+  }
+
+  /** New draft header for a sector split; lines and totals are filled by the rebuild. */
+  private async createBareDraftHeader(
+    ctx: StationScopeContext,
+    source: BillingInvoiceHeaderDocument,
+    records: BillingPreparationRecordDocument[],
+  ): Promise<BillingInvoiceHeaderDocument> {
+    const stationCode = StationScope.require(ctx);
+    const draftNumber = await this.nextDraftNumber(stationCode);
+    const [header] = await this.invoiceModel.create([
+      StationScope.stampCreate(
+        {
+          draftNumber,
+          customerCode: source.customerCode,
+          customerName: source.customerName,
+          customerAddress: source.customerAddress,
+          status: 'draft',
+          documentDate: source.documentDate,
+          currencyCode: source.currencyCode,
+          currencyFactor: source.currencyFactor,
+          billingPeriodStart: records[0]?.billingPeriodStart ?? source.billingPeriodStart,
+          billingPeriodEnd: records[0]?.billingPeriodEnd ?? source.billingPeriodEnd,
+          contractId: source.contractId,
+          invoiceCategory:
+            preparationInvoiceCategory(records[0]?.sourceType) ?? source.invoiceCategory ?? 'BHS',
+          subtotalExclTax: 0,
+          taxTotal: 0,
+          totalInclTax: 0,
+          approvalStatus: 'pending',
+          preparationRecordIds: records.map((row) => row._id),
+        },
+        ctx,
+      ),
+    ]);
+    return header;
   }
 
   /**
@@ -3042,12 +3152,19 @@ export class BillingInvoiceDraftsService {
     );
   }
 
+  /**
+   * Open draft for the same customer, period, category *and* flight sector.
+   * Domestic and international are billed on separate invoices (different
+   * Royalty Master percents), so a Dom group must never merge into an Int draft.
+   */
   private async findOpenDraftForPeriod(
     ctx: StationScopeContext,
     composed: Awaited<ReturnType<InvoiceEngineService['composeFromPreparation']>>,
+    groupRecords: BillingPreparationRecordDocument[],
+    internationalAirline: boolean,
   ) {
     const category = composed.invoiceCategory ?? 'BHS';
-    return this.invoiceModel.findOne(
+    const candidates = await this.invoiceModel.find(
       StationScope.filter(
         {
           ...exactBillingPeriodMatch(
@@ -3070,6 +3187,32 @@ export class BillingInvoiceDraftsService {
         ctx,
       ),
     );
+    if (candidates.length === 0) return null;
+
+    const sectorOf = (row: {
+      customerCode: string;
+      billingPeriodStart?: Date | string;
+      billingPeriodEnd?: Date | string;
+      sourceType?: string;
+      operationalSnapshot?: Record<string, unknown> | null;
+    }) => preparationInvoiceGroupKey(row, { internationalAirline }).split('|').pop() ?? '';
+    const wanted = groupRecords[0] ? sectorOf(groupRecords[0]) : '';
+    if (!wanted) return candidates[0];
+
+    for (const candidate of candidates) {
+      const prepIds = (candidate.preparationRecordIds ?? []).map((id) => String(id));
+      if (prepIds.length === 0) return candidate;
+      const sample = await this.preparationModel
+        .find({
+          _id: { $in: prepIds.map((id) => new Types.ObjectId(id)) },
+          ...StationScope.filter({}, ctx),
+        })
+        .select('customerCode billingPeriodStart billingPeriodEnd sourceType operationalSnapshot')
+        .lean();
+      const sectors = new Set(sample.map((row) => sectorOf(row as never)));
+      if (sectors.size === 1 && sectors.has(wanted)) return candidate;
+    }
+    return null;
   }
 
   private async insertComposedLines(
@@ -3865,6 +4008,14 @@ export class BillingInvoiceDraftsService {
       .lean();
     const lineTotals = this.invoiceEngine.sumLines(lines);
     header.subtotalExclTax = lineTotals.subtotalExclTax;
+
+    // AERA ceiling flag: any line the engine marked above the regulated maximum.
+    const aeraLines = lines
+      .filter((line) => (line.sourceRef as Record<string, unknown> | undefined)?.exceedsAeraCeiling === true)
+      .map((line) => Number(line.lineNo))
+      .filter((n) => Number.isFinite(n));
+    header.aeraCeilingExceeded = aeraLines.length > 0;
+    header.aeraCeilingExceededLines = aeraLines;
 
     // USD receivable mode: keep line amounts + ROE as-is; only header tax totals change.
     // Fortnight parts keep the rate saved on that part. Other invoices use Conversion Rates.

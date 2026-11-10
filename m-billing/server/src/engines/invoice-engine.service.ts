@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, Optional } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import {
@@ -24,10 +24,18 @@ import {
   divertedUnitPricePercent,
   resolveLineConcessionPercent,
   resolveLineFeeConcessionPercent,
+  resolveLineFlightScenario,
   shouldApplyConcessionToBhsUnitPrice,
   type ContractConcessionRatesShape,
   type ContractConditionalChargesShape,
 } from '../utils/invoice-concession.util';
+import type { FlightScenario } from '../utils/flight-scenario.util';
+import {
+  aeraCeilingCheck,
+  aeraFlightClassFor,
+  resolveAeraCeiling,
+} from '../utils/aera-ceiling.util';
+import { BillingAeraTariffService } from '../services/billing-aera-tariff.service';
 import { isAdsFamilySourceType } from '../shared/ads-adhoc-tariff';
 import {
   aircraftKeysMatch,
@@ -139,7 +147,18 @@ type AggregateBucket = {
   groundSurchargeApplied?: boolean;
   /** Particular stem from FHR type of flight, e.g. "Charges for Originate handling". */
   handlingPhrase: string;
+  /** Explicit scenario (diverted / returnToRamp / technical / standby / normal). */
+  flightScenario: FlightScenario;
+  /** AERA ceiling for these flights (lowest across the bucket), when the station has an order. */
+  aeraCeiling?: number | null;
+  aeraFinancialYear?: string;
+  aeraOrderNumber?: string;
+  /** True when the billed per-flight price is above the AERA ceiling. */
+  aeraExceeds?: boolean;
 };
+
+/** Minimal order shape the engine needs for the ceiling check. */
+export type AeraOrderLike = Parameters<typeof resolveAeraCeiling>[0];
 
 export type InvoiceChargeContractLike = {
   royaltyAtGross?: number | null;
@@ -184,7 +203,24 @@ export class InvoiceEngineService {
     private readonly fhrModel: Model<FhrCollectionReadDocument>,
     @InjectModel(BillingPriceCardAirline.name)
     private readonly priceCardAirlineModel: Model<BillingPriceCardAirlineDocument>,
+    @Optional() private readonly aeraTariff?: BillingAeraTariffService,
   ) {}
+
+  /** Active AERA order for the station on the invoice date; null when none or on lookup failure. */
+  private async aeraOrderFor(
+    ctx: StationScopeContext,
+    records: BillingPreparationRecordDocument[],
+    documentDate: Date,
+  ): Promise<AeraOrderLike | null> {
+    if (!this.aeraTariff) return null;
+    const station = String(ctx.stationCode ?? records[0]?.stationCode ?? '').trim();
+    if (!station) return null;
+    try {
+      return await this.aeraTariff.activeOrderFor(station, documentDate);
+    } catch {
+      return null;
+    }
+  }
 
   async composeFromPreparation(
     ctx: StationScopeContext,
@@ -293,6 +329,7 @@ export class InvoiceEngineService {
         ctx,
         otherRecords,
       );
+      const aeraOrder = await this.aeraOrderFor(ctx, otherRecords, documentDate);
       const buckets = aggregateBuckets(
         otherRecords.length > 0 ? otherRecords : [],
         contract,
@@ -303,6 +340,7 @@ export class InvoiceEngineService {
             }
           : undefined,
         incrementalPriceById,
+        aeraOrder,
       );
       for (const bucket of buckets) {
         lineNo += 1;
@@ -368,6 +406,15 @@ export class InvoiceEngineService {
             additionalChargePercent: bucket.additionalChargePercent || undefined,
             concessionFeePercent: bucket.feeConcessionPercent || undefined,
             concessionAppliedToUnitPrice: bucket.concessionAppliedToUnitPrice || undefined,
+            flightScenario: bucket.flightScenario,
+            ...(bucket.aeraCeiling != null
+              ? {
+                  aeraCeiling: bucket.aeraCeiling,
+                  aeraFinancialYear: bucket.aeraFinancialYear,
+                  aeraOrderNumber: bucket.aeraOrderNumber,
+                  exceedsAeraCeiling: bucket.aeraExceeds === true,
+                }
+              : {}),
             chargeAmountPerFlight: bucket.unitPrice,
             cancellationChargeablePercent:
               bucket.cancellationChargeablePercent == null
@@ -1548,6 +1595,7 @@ function aggregateBuckets(
     population: BillingPreparationRecordDocument[];
   },
   incrementalPriceById?: Map<string, number>,
+  aeraOrder?: AeraOrderLike | null,
 ): AggregateBucket[] {
   const map = new Map<string, AggregateBucket>();
   const volumeHits =
@@ -1709,7 +1757,9 @@ function aggregateBuckets(
         ? `${volumeHit.flightScope}|${volumeHit.fromCount}|${volumeHit.toCount ?? 'open'}`
         : 'card';
     const handlingPhrase = handlingChargePhrase(rec);
-    const key = `${serviceCode}|${unitPrice}|${aircraftType}|${chargePercent}|${additionalChargePercent}|${feeConcessionPercent}|${concessionAppliedToUnitPrice ? 'unit' : 'header'}|${cancellationChargeablePercent ?? 'na'}|${volumeKey}|${handlingPhrase}`;
+    const flightScenario = resolveLineFlightScenario({ sourceRef });
+    const aera = aeraCeilingForRecord(aeraOrder, rec, effectiveUnitPrice);
+    const key = `${serviceCode}|${unitPrice}|${aircraftType}|${chargePercent}|${additionalChargePercent}|${feeConcessionPercent}|${concessionAppliedToUnitPrice ? 'unit' : 'header'}|${cancellationChargeablePercent ?? 'na'}|${volumeKey}|${handlingPhrase}|${flightScenario}`;
 
     const bucket =
       map.get(key) ??
@@ -1730,13 +1780,61 @@ function aggregateBuckets(
         splitPrice: splitPrice ?? undefined,
         groundSurchargeApplied,
         handlingPhrase,
+        flightScenario,
       } satisfies AggregateBucket);
+
+    if (aera) {
+      // Keep the lowest ceiling seen in the bucket and flag if any flight is above it.
+      bucket.aeraCeiling =
+        bucket.aeraCeiling == null ? aera.ceiling : Math.min(bucket.aeraCeiling, aera.ceiling);
+      bucket.aeraFinancialYear = bucket.aeraFinancialYear ?? aera.financialYear;
+      bucket.aeraOrderNumber = bucket.aeraOrderNumber ?? aera.orderNumber;
+      bucket.aeraExceeds = Boolean(bucket.aeraExceeds) || aera.exceeds;
+    }
 
     bucket.records.push(rec);
     map.set(key, bucket);
   }
 
   return [...map.values()];
+}
+
+/**
+ * AERA ceiling for one prepared flight, compared with what will be billed per
+ * flight. Returns null when the station has no order or the flight cannot be
+ * mapped (no aircraft code letter, date outside the order, N/A row).
+ */
+function aeraCeilingForRecord(
+  order: AeraOrderLike | null | undefined,
+  rec: BillingPreparationRecordDocument,
+  billedUnitPrice: number,
+): { ceiling: number; financialYear: string; orderNumber: string; exceeds: boolean } | null {
+  if (!order) return null;
+  const snap = (rec.operationalSnapshot ?? {}) as Record<string, unknown>;
+  const flightYmd = extractPreparationFlightYmd(rec);
+  const flightDate = flightYmd ? new Date(`${flightYmd}T00:00:00.000Z`) : rec.billingPeriodStart;
+  if (!flightDate) return null;
+  const aircraftType = String(snap.aircraftType ?? snap.TypeCraft ?? snap.aircraft ?? '');
+  const flightClass = aeraFlightClassFor({
+    categoryOfFlight: String(snap.categoryOfFlight ?? snap.Cate_of_Flight ?? snap.flightCategory ?? ''),
+    typeOfFlight: String(snap.typeOfFlight ?? snap.Typeofflight ?? ''),
+    cargo: snap.freighter === true || snap.cargo === 'Y',
+    aircraftType,
+  });
+  const hit = resolveAeraCeiling(order, {
+    aircraftCode: String(snap.aircraftTariffCode ?? ''),
+    flightClass,
+    flightDate,
+    scope: 'full',
+  });
+  if (!hit.found) return null;
+  const check = aeraCeilingCheck(billedUnitPrice, hit);
+  return {
+    ceiling: hit.amount,
+    financialYear: hit.financialYear,
+    orderNumber: hit.orderNumber,
+    exceeds: check.exceeds,
+  };
 }
 
 /**

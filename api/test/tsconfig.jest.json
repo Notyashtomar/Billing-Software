@@ -5,7 +5,7 @@
     "module": "commonjs",
     "moduleResolution": "node",
     "resolvePackageJsonExports": false,
-    "rootDir": "../../..",
+    "rootDir": "../..",
     "baseUrl": "../",
     "paths": {
       "src/*": ["src/*"]
@@ -19,6 +19,6 @@
   },
   "include": [
     "../src/**/*.ts",
-    "../../modules/**/*.ts"
+    "../../m-*/server/**/*.ts"
   ]
 }

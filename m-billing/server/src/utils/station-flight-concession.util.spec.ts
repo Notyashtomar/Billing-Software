@@ -156,7 +156,14 @@ describe('station flight concession', () => {
         contract,
       ),
     ).toBe(5);
-    expect(preparationFlightConcessionSector({ sourceType: 'raf' })).toBe('GA');
+    // RAF with no category falls back to the international GA royalty.
+    expect(preparationFlightConcessionSector({ sourceType: 'raf' })).toBe('GA_INT');
+    expect(
+      preparationFlightConcessionSector({
+        sourceType: 'raf',
+        operationalSnapshot: { categoryOfFlight: 'Domestic' },
+      }),
+    ).toBe('GA_DOM');
   });
 
   it('uses the international royalty for an international airline flight tagged International-Domestic', () => {

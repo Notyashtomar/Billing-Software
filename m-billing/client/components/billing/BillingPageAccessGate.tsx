@@ -75,6 +75,7 @@ export function BillingPageAccessGate({ children }: { children: ReactNode }) {
       }
       if (
         path === '/billing/royalty-setup' ||
+        path === '/billing/aera-tariff' ||
         path === '/billing/aircraft-master' ||
         path === '/billing/equipment-master'
       ) {

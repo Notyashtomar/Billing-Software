@@ -120,23 +120,31 @@ function fmtPct(n: number): string {
   return n.toFixed(2);
 }
 
-/** Contractual exclusive rate. Extended royalty changes the amount, not this label. */
-const MAX_CONCESSION_DISPLAY_PERCENT = 18;
-
-/** One concession row. A ceiling with no percent is named Concession only. */
+/**
+ * One concession row. The percent is printed only when the fee is a Royalty
+ * Setup / contract percent of the invoice amount. Fees derived another way
+ * (AERA ceiling base, MAG floor, fixed ceiling rate) carry no percent and are
+ * labelled "Concession Fee" only.
+ */
 function concessionAmountRows(
   _subtotal: number,
   percent: number | undefined,
   amount: number,
 ): Array<{ label: string; amount: number }> {
+<<<<<<< HEAD
   const raw = percent != null && percent > 0 ? percent : 0;
   if (raw > 0 && amount > 0.004) {
     // Above the contractual display cap the fee is not a plain "% of revenue"
     // (e.g. per-flight ceiling amounts), so print it without a misleading percent.
     if (raw > MAX_CONCESSION_DISPLAY_PERCENT) return [{ label: 'Concession Fee', amount }];
     return [{ label: `Concession Fee @ ${fmtPct(raw)}% of "Total Gross Revenue"`, amount }];
+=======
+  const pct = percent != null && percent > 0 ? percent : 0;
+  if (pct > 0 && amount > 0.004) {
+    return [{ label: `Concession Fee @ ${fmtPct(pct)}% of "Total Gross Revenue"`, amount }];
+>>>>>>> 9b7ce8203c08c4e4a544a8357d97788c538cd906
   }
-  if (amount > 0.004) return [{ label: 'Concession', amount }];
+  if (amount > 0.004) return [{ label: 'Concession Fee', amount }];
   return [];
 }
 

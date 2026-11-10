@@ -3255,13 +3255,17 @@ export class BillingPreparationService {
     if (enrichedCustomer) doc.customerCode = enrichedCustomer;
 
     if (enriched.operationalData) {
+      // Explicit scenario + AERA aircraft letter are derived by enrichment and
+      // must survive a refresh of linked rows, or invoice rules fall back to text.
       const adsPatch = Object.fromEntries(
         Object.entries(enriched.operationalData).filter(
           ([k]) =>
             k.startsWith('ads') ||
             k === 'aircraftType' ||
             k === 'customerCode' ||
-            k === 'customerName',
+            k === 'customerName' ||
+            k === 'flightScenario' ||
+            k === 'aircraftTariffCode',
         ),
       );
       doc.operationalSnapshot = { ...snapshot, ...adsPatch };

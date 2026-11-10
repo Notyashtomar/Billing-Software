@@ -136,6 +136,49 @@ export type AircraftMasterRecord = {
 
 export type AircraftMasterWrite = Omit<AircraftMasterRecord, '_id'>;
 
+/** AERA ground-handling tariff order (ceiling rates) stored for a station. */
+export type AeraTariffOrder = {
+  _id: string;
+  stationCode: string;
+  orderNumber: string;
+  orderDate?: string;
+  isp?: string;
+  airport?: string;
+  airportOperator?: string;
+  controlPeriodLabel?: string;
+  controlPeriodFrom: string;
+  controlPeriodTo: string;
+  effectiveFrom: string;
+  currency: string;
+  financialYears: string[];
+  cargoRateColumn: 'ramp' | 'full';
+  scheduled: Array<{
+    flightClass: 'DomesticPassenger' | 'InternationalPassenger' | 'DomesticCargo' | 'InternationalCargo';
+    aircraftCode: string;
+    pax: Array<number | null> | null;
+    ramp: Array<number | null> | null;
+    full: Array<number | null> | null;
+    notApplicable?: boolean;
+  }>;
+  internationalNonScheduled: Array<{
+    mtowFromKg: number;
+    mtowToKg: number | null;
+    rates: Array<number | null>;
+  }>;
+  itemWise: Array<{
+    itemCode: string;
+    description: string;
+    uom: string;
+    domestic: Array<number | null> | null;
+    international: Array<number | null> | null;
+  }>;
+  rules: string[];
+  anomalies: string[];
+  verification?: string;
+  sourceFile?: string;
+  active: boolean;
+};
+
 export type EquipmentMasterUomRecord = {
   uom: string;
   abbreviation: string;
@@ -554,6 +597,18 @@ export function createBillingApi({ getApiBase, fetch }: BillingApiConfig) {
 
     deleteAircraftMaster: (id: string) =>
       request(`/billing/aircraft-master/${id}`, { method: 'DELETE' }).then((r) => parseJson(r)),
+
+    listAeraTariffs: () =>
+      request('/billing/aera-tariff').then((r) => parseJson<{ data: AeraTariffOrder[] }>(r)),
+
+    importAeraTariffs: (stations: unknown[]) =>
+      request('/billing/aera-tariff/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stations }),
+      }).then((r) =>
+        parseJson<{ data: Array<{ station: string; orderNumber: string; status: string; reason?: string }> }>(r),
+      ),
 
     listEquipmentMaster: () =>
       request('/billing/equipment-master').then((r) =>

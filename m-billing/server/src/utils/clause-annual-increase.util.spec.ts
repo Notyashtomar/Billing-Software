@@ -1,8 +1,42 @@
 import {
   annualSteps,
+  bakedAnnualSteps,
   increaseStartForRateCard,
+  parseAnnualIncreaseRemark,
   priceWithAnnualIncrease,
+  readAppliedAnnualIncrease,
 } from './clause-annual-increase.util';
+
+describe('applied annual increase field', () => {
+  it('reads the structured field before the legacy CYI remark', () => {
+    const row = {
+      remarks: 'Band A CYI:MAA-IX-01:2026-06-01:4.5%x1',
+      annualIncreaseApplied: { contractNumber: 'MAA-IX-01', validFrom: '2027-06-01', percent: 4.5, steps: 2 },
+    };
+    expect(readAppliedAnnualIncrease(row)).toEqual({
+      contractNumber: 'MAA-IX-01',
+      validFrom: '2027-06-01',
+      percent: 4.5,
+      steps: 2,
+    });
+    expect(bakedAnnualSteps(row, 4.5, '2027-06-01')).toBe(2);
+    expect(bakedAnnualSteps(row, 4.5, '2026-06-01')).toBe(0);
+  });
+
+  it('falls back to the CYI remark tag when the field is missing', () => {
+    expect(parseAnnualIncreaseRemark('CYI:MAA-IX-01:2026-06-01:4.5%x1')).toEqual({
+      contractNumber: 'MAA-IX-01',
+      validFrom: '2026-06-01',
+      percent: 4.5,
+      steps: 1,
+    });
+    expect(bakedAnnualSteps({ remarks: 'CYI:X:2026-06-01:4.5%x1' }, 4.5, '2026-06-01')).toBe(1);
+    expect(bakedAnnualSteps('CYI:X:2026-06-01:4.5%x1', 4.5, '2026-06-01')).toBe(1);
+    expect(bakedAnnualSteps('no tag here', 4.5, '2026-06-01')).toBe(0);
+    expect(bakedAnnualSteps(undefined, 4.5, '2026-06-01')).toBe(0);
+    expect(readAppliedAnnualIncrease({ annualIncreaseApplied: { steps: 0 } })).toBeNull();
+  });
+});
 
 describe('clause annual increase', () => {
   const clauses = [

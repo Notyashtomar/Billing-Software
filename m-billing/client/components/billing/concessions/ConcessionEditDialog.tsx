@@ -46,6 +46,7 @@ export function ConcessionEditDialog({
   const [values, setValues] = useState<ContractConcessionRatesForm>(emptyConcessionRatesForm());
   const [ceilingInr, setCeilingInr] = useState('');
   const [ceilingUsd, setCeilingUsd] = useState('');
+  const [concessionBase, setConcessionBase] = useState<'invoice_amount' | 'aera_ceiling'>('invoice_amount');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -54,10 +55,12 @@ export function ConcessionEditDialog({
       setValues(emptyConcessionRatesForm());
       setCeilingInr('');
       setCeilingUsd('');
+      setConcessionBase('invoice_amount');
       setError('');
       return;
     }
     setValues(concessionRatesFromContract(contract));
+    setConcessionBase(contract.concessionBase === 'aera_ceiling' ? 'aera_ceiling' : 'invoice_amount');
     setCeilingInr(
       contract.ceilingRatePerFlightINR != null && contract.ceilingRatePerFlightINR > 0
         ? String(contract.ceilingRatePerFlightINR)
@@ -102,10 +105,10 @@ export function ConcessionEditDialog({
     setSaving(true);
     setError('');
     try {
-      const res = await api.updateContract(
-        contract._id,
-        buildConcessionPatchBody({ values, ceilingInr, ceilingUsd }),
-      );
+      const res = await api.updateContract(contract._id, {
+        ...buildConcessionPatchBody({ values, ceilingInr, ceilingUsd }),
+        concessionBase,
+      });
       const updated = (res as { data?: BillingContract }).data;
       onOpenChange(false);
       onSaved(updated);
@@ -227,6 +230,36 @@ export function ConcessionEditDialog({
                   {ceilingUsdError ? (
                     <span className="text-xs font-normal text-red-700">{ceilingUsdError}</span>
                   ) : null}
+                </label>
+              </div>
+            </fieldset>
+            <fieldset className="rounded-lg border border-gray-200 p-3">
+              <legend className="px-1 text-xs font-semibold text-gray-700">Concession is calculated on</legend>
+              <div className="mt-1 flex flex-col gap-2 text-sm text-gray-800">
+                <label className="flex items-start gap-2">
+                  <input
+                    type="radio"
+                    name="concession-base"
+                    checked={concessionBase === 'invoice_amount'}
+                    onChange={() => setConcessionBase('invoice_amount')}
+                  />
+                  <span>
+                    The invoice amount <span className="text-gray-500">(default — percent × billed handling)</span>
+                  </span>
+                </label>
+                <label className="flex items-start gap-2">
+                  <input
+                    type="radio"
+                    name="concession-base"
+                    checked={concessionBase === 'aera_ceiling'}
+                    onChange={() => setConcessionBase('aera_ceiling')}
+                  />
+                  <span>
+                    The AERA ceiling rate per flight{' '}
+                    <span className="text-gray-500">
+                      (for contracts worded “x% of the AERA ceiling rate”; needs an AERA order for this station)
+                    </span>
+                  </span>
                 </label>
               </div>
             </fieldset>

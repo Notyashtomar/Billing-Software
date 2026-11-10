@@ -56,6 +56,7 @@ import {
   BillingEquipmentMaster,
   BillingEquipmentMasterSchema,
 } from './billing-equipment-master.schema';
+import { BillingAeraTariff, BillingAeraTariffSchema } from './billing-aera-tariff.schema';
 
 /** Registers all billing entities as discriminators on the single `billing` collection. */
 export const billingMongooseFeature = {
@@ -150,6 +151,11 @@ export const billingMongooseFeature = {
       name: BillingUldSheet.name,
       schema: BillingUldSheetSchema,
       value: BillingDocType.UldSheet,
+    },
+    {
+      name: BillingAeraTariff.name,
+      schema: BillingAeraTariffSchema,
+      value: BillingDocType.AeraTariff,
     },
   ],
 };

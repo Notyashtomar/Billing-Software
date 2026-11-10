@@ -41,7 +41,7 @@ export function concessionRatesFromContract(
   return form;
 }
 
-/** Load Contracts-page conditional charges (legacy fallback for non-diverted terms only). */
+/** Load Contracts-page conditional charges. These live only on `conditionalCharges`. */
 export function conditionalChargesFromContract(
   record?: BillingContract | null,
 ): ContractConcessionRatesForm {
@@ -49,24 +49,10 @@ export function conditionalChargesFromContract(
   if (!record) return form;
 
   const charges = record.conditionalCharges;
-  const legacyRates = record.concessionRates;
   for (const scenario of CONTRACT_CONDITIONAL_CHARGE_SCENARIOS) {
     const fromNew = charges?.[scenario as keyof BillingContractConditionalCharges];
     if (fromNew != null && Number.isFinite(fromNew)) {
       form[scenario] = String(fromNew);
-      continue;
-    }
-    // Do not fall back diverted* — those collide with Concessions-page Div Dom/Int fees.
-    if (
-      scenario === 'returnToRamp' ||
-      scenario === 'cancellationWithinHoursPercent' ||
-      scenario === 'technicalHandlingChargesPercent' ||
-      scenario === 'standbyChargesPercent'
-    ) {
-      const fromLegacy = legacyRates?.[scenario];
-      if (fromLegacy != null && Number.isFinite(fromLegacy)) {
-        form[scenario] = String(fromLegacy);
-      }
     }
   }
   return form;
@@ -163,15 +149,6 @@ function resolveConditionalChargePercent(
 ): number | null {
   const value = record.conditionalCharges?.[key];
   if (value != null && Number.isFinite(value)) return value;
-  if (
-    key === 'returnToRamp' ||
-    key === 'cancellationWithinHoursPercent' ||
-    key === 'technicalHandlingChargesPercent' ||
-    key === 'standbyChargesPercent'
-  ) {
-    const legacy = record.concessionRates?.[key];
-    if (legacy != null && Number.isFinite(legacy)) return legacy;
-  }
   return null;
 }
 

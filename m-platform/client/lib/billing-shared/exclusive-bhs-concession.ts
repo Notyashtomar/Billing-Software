@@ -1,8 +1,5 @@
 import type { BillingContract } from './types';
 
-/** Exclusive (non-comprehensive) BHS: invoice concession is max(this % of flight total, ceiling × flights). */
-export const EXCLUSIVE_BHS_INVOICE_CONCESSION_PERCENT = 18;
-
 export type BhsPricingMode = 'comprehensive' | 'non_comprehensive';
 
 /** Inclusive — concession is inside the BHS package; no separate invoice concession line. */

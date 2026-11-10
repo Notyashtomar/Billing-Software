@@ -683,6 +683,7 @@ describe('InvoiceEngineService', () => {
           typeOfFlight: 'Diverted Flight',
           aircraftType: 'A320',
           adsParticular: 'GPU-NB',
+          usageHours: 1,
         },
         rateMatch: {
           serviceCode: 'GPU-NB',
@@ -787,6 +788,7 @@ describe('InvoiceEngineService', () => {
           equipment_name: 'GPU-90KV',
           billingDateYmd: '2026-08-10',
           adsParticular: 'GPU-90KV',
+          usageHours: 2,
         },
         rateMatch: {
           serviceCode: 'GPU-NB',
@@ -889,9 +891,10 @@ describe('InvoiceEngineService', () => {
       'INR',
       contract,
     );
-    expect(excluded.lines.map((line) => line.description)).toEqual([
-      'Ground Power Unit - 140KV',
-    ]);
+    // Lines are named after the live contract rule (GPU-NB), not the FHR label.
+    expect(excluded.lines).toHaveLength(1);
+    expect(excluded.lines[0].description).toBe('GPU-NB');
+    expect(excluded.lines[0].quantity).toBe(2);
 
     const included = await service.composeFromPreparation(
       {} as never,
@@ -900,10 +903,10 @@ describe('InvoiceEngineService', () => {
       'INR',
       { ...contract, billBmeEquipment: true },
     );
-    expect(included.lines.map((line) => line.description).sort()).toEqual([
-      'Ground Power Unit (BME)',
-      'Ground Power Unit - 140KV',
-    ]);
+    // Same rule → one merged line; the BME unit (1) joins the 140KV units (2).
+    expect(included.lines).toHaveLength(1);
+    expect(included.lines[0].description).toBe('GPU-NB');
+    expect(included.lines[0].quantity).toBe(3);
   });
 
   it('ADS: applies July contract rules when STA is DD/MM/YYYY', async () => {
@@ -944,6 +947,7 @@ describe('InvoiceEngineService', () => {
           staDate: '15/07/2026',
           billingDateYmd: '2026-07-15',
           adsParticular: 'Ground Power Unit -90KV',
+          usageHours: 1,
         },
         rateMatch: {
           serviceCode: 'ADS - Equipment - Ground Power Unit -90KV',
@@ -996,6 +1000,7 @@ describe('InvoiceEngineService', () => {
           equipment_name: 'GPU-90KV',
           staDate: '15/07/2026',
           adsParticular: 'Ground Power Unit -90KV',
+          usageHours: 1,
         },
         rateMatch: {
           serviceCode: 'GPU-NB',
@@ -1055,6 +1060,7 @@ describe('InvoiceEngineService', () => {
           aircraftType: 'A320',
           equipment_name: 'C',
           adsParticular: 'Cones',
+          usageHours: 1,
         },
         rateMatch: {
           serviceCode: 'ADS - Equipment - Cones',
@@ -1079,6 +1085,7 @@ describe('InvoiceEngineService', () => {
           aircraftType: 'A320',
           equipment_name: 'GPU-90KV',
           adsParticular: 'GPU-NB',
+          usageHours: 1,
         },
         rateMatch: {
           serviceCode: 'ADS - Equipment - GPU-NB',
@@ -1136,6 +1143,7 @@ describe('InvoiceEngineService', () => {
           equipment_name: 'GPU-WB',
           adsParticular: 'Ground Power Unit - Wide Body',
           qty: 9,
+          usageHours: 2.25, // 9 × 15 min
         },
         rateMatch: {
           serviceCode: 'ADS - Equipment - Ground Power Unit - Wide Body',
@@ -1890,5 +1898,87 @@ describe('InvoiceEngineService', () => {
       contract,
     );
     expect(ads).toHaveLength(1);
+  });
+
+  describe('AERA ceiling flag', () => {
+    const delOrder = {
+      orderNumber: '34/2022-23',
+      currency: 'INR',
+      effectiveFrom: new Date('2023-01-16'),
+      controlPeriodTo: new Date('2026-03-31'),
+      financialYears: ['2022-23', '2023-24', '2024-25', '2025-26'],
+      cargoRateColumn: 'ramp',
+      scheduled: [
+        {
+          flightClass: 'DomesticPassenger',
+          aircraftCode: 'C',
+          pax: [4000, 4600, 5300, 6100],
+          ramp: [12200, 14100, 16300, 18800],
+          full: [16200, 18700, 21600, 24900],
+        },
+      ],
+      internationalNonScheduled: [],
+    };
+    const aeraTariff = { activeOrderFor: jest.fn(async () => delOrder) } as never;
+    const withAera = new InvoiceEngineService(taxEngine, currencyEngine, emptyModel, emptyModel, aeraTariff);
+
+    const flight = (unitPrice: number) =>
+      [
+        {
+          _id: new Types.ObjectId(),
+          stationCode: 'DEL',
+          customerCode: '6E',
+          customerName: 'IndiGo',
+          billingPeriodStart: new Date('2024-09-01'),
+          billingPeriodEnd: new Date('2024-09-30'),
+          sourceType: 'scheduled_flight',
+          sourceRef: { serialNo: '77' },
+          operationalSnapshot: {
+            categoryOfFlight: 'Domestic',
+            typeOfHandling: 'Turnaround',
+            aircraftType: 'A320',
+            aircraftTariffCode: 'C',
+            ataDate: '2024-09-10',
+          },
+          rateMatch: { serviceCode: 'BHS', unitPrice },
+        },
+      ] as never;
+
+    it('marks a line above the ceiling and keeps the billed price unchanged', async () => {
+      const composed = await withAera.composeFromPreparation(
+        { stationCode: 'DEL', crossStation: false } as never,
+        flight(22136),
+        new Date('2024-10-01'),
+        'INR',
+      );
+      expect(composed.lines[0].unitPrice).toBe(22136);
+      expect(composed.lines[0].sourceRef).toMatchObject({
+        aeraCeiling: 21600,
+        aeraFinancialYear: '2024-25',
+        aeraOrderNumber: '34/2022-23',
+        exceedsAeraCeiling: true,
+      });
+    });
+
+    it('records the ceiling without a flag when the price is within it', async () => {
+      const composed = await withAera.composeFromPreparation(
+        { stationCode: 'DEL', crossStation: false } as never,
+        flight(21000),
+        new Date('2024-10-01'),
+        'INR',
+      );
+      expect(composed.lines[0].sourceRef).toMatchObject({ aeraCeiling: 21600, exceedsAeraCeiling: false });
+    });
+
+    it('adds nothing when the station has no AERA order', async () => {
+      const composed = await service.composeFromPreparation(
+        { stationCode: 'IMF', crossStation: false } as never,
+        flight(22136),
+        new Date('2024-10-01'),
+        'INR',
+      );
+      expect(composed.lines[0].sourceRef?.aeraCeiling).toBeUndefined();
+      expect(composed.lines[0].sourceRef?.exceedsAeraCeiling).toBeUndefined();
+    });
   });
 });
