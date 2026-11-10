@@ -68,6 +68,8 @@ export interface BillingSourceRow {
     /** Second same-day flight of this airline and aircraft uses incrementalPrice. */
     incrementalFlightsActive?: boolean;
     incrementalPrice?: number;
+    /** Card price and the clause steps that produced unitPrice. */
+    rateOrigin?: Record<string, unknown>;
   };
   validationStatus: {
     passed: boolean;

@@ -20,6 +20,7 @@ type RateLine = {
 type Step = {
   title: string;
   detail: string;
+  figure: string;
 };
 
 function num(value: unknown): number | null {
@@ -79,19 +80,22 @@ export function buildInvoiceRateSteps(line: RateLine, currency: string): Step[] 
     const contractNumber = String(origin?.contractNumber ?? '').trim();
     steps.push({
       title: source,
+      figure: money(listed, currency),
       detail: `${aircraft ? `${aircraft}. ` : ''}${
-        contractNumber ? `Contract ${contractNumber}. ` : ''
-      }The saved rate is ${money(listed, currency)}${from ? `, valid from ${from}` : ''}.`,
+        contractNumber ? `${contractNumber}. ` : ''
+      }${from ? `Valid from ${from}.` : 'Saved on the rate card.'}`,
     });
-  } else if (packageRate != null) {
+  } else if (packageRate != null && packageRate !== line.unitPrice) {
     steps.push({
-      title: 'Price on this line',
-      detail: `${aircraft ? `${aircraft}. ` : ''}The package rate saved with this line is ${money(packageRate, currency)}.`,
+      title: 'Price card',
+      figure: money(packageRate, currency),
+      detail: `${aircraft ? `${aircraft}. ` : ''}Saved on the rate card.`,
     });
   } else {
     steps.push({
-      title: 'Rate on this line',
-      detail: `The unit rate is ${money(line.unitPrice, currency)}.`,
+      title: 'Price card',
+      figure: money(line.unitPrice, currency),
+      detail: `${aircraft ? `${aircraft}. ` : ''}Saved rate on this line.`,
     });
   }
 
@@ -99,9 +103,10 @@ export function buildInvoiceRateSteps(line: RateLine, currency: string): Step[] 
     const contractNumber = String(origin.contractNumber ?? '').trim();
     steps.push({
       title: 'Yearly increase',
+      figure: money(listed, currency),
       detail: `${
-        contractNumber ? `Contract ${contractNumber} has` : 'The contract used for this flight has'
-      } no yearly-increase clause, so the listed price ${money(listed, currency)} is the rate.`,
+        contractNumber ? `${contractNumber} has` : 'This contract has'
+      } no yearly-increase clause. The card rate is unchanged.`,
     });
   }
 
@@ -111,20 +116,28 @@ export function buildInvoiceRateSteps(line: RateLine, currency: string): Step[] 
     const priceAfter = num(annual.priceAfter) ?? afterAnnual ?? listed;
     const label = String(annual.label || 'Current-year rates');
     const starts = String(annual.increaseStarts || annual.validFrom || '');
+    const factor = 1 + percent / 100;
     if (appliedSteps > 0 && priceAfter !== listed) {
+      const formula =
+        appliedSteps === 1
+          ? `${money(listed, currency)} × ${factor} = ${money(priceAfter, currency)}`
+          : `${money(listed, currency)} × ${factor}^${appliedSteps} = ${money(priceAfter, currency)}`;
       steps.push({
-        title: `Clause “${label}”`,
-        detail: `From ${starts}, this rate increases by ${percent}% a year. This flight is step ${appliedSteps}: ${money(listed, currency)} × (1 + ${percent}/100)^${appliedSteps} = ${money(priceAfter, currency)}.`,
+        title: label,
+        figure: money(priceAfter, currency),
+        detail: `${percent}% from ${starts}. Step ${appliedSteps}. ${formula}`,
       });
     } else if (appliedSteps > 0) {
       steps.push({
-        title: `Clause “${label}”`,
-        detail: `The ${percent}% yearly increase from ${starts} is already inside the saved price for ${appliedSteps} step${appliedSteps === 1 ? '' : 's'}. The rate stays ${money(priceAfter, currency)}.`,
+        title: label,
+        figure: money(priceAfter, currency),
+        detail: `${percent}% from ${starts} is already inside the saved card price (${appliedSteps} step${appliedSteps === 1 ? '' : 's'}).`,
       });
     } else {
       steps.push({
-        title: `Clause “${label}”`,
-        detail: `This clause raises the listed price by ${percent}% a year from ${starts}. This flight is before that date, so the rate stays ${money(listed, currency)}.`,
+        title: label,
+        figure: money(listed, currency),
+        detail: `${percent}% a year starts ${starts}. This flight is before that date.`,
       });
     }
   }
@@ -133,7 +146,8 @@ export function buildInvoiceRateSteps(line: RateLine, currency: string): Step[] 
     const incremental = num(origin?.incrementalPrice) ?? line.unitPrice;
     steps.push({
       title: 'Incremental flight',
-      detail: `This flight uses the incremental price on the card, ${money(incremental, currency)}, in place of the full package rate.`,
+      figure: money(incremental, currency),
+      detail: 'The card incremental price replaces the package rate.',
     });
   }
 
@@ -143,35 +157,35 @@ export function buildInvoiceRateSteps(line: RateLine, currency: string): Step[] 
     const toCount = ref.bhsVolumeToCount ?? 'open';
     steps.push({
       title: 'Volume band',
-      detail: `The flight count is in band ${fromCount}–${toCount}${
+      figure: money(packageRate ?? line.unitPrice, currency),
+      detail: `Band ${fromCount}–${toCount}${
         ref.bhsVolumeScope ? ` (${String(ref.bhsVolumeScope)})` : ''
-      }. ${
-        saved != null
-          ? `The card rate ${money(saved, currency)} is replaced by the band price.`
-          : 'The band price replaces the card rate.'
-      }`,
+      }${saved != null ? ` replaces ${money(saved, currency)}` : ''}.`,
     });
   }
 
   if (ref.splitTurnaround) {
     const base = num(ref.splitBaseRate);
     const extra = num(ref.splitAdditionalPercent) ?? 0;
+    const splitResult = base != null ? base * (1 + extra / 100) : line.unitPrice;
     steps.push({
       title: 'Split turnaround',
-      detail: `${String(ref.splitBaseScope ?? 'Base')} rate ${
-        base != null ? money(base, currency) : '—'
-      } plus ${extra}% for ${String(ref.splitTurnaround)}.`,
+      figure: money(splitResult, currency),
+      detail: `${base != null ? money(base, currency) : 'Base'} + ${extra}% (${String(ref.splitTurnaround)}).`,
     });
   }
 
   const chargePercent = num(ref.concessionPercent);
   if (ref.concessionAppliedToUnitPrice === true && chargePercent != null) {
     const base = packageRate ?? afterAnnual ?? listed;
+    const chargedRate = base != null ? (base * chargePercent) / 100 : line.unitPrice;
     steps.push({
       title: scenarioLabel(String(ref.flightScenario ?? '')),
-      detail: `The contract charges ${chargePercent}% of the package rate${
-        base != null ? ` (${money(base, currency)} × ${chargePercent}% = ${money((base * chargePercent) / 100, currency)})` : ''
-      }.`,
+      figure: money(chargedRate, currency),
+      detail:
+        base != null
+          ? `${money(base, currency)} × ${chargePercent}% = ${money(chargedRate, currency)}`
+          : `${chargePercent}% of the package rate.`,
     });
   }
 
@@ -179,10 +193,11 @@ export function buildInvoiceRateSteps(line: RateLine, currency: string): Step[] 
   if (added != null && added > 0) {
     steps.push({
       title: ref.groundSurchargeApplied === true ? 'Extra ground time' : 'Added percent',
+      figure: `+${added}%`,
       detail:
         ref.groundSurchargeApplied === true
-          ? `Ground time is beyond 75 minutes, so ${added}% is added on top of the rate.`
-          : `${added}% is added on top of the rate for late arrival, remain overnight, delay, or extra ground time.`,
+          ? `Ground time beyond 75 minutes adds ${added}%.`
+          : `${added}% is added for late arrival, remain overnight, delay, or extra ground time.`,
     });
   }
 
@@ -190,13 +205,15 @@ export function buildInvoiceRateSteps(line: RateLine, currency: string): Step[] 
   if (cancellation != null) {
     steps.push({
       title: 'Cancellation',
+      figure: `${cancellation}%`,
       detail: `The cancellation clause keeps ${cancellation}% of the rate.`,
     });
   }
 
   steps.push({
     title: 'Rate/Unit',
-    detail: money(line.unitPrice, currency),
+    figure: money(line.unitPrice, currency),
+    detail: 'Rate shown on this invoice.',
   });
 
   return steps;
@@ -240,10 +257,15 @@ export function InvoiceRatePathHover({
         <ol className="max-h-80 space-y-2 overflow-y-auto px-3 py-2">
           {steps.map((step, index) => (
             <li key={`${step.title}-${index}`} className="text-[11px] leading-snug text-gray-800">
-              <span className="font-semibold text-[color:var(--billing-heading)]">
-                {index + 1}. {step.title}
-              </span>
-              <p className="mt-0.5">{step.detail}</p>
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="font-semibold text-[color:var(--billing-heading)]">
+                  {index + 1}. {step.title}
+                </span>
+                <span className="shrink-0 font-semibold tabular-nums text-[color:var(--billing-heading)]">
+                  {step.figure}
+                </span>
+              </div>
+              {step.detail ? <p className="mt-0.5 text-gray-600">{step.detail}</p> : null}
             </li>
           ))}
         </ol>
