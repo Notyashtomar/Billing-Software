@@ -97,7 +97,7 @@ export const CHENNAI_INVOICE_DEFAULTS = {
   company: {
     name: 'BIRD AIRPORT SERVICES (CHENNAI) PRIVATE LIMITED',
     address:
-      'DOMESTIC TERMINAL, NEW DOMESTIC TERMINAL, BUILDING(T-1), AIRPORT CHENNAI 600016',
+      'Next to Tamil Nadu Tourism Centre, New Domestic Terminal Building T-1,Chennai International Airport,\nDomestic Terminal Level, Airport Road Tamil Nadu\nCHENNAI 600027',
     gstin: '33AALCB3911H1ZX',
     cin: 'U63032TN2023PTC158390',
     phone: '30417700',
@@ -106,7 +106,7 @@ export const CHENNAI_INVOICE_DEFAULTS = {
   } satisfies InvoicePdfCompanyDefaults,
   bank: {
     bankName: 'HDFC BANK',
-    branchAddress: 'M-36, OUTER CIRCLE, CONNAUGHGT PLACE, NEW DELHI – 110001, DELHI',
+    branchAddress: 'M-36, OUTER CIRCLE, CONNAUHGT PLACE, NEW DELHI – 110001, DELHI',
     beneficiaryName: 'Bird Airport SVC Chennai PL CLN Escrow AC',
     accountNumber: '99900000600016',
     swiftCode: 'HDFCINBB',

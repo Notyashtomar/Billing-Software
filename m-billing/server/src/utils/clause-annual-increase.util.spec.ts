@@ -1,6 +1,7 @@
 import {
   annualSteps,
   bakedAnnualSteps,
+  explainAnnualIncrease,
   increaseStartForRateCard,
   parseAnnualIncreaseRemark,
   priceWithAnnualIncrease,
@@ -90,6 +91,39 @@ describe('clause annual increase', () => {
         bakedSteps: 1,
       }),
     ).toBe(16834);
+  });
+
+  it('increases the SpiceJet Code C annex rate by 5% from the second contract year', () => {
+    const clauses = [
+      {
+        clauseType: 'cpi',
+        label: 'Current-year rates',
+        appliesTo: ['BHS'],
+        percent: 5,
+        validFrom: '2026-05-15',
+      },
+    ];
+    expect(
+      priceWithAnnualIncrease(23500, clauses, '2026-09-23', 'BHS', {
+        cardValidFrom: '2025-05-15',
+      }),
+    ).toBe(24675);
+    expect(
+      priceWithAnnualIncrease(23500, clauses, '2026-05-14', 'BHS', {
+        cardValidFrom: '2025-05-15',
+      }),
+    ).toBe(23500);
+    expect(
+      explainAnnualIncrease(23500, clauses, '2026-09-23', 'BHS', {
+        cardValidFrom: '2025-05-15',
+      }),
+    ).toMatchObject({
+      label: 'Current-year rates',
+      percent: 5,
+      steps: 1,
+      listedPrice: 23500,
+      priceAfter: 24675,
+    });
   });
 
   it('does not change the price when the clause has not started', () => {

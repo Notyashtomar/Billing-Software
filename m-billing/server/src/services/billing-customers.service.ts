@@ -77,6 +77,28 @@ function normalizeCustomerScheduleLines(
   ];
 }
 
+function cleanIntermediaryAccount(
+  account?: {
+    bankName?: string;
+    branchAddress?: string;
+    beneficiaryName?: string;
+    accountNumber?: string;
+    swiftCode?: string;
+    ifscCode?: string;
+  } | null,
+) {
+  if (!account) return undefined;
+  const cleaned = {
+    bankName: account.bankName?.trim() || undefined,
+    branchAddress: account.branchAddress?.trim() || undefined,
+    beneficiaryName: account.beneficiaryName?.trim() || undefined,
+    accountNumber: account.accountNumber?.trim() || undefined,
+    swiftCode: account.swiftCode?.trim().toUpperCase() || undefined,
+    ifscCode: account.ifscCode?.trim().toUpperCase() || undefined,
+  };
+  return Object.values(cleaned).some(Boolean) ? cleaned : undefined;
+}
+
 function presentCustomer<T extends { annexures?: StoredCustomerAnnexures | null }>(doc: T) {
   const rest = { ...doc };
   delete rest.annexures;
@@ -204,6 +226,8 @@ export class BillingCustomersService {
       existing.msmeNumber = dto.msmeNumber?.trim().toUpperCase() || undefined;
       existing.showVatOnInvoice = dto.showVatOnInvoice ?? false;
       existing.vatNumber = dto.vatNumber?.trim().toUpperCase() || undefined;
+      existing.intermediaryAccountEnabled = dto.intermediaryAccountEnabled === true;
+      existing.intermediaryAccount = cleanIntermediaryAccount(dto.intermediaryAccount);
       const currentLines = Array.isArray(existing.scheduleLines)
         ? [...existing.scheduleLines]
         : [];
@@ -258,6 +282,8 @@ export class BillingCustomersService {
           msmeNumber: dto.msmeNumber?.trim().toUpperCase() || undefined,
           showVatOnInvoice: dto.showVatOnInvoice ?? false,
           vatNumber: dto.vatNumber?.trim().toUpperCase() || undefined,
+          intermediaryAccountEnabled: dto.intermediaryAccountEnabled === true,
+          intermediaryAccount: cleanIntermediaryAccount(dto.intermediaryAccount),
           invoiceTerms: dto.invoiceTerms?.trim() || undefined,
         },
         ctx,
@@ -363,6 +389,12 @@ export class BillingCustomersService {
     }
     if (dto.vatNumber !== undefined) {
       doc.vatNumber = dto.vatNumber.trim().toUpperCase() || undefined;
+    }
+    if (dto.intermediaryAccount !== undefined) {
+      doc.intermediaryAccount = cleanIntermediaryAccount(dto.intermediaryAccount);
+    }
+    if (dto.intermediaryAccountEnabled !== undefined) {
+      doc.intermediaryAccountEnabled = dto.intermediaryAccountEnabled === true;
     }
     if (dto.airlineInvoiceName !== undefined) {
       doc.airlineInvoiceName = dto.airlineInvoiceName.trim() || undefined;

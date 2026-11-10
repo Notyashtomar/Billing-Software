@@ -24,6 +24,7 @@ import {
 import { reportDateYmd } from '../../utils/invoicing-flight-report.mapper';
 import {
   bakedAnnualSteps,
+  explainAnnualIncrease,
   pickAnnualIncrease,
   priceWithAnnualIncrease,
 } from '../../utils/clause-annual-increase.util';
@@ -840,12 +841,44 @@ export class BillingSourceEnrichmentService {
             '',
         ).trim() || input.serviceCode;
     let billedParticular = particular;
+    let rateOrigin: Record<string, unknown> | undefined;
     const aircraftType = String(
       input.operationalData.aircraftType ??
         input.operationalData.TypeCraft ??
         input.operationalData.aircraft ??
         '',
     ).trim();
+
+    if (
+      input.sourceType === 'scheduled_flight' &&
+      bhsPackagePriceRaw != null &&
+      bhsPackagePrice != null
+    ) {
+      const baked = annual
+        ? bakedAnnualSteps(bhsPackage, annual.percent, annual.validFrom)
+        : 0;
+      const explained = explainAnnualIncrease(
+        bhsPackagePriceRaw,
+        clauseRows,
+        billingDate,
+        'BHS',
+        { bakedSteps: baked, cardValidFrom: bhsPackage?.validFrom },
+      );
+      rateOrigin = {
+        listedPrice: bhsPackagePriceRaw,
+        priceAfterAnnual: bhsPackagePrice,
+        cardValidFrom: isoDay(bhsPackage?.validFrom),
+        aircraftType: bhsPackage?.aircraftType || aircraftType || undefined,
+        contractNumber: String(
+          (rulesContract as { contractNumber?: string } | null)?.contractNumber ?? '',
+        ),
+        pricingBasis: 'bhs_package',
+        ...(explained ? { annualIncrease: explained } : { yearlyClause: false }),
+        ...(bhsPackage?.incrementalPrice != null && Number(bhsPackage.incrementalPrice) > 0
+          ? { incrementalPrice: Number(bhsPackage.incrementalPrice) }
+          : {}),
+      };
+    }
 
     let pricingBasis:
       | 'rate_card'
@@ -978,25 +1011,38 @@ export class BillingSourceEnrichmentService {
 
           if (rulePricing.unitPrice != null && rulePricing.unitPrice > 0) {
             const adsAnnual = pickAnnualIncrease(clauseRows, 'ADS');
+            const adsBaked = adsAnnual
+              ? bakedAnnualSteps(
+                  {
+                    annualIncreaseApplied: rulePricing.annualIncreaseApplied,
+                    remarks: rulePricing.remarks,
+                  },
+                  adsAnnual.percent,
+                  adsAnnual.validFrom,
+                )
+              : 0;
             unitPrice = priceWithAnnualIncrease(
               rulePricing.unitPrice,
               clauseRows,
               billingDate,
               'ADS',
-              {
-                bakedSteps: adsAnnual
-                  ? bakedAnnualSteps(
-                      {
-                        annualIncreaseApplied: rulePricing.annualIncreaseApplied,
-                        remarks: rulePricing.remarks,
-                      },
-                      adsAnnual.percent,
-                      adsAnnual.validFrom,
-                    )
-                  : 0,
-              },
+              { bakedSteps: adsBaked },
             );
             pricingBasis = 'rate_card';
+            const explained = explainAnnualIncrease(
+              rulePricing.unitPrice,
+              clauseRows,
+              billingDate,
+              'ADS',
+              { bakedSteps: adsBaked },
+            );
+            rateOrigin = {
+              listedPrice: rulePricing.unitPrice,
+              priceAfterAnnual: unitPrice,
+              aircraftType: aircraftType || undefined,
+              pricingBasis: 'rate_card',
+              ...(explained ? { annualIncrease: explained } : {}),
+            };
             // Free-of-charge is applied once per flight on the invoice, not on
             // this single FHR line. A line inside the free count still has to
             // reach the invoice so extra uses on the same flight can be billed.
@@ -1036,6 +1082,12 @@ export class BillingSourceEnrichmentService {
         unitPrice = rafHit.unitPrice;
         pricingBasis = 'adhoc';
         rafAdhocUom = rafHit.uom;
+        rateOrigin = {
+          listedPrice: rafHit.unitPrice,
+          priceAfterAnnual: rafHit.unitPrice,
+          pricingBasis: 'adhoc',
+          aircraftType: aircraftType || undefined,
+        };
       }
       const uomHint =
         String(input.operationalData.uom ?? rafAdhocUom ?? '').toLowerCase();
@@ -1344,6 +1396,7 @@ export class BillingSourceEnrichmentService {
                 ? 'BHS package price missing on price card airline row'
                 : 'No rate card for service',
         ...(!isAds && pricingBasis ? { pricingBasis } : {}),
+        ...(rateOrigin ? { rateOrigin } : {}),
         ...(isAds
           ? {
               usedUnits,
@@ -1480,4 +1533,12 @@ function contractCoversSector(
   const passenger = sector === 'DomCargo' ? 'Dom' : sector === 'IntCargo' ? 'Int' : sector;
   if (legacy === 'Both' || legacy === 'both') return true;
   return legacy === passenger;
+}
+
+function isoDay(value: Date | string | undefined): string {
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return value.toISOString().slice(0, 10);
+  }
+  const match = String(value ?? '').match(/^(\d{4}-\d{2}-\d{2})/);
+  return match?.[1] ?? '';
 }

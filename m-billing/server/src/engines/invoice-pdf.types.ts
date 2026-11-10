@@ -32,6 +32,13 @@ export interface InvoicePdfBankDetails {
   micr?: string;
   /** PAN shown in the bank block; the builder falls back to the company PAN. */
   beneficiaryPan?: string;
+  /** Printed only when this airline pays through an intermediary account. */
+  intermediaryBankName?: string;
+  intermediaryBranchAddress?: string;
+  intermediaryBeneficiaryName?: string;
+  intermediaryAccountNumber?: string;
+  intermediarySwiftCode?: string;
+  intermediaryIfscCode?: string;
 }
 
 export interface InvoicePdfContactRow {

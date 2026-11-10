@@ -34,6 +34,13 @@ const emptyForm = {
   msmeNumber: '',
   showVatOnInvoice: false,
   vatNumber: '',
+  intermediaryAccountEnabled: false,
+  intermediaryBankName: '',
+  intermediaryBranchAddress: '',
+  intermediaryBeneficiaryName: '',
+  intermediaryAccountNumber: '',
+  intermediarySwiftCode: '',
+  intermediaryIfscCode: '',
 };
 
 type Props = {
@@ -74,6 +81,13 @@ export function CustomerFormDialog({ api, open, onOpenChange, onSaved, record }:
         msmeNumber: record.msmeNumber ?? '',
         showVatOnInvoice: record.showVatOnInvoice === true,
         vatNumber: record.vatNumber ?? '',
+        intermediaryAccountEnabled: record.intermediaryAccountEnabled === true,
+        intermediaryBankName: record.intermediaryAccount?.bankName ?? '',
+        intermediaryBranchAddress: record.intermediaryAccount?.branchAddress ?? '',
+        intermediaryBeneficiaryName: record.intermediaryAccount?.beneficiaryName ?? '',
+        intermediaryAccountNumber: record.intermediaryAccount?.accountNumber ?? '',
+        intermediarySwiftCode: record.intermediaryAccount?.swiftCode ?? '',
+        intermediaryIfscCode: record.intermediaryAccount?.ifscCode ?? '',
       });
     } else {
       setForm(emptyForm);
@@ -93,6 +107,20 @@ export function CustomerFormDialog({ api, open, onOpenChange, onSaved, record }:
         setError('Enter the second bill-to address, or turn the second address off.');
         return;
       }
+      if (form.intermediaryAccountEnabled && !form.intermediaryAccountNumber.trim()) {
+        setError('Enter the intermediary account number, or turn the intermediary account off.');
+        return;
+      }
+      const intermediaryAccount = form.intermediaryAccountEnabled
+        ? {
+            bankName: form.intermediaryBankName.trim() || undefined,
+            branchAddress: form.intermediaryBranchAddress.trim() || undefined,
+            beneficiaryName: form.intermediaryBeneficiaryName.trim() || undefined,
+            accountNumber: form.intermediaryAccountNumber.trim() || undefined,
+            swiftCode: form.intermediarySwiftCode.trim().toUpperCase() || undefined,
+            ifscCode: form.intermediaryIfscCode.trim().toUpperCase() || undefined,
+          }
+        : undefined;
 
       if (isEdit && record) {
         const code = form.customerCode.trim().toUpperCase();
@@ -122,6 +150,8 @@ export function CustomerFormDialog({ api, open, onOpenChange, onSaved, record }:
           msmeNumber: form.msmeNumber.trim().toUpperCase() || undefined,
           showVatOnInvoice: form.showVatOnInvoice,
           vatNumber: form.vatNumber.trim().toUpperCase() || undefined,
+          intermediaryAccountEnabled: form.intermediaryAccountEnabled,
+          intermediaryAccount,
         });
       } else {
         const code = form.customerCode.trim().toUpperCase();
@@ -151,6 +181,8 @@ export function CustomerFormDialog({ api, open, onOpenChange, onSaved, record }:
           msmeNumber: form.msmeNumber.trim().toUpperCase() || undefined,
           showVatOnInvoice: form.showVatOnInvoice,
           vatNumber: form.vatNumber.trim().toUpperCase() || undefined,
+          intermediaryAccountEnabled: form.intermediaryAccountEnabled,
+          intermediaryAccount,
         });
       }
 
@@ -413,6 +445,75 @@ export function CustomerFormDialog({ api, open, onOpenChange, onSaved, record }:
                     autoComplete="off"
                   />
                 </FieldGroup>
+              ) : null}
+            </fieldset>
+
+            <fieldset className="space-y-3 rounded-lg border border-gray-200 p-3">
+              <legend className="px-1 text-sm font-medium text-gray-800">Intermediary account</legend>
+              <label className="flex cursor-pointer items-start gap-2 text-sm text-gray-800">
+                <input
+                  id="intermediaryAccountEnabled"
+                  type="checkbox"
+                  role="switch"
+                  aria-checked={form.intermediaryAccountEnabled}
+                  className="mt-0.5 h-4 w-4"
+                  checked={form.intermediaryAccountEnabled}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, intermediaryAccountEnabled: e.target.checked }))
+                  }
+                />
+                <span>
+                  Print an intermediary account on invoices
+                  <span className="mt-0.5 block text-xs font-normal text-gray-500">
+                    Off: the invoice shows only the station bank account. On: these details print under it on BHS, ADS, and RAF invoices.
+                  </span>
+                </span>
+              </label>
+              {form.intermediaryAccountEnabled ? (
+                <div className="space-y-3">
+                  <FieldGroup label="Intermediary bank" htmlFor="intermediaryBankName">
+                    <TextInput
+                      id="intermediaryBankName"
+                      value={form.intermediaryBankName}
+                      onChange={(v) => setForm((f) => ({ ...f, intermediaryBankName: v }))}
+                    />
+                  </FieldGroup>
+                  <FieldGroup label="Intermediary branch" htmlFor="intermediaryBranchAddress">
+                    <TextInput
+                      id="intermediaryBranchAddress"
+                      value={form.intermediaryBranchAddress}
+                      onChange={(v) => setForm((f) => ({ ...f, intermediaryBranchAddress: v }))}
+                    />
+                  </FieldGroup>
+                  <FieldGroup label="Intermediary beneficiary" htmlFor="intermediaryBeneficiaryName">
+                    <TextInput
+                      id="intermediaryBeneficiaryName"
+                      value={form.intermediaryBeneficiaryName}
+                      onChange={(v) => setForm((f) => ({ ...f, intermediaryBeneficiaryName: v }))}
+                    />
+                  </FieldGroup>
+                  <FieldGroup label="Intermediary account number" htmlFor="intermediaryAccountNumber">
+                    <TextInput
+                      id="intermediaryAccountNumber"
+                      value={form.intermediaryAccountNumber}
+                      onChange={(v) => setForm((f) => ({ ...f, intermediaryAccountNumber: v }))}
+                    />
+                  </FieldGroup>
+                  <FieldGroup label="Intermediary SWIFT" htmlFor="intermediarySwiftCode">
+                    <TextInput
+                      id="intermediarySwiftCode"
+                      value={form.intermediarySwiftCode}
+                      onChange={(v) => setForm((f) => ({ ...f, intermediarySwiftCode: v.toUpperCase() }))}
+                    />
+                  </FieldGroup>
+                  <FieldGroup label="Intermediary IFSC" htmlFor="intermediaryIfscCode">
+                    <TextInput
+                      id="intermediaryIfscCode"
+                      value={form.intermediaryIfscCode}
+                      onChange={(v) => setForm((f) => ({ ...f, intermediaryIfscCode: v.toUpperCase() }))}
+                    />
+                  </FieldGroup>
+                </div>
               ) : null}
             </fieldset>
 

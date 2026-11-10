@@ -147,6 +147,10 @@ type AggregateBucket = {
   groundSurchargeApplied?: boolean;
   /** Particular stem from FHR type of flight, e.g. "Charges for Originate handling". */
   handlingPhrase: string;
+  /** Price-card and yearly-clause figures copied from preparation. */
+  rateOrigin?: Record<string, unknown>;
+  /** Second flight on the same aircraft/day billed at the card incremental price. */
+  incrementalPriceApplied?: boolean;
   /** Explicit scenario (diverted / returnToRamp / technical / standby / normal). */
   flightScenario: FlightScenario;
   /** AERA ceiling for these flights (lowest across the bucket), when the station has an order. */
@@ -416,6 +420,9 @@ export class InvoiceEngineService {
                 }
               : {}),
             chargeAmountPerFlight: bucket.unitPrice,
+            ...(bucket.rateOrigin ? { rateOrigin: bucket.rateOrigin } : {}),
+            ...(bucket.incrementalPriceApplied ? { incrementalPriceApplied: true } : {}),
+            ...(bucket.groundSurchargeApplied ? { groundSurchargeApplied: true } : {}),
             cancellationChargeablePercent:
               bucket.cancellationChargeablePercent == null
                 ? undefined
@@ -1213,6 +1220,7 @@ export class InvoiceEngineService {
           concessionPercent: bucket.chargePercent,
           concessionFeePercent: bucket.feeConcessionPercent || undefined,
           concessionAppliedToUnitPrice: bucket.concessionAppliedToUnitPrice || undefined,
+          ...rateOriginFromRecord(bucket.records[0]),
         },
         preparationRecordIds,
         preparationRecordId: preparationRecordIds[0],
@@ -1758,6 +1766,7 @@ function aggregateBuckets(
         : 'card';
     const handlingPhrase = handlingChargePhrase(rec);
     const flightScenario = resolveLineFlightScenario({ sourceRef });
+    const rateOrigin = rateOriginFromRecord(rec).rateOrigin;
     const aera = aeraCeilingForRecord(aeraOrder, rec, effectiveUnitPrice);
     const key = `${serviceCode}|${unitPrice}|${aircraftType}|${chargePercent}|${additionalChargePercent}|${feeConcessionPercent}|${concessionAppliedToUnitPrice ? 'unit' : 'header'}|${cancellationChargeablePercent ?? 'na'}|${volumeKey}|${handlingPhrase}|${flightScenario}`;
 
@@ -1781,6 +1790,8 @@ function aggregateBuckets(
         groundSurchargeApplied,
         handlingPhrase,
         flightScenario,
+        rateOrigin,
+        incrementalPriceApplied: useIncremental,
       } satisfies AggregateBucket);
 
     if (aera) {
@@ -1852,6 +1863,14 @@ export function splitBhsPreparationByUnitRate(
 ): BillingPreparationRecordDocument[][] {
   if (records.length === 0) return [];
   return [records];
+}
+
+function rateOriginFromRecord(
+  rec: { rateMatch?: unknown } | null | undefined,
+): { rateOrigin?: Record<string, unknown> } {
+  const origin = (rec?.rateMatch as { rateOrigin?: unknown } | null | undefined)?.rateOrigin;
+  if (!origin || typeof origin !== 'object') return {};
+  return { rateOrigin: origin as Record<string, unknown> };
 }
 
 function aircraftTypeFromRecord(rec: BillingPreparationRecordDocument): string {

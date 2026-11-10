@@ -41,6 +41,7 @@ import { StatusBadge } from '../StatusBadge';
 import { InvoiceHeaderActionButtons } from './InvoiceHeaderActionButtons';
 import { InvoiceViewPdfButton } from './InvoiceViewPdfButton';
 import { InvoiceViewAnnexureButton, invoiceShowsAdsAnnexure } from './InvoiceViewAnnexureButton';
+import { InvoiceRatePathHover } from './InvoiceRatePathHover';
 import { InvoiceSamplePdfButton } from './InvoiceSamplePdfButton';
 import { InvoiceDeleteDialog } from './InvoiceDeleteDialog';
 import { InvoiceBinDialog } from './InvoiceBinDialog';
@@ -430,7 +431,8 @@ function InvoiceCalculationDetails({
                     </div>
                   </td>
                   <td className="px-2 py-2 align-top text-[11px] text-gray-700">
-                    Amount = Qty({line.quantity}) × Rate({line.unitPrice.toFixed(2)})
+                    Amount = Qty({line.quantity}) ×{' '}
+                    <InvoiceRatePathHover line={line} currency={currency} />
                     {line.lineDiscountPercent && line.lineDiscountPercent > 0
                       ? ` × (1 - ${line.lineDiscountPercent.toFixed(2)}%)`
                       : ''}

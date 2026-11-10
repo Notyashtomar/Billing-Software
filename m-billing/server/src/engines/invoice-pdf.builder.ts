@@ -1472,17 +1472,29 @@ function renderLineItemsTable(doc: PDFKit.PDFDocument, input: InvoicePdfInput, s
 /** Reference bank block: bold label, regular value, one line per row, no blank rows. */
 function bankTableRows(input: InvoicePdfInput): Array<[string, string]> {
   const bank = input.bankDetails ?? {};
-  const isUsd = input.currencyCode === 'USD';
-  return [
+  const rows: Array<[string, string]> = [
     ['Bank Name :', bank.bankName ?? ''],
-    ['Branch Address :', bank.branchAddress ?? ''],
+    ['Branch :', bank.branchAddress ?? ''],
     ['Beneficiary Name :', bank.beneficiaryName ?? ''],
+    ['Beneficiary A/C No. for (USD/INR) :', bank.accountNumber ?? ''],
     ["Swift Code of Beneficiary's Bank :", bank.swiftCode ?? ''],
-    [isUsd ? 'USD Account Number :' : 'INR Account Number :', bank.accountNumber ?? ''],
-    ['MICR :', bank.micr ?? ''],
-    ['IFSC :', bank.ifscCode ?? ''],
-    ["Beneficiary's PAN :", bank.beneficiaryPan?.trim() || input.company.pan || ''],
   ];
+  const optional: Array<[string, string | undefined]> = [
+    ['MICR :', bank.micr],
+    ['IFSC :', bank.ifscCode],
+    ["Beneficiary's PAN :", bank.beneficiaryPan],
+    ['Intermediary Bank Name :', bank.intermediaryBankName],
+    ['Intermediary Branch :', bank.intermediaryBranchAddress],
+    ['Intermediary Beneficiary Name :', bank.intermediaryBeneficiaryName],
+    ['Intermediary A/C No. :', bank.intermediaryAccountNumber],
+    ["Swift Code of Intermediary's Bank :", bank.intermediarySwiftCode],
+    ['Intermediary IFSC :', bank.intermediaryIfscCode],
+  ];
+  for (const [label, value] of optional) {
+    const text = value?.trim();
+    if (text) rows.push([label, text]);
+  }
+  return rows;
 }
 
 const BANK_ROW_H = invDim(12);

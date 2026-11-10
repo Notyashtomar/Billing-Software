@@ -496,6 +496,7 @@ export class BillingPreparationService {
               particular: row.rateMatch?.particular,
               aircraftType: row.rateMatch?.aircraftType,
               uom: row.rateMatch?.uom,
+              ...(row.rateMatch?.rateOrigin ? { rateOrigin: row.rateMatch.rateOrigin } : {}),
             },
             validationResults,
             operationalSnapshot: row.operationalData,
@@ -3245,6 +3246,7 @@ export class BillingPreparationService {
       particular: enriched.rateMatch.particular,
       aircraftType: enriched.rateMatch.aircraftType,
       uom: enriched.rateMatch.uom,
+      ...(enriched.rateMatch.rateOrigin ? { rateOrigin: enriched.rateMatch.rateOrigin } : {}),
     };
     doc.markModified('contractMatch');
     doc.markModified('rateMatch');

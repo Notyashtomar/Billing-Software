@@ -12,6 +12,7 @@ import {
   normalizeBillingScheduledDateBasis,
   queryParamToYmd,
   scheduledFlightBillingWindowYmd,
+  scheduledFlightFhrDateMatch,
 } from '../../utils/billing-date.util';
 import {
   mapFhrToInvoicingFlightReportRow,
@@ -162,20 +163,15 @@ export class BillingSourcesScheduledService {
             : toYmd;
         const usesRawDailyJoin = dateBasis !== 'schedule-date';
         const staDateCandidates = this.buildStaDateCandidates(fetchFrom, fetchTo);
+        const atdDateCandidates = this.buildStaDateCandidates(fromYmd, toYmd);
         const customerFilterCode = String(query.customerCode ?? '')
           .trim()
           .toUpperCase();
-        const dateFilter: Record<string, unknown> = {
-          $or: [
-            { staDates: { $in: staDateCandidates } },
-            { 'mainDetails.STADate': { $in: staDateCandidates } },
-            { 'mainDetails.staDate': { $in: staDateCandidates } },
-            { 'mainDetails.STA_Date': { $in: staDateCandidates } },
-            { 'terminalDetails.STADate': { $in: staDateCandidates } },
-            { 'terminalDetails.staDate': { $in: staDateCandidates } },
-            { 'terminalDetails.STA_Date': { $in: staDateCandidates } },
-          ],
-        };
+        const dateFilter = scheduledFlightFhrDateMatch(
+          normalizeBillingScheduledDateBasis(dateBasis),
+          staDateCandidates,
+          atdDateCandidates,
+        );
         const customerFilter: Record<string, unknown> | null = customerFilterCode
           ? {
               $or: [

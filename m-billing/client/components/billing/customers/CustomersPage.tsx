@@ -47,6 +47,7 @@ export function CustomersPage({ api }: Props) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [panToggleBusyId, setPanToggleBusyId] = useState<string | null>(null);
   const [vatToggleBusyId, setVatToggleBusyId] = useState<string | null>(null);
+  const [intermediaryToggleBusyId, setIntermediaryToggleBusyId] = useState<string | null>(null);
   const dialogOpen = createOpen || editRecord != null;
   const closeDialog = () => {
     setCreateOpen(false);
@@ -138,6 +139,31 @@ export function CustomersPage({ api }: Props) {
       setError(e instanceof Error ? e.message : 'Failed to update VAT setting');
     } finally {
       setVatToggleBusyId(null);
+    }
+  };
+
+  const toggleIntermediaryAccount = async (customer: BillingCustomer, next: boolean) => {
+    if (customer.intermediaryAccountEnabled === next) return;
+    setIntermediaryToggleBusyId(customer._id);
+    setError('');
+    setSuccess('');
+    try {
+      await api.updateCustomer(customer._id, { intermediaryAccountEnabled: next });
+      const updated = { ...customer, intermediaryAccountEnabled: next };
+      setRows((prev) => prev.map((row) => (row._id === customer._id ? updated : row)));
+      if (next) {
+        setCreateOpen(false);
+        setEditRecord(updated);
+        setSuccess(
+          `Intermediary account is on for ${customer.customerCode}. Enter the account details.`,
+        );
+      } else {
+        setSuccess(`Intermediary account hidden on invoices for ${customer.customerCode}.`);
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to update intermediary account');
+    } finally {
+      setIntermediaryToggleBusyId(null);
     }
   };
 
@@ -431,6 +457,48 @@ export function CustomersPage({ api }: Props) {
                   </button>
                   <span className="text-xs font-medium text-gray-600">
                     {busy ? '…' : on ? 'On' : 'Off'}
+                  </span>
+                </label>
+              );
+            },
+          },
+          {
+            key: 'intermediary',
+            header: 'Intermediary account',
+            render: (r) => {
+              const on = r.intermediaryAccountEnabled === true;
+              const busy = intermediaryToggleBusyId === r._id;
+              const account = r.intermediaryAccount?.accountNumber?.trim();
+              return (
+                <label
+                  className="inline-flex cursor-pointer items-center gap-2"
+                  title={
+                    on
+                      ? 'Intermediary account prints under the station bank on invoices'
+                      : 'Invoice shows only the station bank account'
+                  }
+                >
+                  <span className="sr-only">
+                    {on ? 'Hide' : 'Show'} intermediary account for {r.customerCode}
+                  </span>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={on}
+                    disabled={busy}
+                    onClick={() => void toggleIntermediaryAccount(r, !on)}
+                    className={`relative h-6 w-11 shrink-0 rounded-full transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--billing-primary)] disabled:opacity-50 ${
+                      on ? 'bg-[color:var(--billing-primary)]' : 'bg-gray-300'
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                        on ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                  <span className="text-xs font-medium text-gray-600">
+                    {busy ? '…' : on ? account || 'Add details' : 'Off'}
                   </span>
                 </label>
               );

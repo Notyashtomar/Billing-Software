@@ -365,6 +365,64 @@ describe('buildInvoicePdfInput — customer PAN toggle', () => {
     expect(input.billTo.secondaryAddressLines?.join(' ')).toContain('Chicago');
     expect(input.billTo.pan).toBeFalsy();
   });
+
+  it('prints the customer master address when the draft still has an older address', () => {
+    const input = buildInvoicePdfInput({
+      header: {
+        ...header,
+        customerName: 'Biman Bangladesh',
+        customerAddress: 'Old office\nDhaka',
+      },
+      lines: [bhsLine({ flightCount: 1 })],
+      customer: {
+        name: 'Biman Bangladesh',
+        airlineInvoiceName: 'BIMAN BANGLADESH AIRLINES LIMITED',
+        address: '8/2, JOSMANS COMPLEX GROUND FLOOR,\nTamil Nadu-600031\nIndia',
+        gstRegistrationNo: '33AABCB3134C1ZI',
+        showPanOnInvoice: true,
+        panNumber: 'AABCB3134C',
+      },
+    });
+    expect(input.billTo.name).toBe('BIMAN BANGLADESH AIRLINES LIMITED');
+    expect(input.billTo.addressLines).toEqual([
+      '8/2, JOSMANS COMPLEX GROUND FLOOR,',
+      'Tamil Nadu-600031',
+      'India',
+    ]);
+    expect(input.billTo.gstin).toBe('33AABCB3134C1ZI');
+    expect(input.billTo.pan).toBe('AABCB3134C');
+  });
+
+  it('adds intermediary bank rows only when that account is switched on', () => {
+    const off = buildInvoicePdfInput({
+      header,
+      lines: [bhsLine({ flightCount: 1 })],
+      customer: {
+        name: 'Emirates',
+        intermediaryAccountEnabled: false,
+        intermediaryAccount: { accountNumber: '1234567890', bankName: 'CITIBANK' },
+      },
+    });
+    expect(off.bankDetails?.intermediaryAccountNumber).toBeUndefined();
+
+    const on = buildInvoicePdfInput({
+      header,
+      lines: [bhsLine({ flightCount: 1 })],
+      customer: {
+        name: 'Emirates',
+        intermediaryAccountEnabled: true,
+        intermediaryAccount: {
+          bankName: 'CITIBANK',
+          accountNumber: '1234567890',
+          swiftCode: 'CITIUS33',
+        },
+      },
+    });
+    expect(on.bankDetails?.accountNumber).toBeTruthy();
+    expect(on.bankDetails?.intermediaryBankName).toBe('CITIBANK');
+    expect(on.bankDetails?.intermediaryAccountNumber).toBe('1234567890');
+    expect(on.bankDetails?.intermediarySwiftCode).toBe('CITIUS33');
+  });
 });
 
 describe('invoice particulars and receivable words', () => {
