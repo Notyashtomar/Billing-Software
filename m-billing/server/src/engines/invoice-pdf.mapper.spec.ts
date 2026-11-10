@@ -454,3 +454,37 @@ describe('invoice particulars and receivable words', () => {
     );
   });
 });
+
+describe('buildInvoicePdfInput — invoice date and time', () => {
+  it('prints the creation time in 24-hour form beside a date-only invoice date', () => {
+    const created = new Date('2026-11-05T09:08:00.000Z');
+    const id = `${Math.floor(created.getTime() / 1000).toString(16)}aaaaaaaaaaaaaaaa`;
+    const input = buildInvoicePdfInput({
+      header: { ...header, documentDate: new Date('2026-11-05T00:00:00.000Z'), _id: id },
+      lines: [bhsLine({ flightCount: 1 })],
+    });
+    expect(input.invoiceDate.endsWith(' 14:38')).toBe(true);
+    expect(input.invoiceDate.includes('November 2026')).toBe(true);
+  });
+
+  it('prints the regenerate time beside the invoice date', () => {
+    const input = buildInvoicePdfInput({
+      header: {
+        ...header,
+        documentDate: new Date('2026-11-05T00:00:00.000Z'),
+        generatedAt: new Date('2026-11-10T11:20:00.000Z'),
+      },
+      lines: [bhsLine({ flightCount: 1 })],
+    });
+    expect(input.invoiceDate.endsWith(' 16:50')).toBe(true);
+    expect(input.invoiceDate.includes('November 2026')).toBe(true);
+  });
+
+  it('uses a clock time already stored on the invoice date', () => {
+    const input = buildInvoicePdfInput({
+      header: { ...header, documentDate: new Date('2026-11-05T04:15:00.000Z') },
+      lines: [bhsLine({ flightCount: 1 })],
+    });
+    expect(input.invoiceDate.endsWith(' 09:45')).toBe(true);
+  });
+});

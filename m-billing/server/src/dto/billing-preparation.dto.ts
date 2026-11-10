@@ -128,6 +128,11 @@ class IngestMatchDto {
   @IsOptional()
   @IsString()
   uom?: string;
+
+  /** Saved path from the rate card to the invoice Rate/Unit. */
+  @IsOptional()
+  @IsObject()
+  rateOrigin?: Record<string, unknown>;
 }
 
 class IngestValidationRuleDto {
