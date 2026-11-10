@@ -233,9 +233,22 @@ export function pickBhsPackagePriceEntry(
 
   const family = bhsAircraftFamily(flightAircraft);
   if (family) {
+    // A cargo flight typed "B777" is the freighter, not the passenger B777-300.
+    if (/cargo/i.test(categoryOfFlight)) {
+      const freighterHits = priced.filter((entry) => {
+        const compact = compactAircraft(entry.aircraftType);
+        return compact.includes(family) && compact.endsWith('F') && !compact.includes('P2F');
+      });
+      if (freighterHits.length === 1) return freighterHits[0];
+      if (freighterHits.length > 1) return pickBaseHandlingBand(freighterHits, categoryOfFlight);
+    }
     const familyHits = priced.filter((entry) => {
       const entryFamily = bhsAircraftFamily(entry.aircraftType);
-      return entryFamily === family || compactAircraft(entry.aircraftType).includes(family);
+      if (entryFamily === family) return true;
+      const compact = compactAircraft(entry.aircraftType);
+      // B777F contains B777, but it is its own family.
+      if (!compact.includes(family) || (entryFamily && entryFamily !== family)) return false;
+      return true;
     });
     if (familyHits.length === 1) return familyHits[0];
     if (familyHits.length > 1) return pickBaseHandlingBand(familyHits, categoryOfFlight);

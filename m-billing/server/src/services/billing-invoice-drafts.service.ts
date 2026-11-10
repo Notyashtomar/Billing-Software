@@ -1489,6 +1489,7 @@ export class BillingInvoiceDraftsService {
       allRecords,
     );
 
+    header.generatedAt = new Date();
     await this.rebuildDraftFromPreparationRecords(
       ctx,
       header,
@@ -1507,6 +1508,7 @@ export class BillingInvoiceDraftsService {
     const splitDraftIds: string[] = [];
     for (const group of spun) {
       const spunHeader = await this.createBareDraftHeader(ctx, header, group);
+      spunHeader.generatedAt = new Date();
       await this.rebuildDraftFromPreparationRecords(
         ctx,
         spunHeader,
@@ -1676,6 +1678,7 @@ export class BillingInvoiceDraftsService {
     this.taxEngine.clearCache();
     this.volumePopulationCache.clear();
 
+    header.generatedAt = new Date();
     const previousFactor = Number(header.currencyFactor) || null;
     const prepIds = (header.preparationRecordIds ?? []).map((prepId) => String(prepId));
     const canRebuildFromPrep =

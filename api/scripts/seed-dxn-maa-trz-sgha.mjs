@@ -59,7 +59,7 @@ function aixClauses(dom, intl, free, stationName) {
     clause('1.2', 'Return to ramp is not charged extra when there is no physical change of load. With a change of load limited to disembarkation of passengers and crew, the charge is 50%.'),
     clause('1.2.3', 'Technical landing for a non-commercial purpose is 50% when there is no physical change of load. Ferry-out is 50%. An aircraft on ground that needs a second check-in is an additional 50%.'),
     clause('1.2.9', '10% additional when ATA/ATD exceeds STA/STD by six hours. Cancellation notice not received within six hours of STA is 50%.'),
-    clause('1.3', 'Printed rates stay fixed for one year from 1 January 2025. From 1 January 2026 the CPI increase is capped at 5%. The annex does not print the increased amount.'),
+    clause('1.3', 'Printed rates stay fixed for one year from 1 January 2025. From 1 January 2026 the CPI increase is capped at 5%. The saved card keeps the printed rate. The annex does not print the increased amount.'),
     clause('ADS', `Additional-service rates exclude airport concession, tax and royalty. ${free} wheelchair services are included per flight on a cumulative monthly basis.`),
   ];
 }
@@ -156,7 +156,7 @@ const contracts = [
       clause('1.7', 'Cancellation within 6 hours of STA is 50%.'),
       clause('1.8', 'Off schedule by more than 2 hours is an additional 10%, waived if the delay is advised at least 6 hours before STA and STD. AOG flights are excepted.'),
       clause('1.9', 'A secondary load change for a freighter, before pushback, is an additional 15%.'),
-      clause('1.13', 'Rates adjust each anniversary by the Government of India CPI, capped at 5%. The annex does not print the increased amount.'),
+      clause('1.13', 'Rates adjust each anniversary by the Government of India CPI, capped at 5%. The saved card keeps the printed basic rate. The annex does not print the increased amount.'),
       clause('3', 'Disbursements are at cost plus 5%, capped at Rs 50,000 per occasion unless the carrier agrees a higher amount first.'),
       clause('ULD', '80 LD3 containers per month are free for the B777 and A350.'),
     ],
@@ -179,7 +179,7 @@ const contracts = [
       { aircraft: ['A320', 'A321'], category: 'Int', price: 630, remarks: 'Comprehensive per flight, inclusive of Section 1 management. Based on 91 monthly one-way flights.' },
       { aircraft: ['B787', 'B777-300', 'A350'], category: 'Int', price: 1190, remarks: 'Comprehensive per flight.' },
       { aircraft: ['A380'], category: 'Int', price: 1600, remarks: 'Comprehensive per flight.' },
-      { aircraft: ['B777F', 'B747F'], category: 'Int', price: 1500, remarks: 'Freighter comprehensive per flight.' },
+      { aircraft: ['B777F', 'B747F'], category: 'Int', price: 1500, remarks: 'Freighter comprehensive per flight. A cargo flight recorded as B777 uses this rate, not the passenger B777 rate.' },
     ],
     rules: [
       rule('Ground Power Unit-180KV', 103, 'USD', 'Per Hour', { remarks: '180 KVA. Per 60 minutes.' }),

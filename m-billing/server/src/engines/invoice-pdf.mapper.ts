@@ -32,6 +32,10 @@ type InvoiceHeaderLike = {
   customerName: string;
   customerAddress?: string;
   documentDate: Date | string;
+  /** Set when the user regenerates the invoice. */
+  generatedAt?: Date | string;
+  /** Present on saved invoices. Its creation time fills a date-only invoice date. */
+  _id?: unknown;
   currencyCode: string;
   currencyFactor?: number;
   totalReceivableInUsd?: boolean;
@@ -125,10 +129,61 @@ type ServiceCatalogLike = {
   category?: string;
 };
 
-function formatInvoiceDate(value: Date | string): string {
+function isUtcMidnight(value: Date): boolean {
+  return (
+    value.getUTCHours() === 0 &&
+    value.getUTCMinutes() === 0 &&
+    value.getUTCSeconds() === 0 &&
+    value.getUTCMilliseconds() === 0
+  );
+}
+
+/** Creation instant stored in a Mongo ObjectId, when the invoice date has no clock time. */
+function objectIdCreatedAt(id: unknown): Date | null {
+  if (id && typeof id === 'object' && 'getTimestamp' in id) {
+    const read = (id as { getTimestamp?: () => Date }).getTimestamp;
+    if (typeof read === 'function') {
+      const stamp = read.call(id);
+      if (stamp instanceof Date && !Number.isNaN(stamp.getTime())) return stamp;
+    }
+  }
+  const text = String(id ?? '').trim();
+  if (!/^[a-f0-9]{24}$/i.test(text)) return null;
+  const seconds = Number.parseInt(text.slice(0, 8), 16);
+  if (!Number.isFinite(seconds)) return null;
+  return new Date(seconds * 1000);
+}
+
+/** 24-hour clock in India, beside the invoice date. */
+function formatInvoiceClock(value: Date): string {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+    timeZone: 'Asia/Kolkata',
+  }).formatToParts(value);
+  const hour = parts.find((part) => part.type === 'hour')?.value ?? '00';
+  const minute = parts.find((part) => part.type === 'minute')?.value ?? '00';
+  return `${hour === '24' ? '00' : hour}:${minute}`;
+}
+
+function formatInvoiceDate(
+  value: Date | string,
+  invoiceId?: unknown,
+  generatedAt?: Date | string,
+): string {
   const d = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(d.getTime())) return '';
-  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
+  const date = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
+  const generated = generatedAt ? new Date(generatedAt) : null;
+  const clockSource =
+    generated && !Number.isNaN(generated.getTime())
+      ? generated
+      : isUtcMidnight(d)
+        ? objectIdCreatedAt(invoiceId)
+        : d;
+  if (!clockSource) return date;
+  return `${date} ${formatInvoiceClock(clockSource)}`;
 }
 
 const MONTH_YEAR_NAMES = [
@@ -762,7 +817,7 @@ export function buildInvoicePdfInput(params: BuildInvoicePdfInputParams): Invoic
       msme: companyDefaults.msme,
     },
     invoiceNumber: header.invoiceNumber?.trim() || header.draftNumber,
-    invoiceDate: formatInvoiceDate(header.documentDate),
+    invoiceDate: formatInvoiceDate(header.documentDate, header._id, header.generatedAt),
     billTo,
     serviceDescription: airport.serviceDescription,
     serviceTableTitle: serviceTableTitleResolved,

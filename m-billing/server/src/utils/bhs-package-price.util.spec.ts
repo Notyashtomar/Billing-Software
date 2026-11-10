@@ -119,6 +119,28 @@ describe('resolveBhsScheduledUnitPrice', () => {
     expect(hit?.price).toBe(18500);
   });
 
+  it('bills a cargo B777 on the freighter card and a passenger B777 on the passenger card', () => {
+    const rows = [
+      {
+        aircraftType: 'B777-300',
+        category: 'Int',
+        price: 1190,
+        validFrom: '2025-04-01',
+        remarks: 'Comprehensive per flight.',
+      },
+      {
+        aircraftType: 'B777F',
+        category: 'Int',
+        price: 1500,
+        validFrom: '2025-04-01',
+        remarks: 'Freighter comprehensive per flight.',
+      },
+    ];
+    expect(pickBhsPackagePriceEntry(rows, 'B777', 'International')?.price).toBe(1190);
+    expect(pickBhsPackagePriceEntry(rows, 'B777-300', 'International')?.price).toBe(1190);
+    expect(pickBhsPackagePriceEntry(rows, 'B777', 'International-Cargo')?.price).toBe(1500);
+  });
+
   it('prefers TRND/Turnaround over Transit/Technical freighter packages', () => {
     const rows = [
       {

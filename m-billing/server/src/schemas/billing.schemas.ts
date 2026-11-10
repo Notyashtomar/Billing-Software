@@ -1303,6 +1303,10 @@ export class BillingInvoiceHeader {
   @Prop({ required: true })
   documentDate: Date;
 
+  /** Set when the user regenerates the invoice. Printed beside the invoice date. */
+  @Prop()
+  generatedAt?: Date;
+
   @Prop()
   dueDate?: Date;
 
