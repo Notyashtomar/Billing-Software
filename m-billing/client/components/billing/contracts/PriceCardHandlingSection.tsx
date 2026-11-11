@@ -1,12 +1,24 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState, type ComponentType } from 'react';
-import { ChevronLeft, Download, Minus, Package, Pencil, Plane, Plus, Trash2, UsersRound } from 'lucide-react';
+import {
+  ChevronLeft,
+  Download,
+  Minus,
+  Package,
+  Pencil,
+  Plane,
+  Plus,
+  Trash2,
+  Upload,
+  UsersRound,
+} from 'lucide-react';
 import Link from 'next/link';
 import { AddPriceCardAirlineDialog } from './AddPriceCardAirlineDialog';
 import { BhsAirlineCardGrid } from './BhsAirlineCardGrid';
 import { BhsAirlineCategoryRateCards } from './BhsAirlineCategoryRateCards';
 import { PriceCardAirlineDeleteDialog } from './PriceCardAirlineDeleteDialog';
+import { PriceCardImportDialog } from './PriceCardImportDialog';
 import { exportBhsPriceCardsToExcel } from './exportBhsPriceCardExcel';
 import { contractUi } from './ContractUi';
 import type { BillingApi } from '@/lib/billing-api';
@@ -207,9 +219,11 @@ export function PriceCardHandlingSection({
   const [airlineFilter, setAirlineFilter] = useState('');
   const [aircraftTypeFilter, setAircraftTypeFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [gapsOpen, setGapsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [clausesExpanded, setClausesExpanded] = useState(false);
   const [exportingPriceCard, setExportingPriceCard] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
 
   const serviceCategoryByCode = useMemo(
     () => buildServiceCategoryMap(services),
@@ -539,14 +553,16 @@ export function PriceCardHandlingSection({
                 {exportingPriceCard ? 'Exporting…' : 'Export price card'}
               </button>
             ) : null}
-            <button
-              type="button"
-              onClick={openAddAirline}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-[color:var(--billing-primary)] px-3 py-1.5 text-sm font-medium text-white hover:bg-[color:var(--billing-primary-hover)]"
-            >
-              <Plus className="h-4 w-4" aria-hidden />
-              Add airline
-            </button>
+            {usesAirlineCardGrid ? (
+              <button
+                type="button"
+                onClick={() => setImportOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-[color:var(--billing-primary)] px-3 py-1.5 text-sm font-medium text-white hover:bg-[color:var(--billing-primary-hover)]"
+              >
+                <Upload className="h-4 w-4" aria-hidden />
+                Import
+              </button>
+            ) : null}
           </div>
         </div>
 
@@ -621,7 +637,7 @@ export function PriceCardHandlingSection({
                 >
                   <option value="">All status</option>
                   <option value="active">Active</option>
-                  <option value="expired">Expired</option>
+                  <option value="expired">Discontinued</option>
                 </select>
               </label>
               <label className="flex min-w-[12rem] flex-[2] flex-col gap-1 text-xs font-medium text-gray-600">
@@ -666,19 +682,36 @@ export function PriceCardHandlingSection({
               aria-label="Search airlines"
               className="w-full max-w-sm rounded-lg border border-gray-300 px-3 py-2 text-sm"
             />
-            <label className="flex items-center gap-2 text-xs font-medium text-gray-600">
-              <span className="sr-only">Status</span>
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                aria-label="Filter airlines by contract status"
-                className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800"
-              >
-                <option value="">All status</option>
-                <option value="active">Active</option>
-                <option value="expired">Expired</option>
-              </select>
-            </label>
+            <div
+              role="group"
+              aria-label="Filter airlines by status"
+              className="inline-flex rounded-[var(--billing-radius)] border border-[color:var(--billing-border-strong)] bg-[color:var(--billing-surface)] p-0.5 shadow-[var(--billing-shadow-sm)]"
+            >
+              {(
+                [
+                  { value: '', label: 'All' },
+                  { value: 'active', label: 'Active' },
+                  { value: 'expired', label: 'Discontinued' },
+                ] as const
+              ).map((option) => {
+                const selected = statusFilter === option.value;
+                return (
+                  <button
+                    key={option.value || 'all'}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => setStatusFilter(option.value)}
+                    className={`rounded-[calc(var(--billing-radius)-2px)] px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--billing-info)] ${
+                      selected
+                        ? 'bg-[color:var(--billing-primary)] text-[color:var(--billing-text-inverse)] shadow-[var(--billing-shadow-sm)]'
+                        : 'text-[color:var(--billing-text-secondary)] hover:bg-[color:var(--billing-surface-muted)] hover:text-[color:var(--billing-text)]'
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
             {searchQuery.trim() || statusFilter ? (
               <button
                 type="button"
@@ -688,12 +721,23 @@ export function PriceCardHandlingSection({
                 Clear
               </button>
             ) : null}
+            <MissingRateCardAircraftReminder
+              stationCode={stationCode}
+              handlingType={selectedHandling}
+              part="button"
+              open={gapsOpen}
+              onOpenChange={setGapsOpen}
+              className="ml-auto"
+            />
           </div>
         ) : null}
 
         <MissingRateCardAircraftReminder
           stationCode={stationCode}
           handlingType={selectedHandling}
+          part={!loadingEntries && entries.length > 0 && usesAirlineCardGrid ? 'panel' : undefined}
+          open={gapsOpen}
+          onOpenChange={setGapsOpen}
         />
 
         {loadingEntries ? (
@@ -736,6 +780,7 @@ export function PriceCardHandlingSection({
             contracts={contracts}
             onOpenRateCards={openRateCardsForGroup}
             missingAircraftCounts={missingAircraftCounts}
+            serviceLabel={`${selectedHandling} service`}
           />
         ) : (
           <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
@@ -805,7 +850,7 @@ export function PriceCardHandlingSection({
                             : 'inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-800'
                         }
                       >
-                        {expired ? 'Expired' : 'Active'}
+                        {expired ? 'Discontinued' : 'Active'}
                       </span>
                     </td>
                     <td className="px-3 py-2.5 text-right">
@@ -862,6 +907,22 @@ export function PriceCardHandlingSection({
           onSaved={refreshAfterSave}
           onError={onError}
           onSuccess={onSuccess}
+        />
+
+        <PriceCardImportDialog
+          api={api}
+          open={importOpen}
+          onOpenChange={setImportOpen}
+          handling={selectedHandling}
+          stationCode={stationCode ?? ''}
+          customers={customers}
+          onImported={(count) => {
+            onSuccess(
+              `Imported ${count} ${selectedHandling} rate card${count === 1 ? '' : 's'}.`,
+            );
+            refreshAfterSave();
+          }}
+          onError={onError}
         />
 
         <EditPriceCardAirlineDialog

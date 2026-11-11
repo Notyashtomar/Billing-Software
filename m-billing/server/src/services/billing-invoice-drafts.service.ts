@@ -3311,7 +3311,13 @@ export class BillingInvoiceDraftsService {
       .lean();
     const ownership = String(settings?.airportCommercial?.ownership ?? '').toLowerCase();
     const airportKnown = ownership === 'private' || ownership === 'aai';
-    const royaltyOnGross = stationRoyaltyOnGross(settings, documentDate, billingPeriod);
+    // A contract that overrides the station concession % also keeps its own
+    // extended-royalty (gross-up) setting instead of the station's.
+    const own = contract as { concessionRatesOverrideStation?: boolean; extendedRoyaltyEnabled?: boolean } | null | undefined;
+    const royaltyOnGross =
+      own?.concessionRatesOverrideStation === true
+        ? Boolean(own.extendedRoyaltyEnabled)
+        : stationRoyaltyOnGross(settings, documentDate, billingPeriod);
     const stationFlightConcession = stationFlightConcessionPercents(
       settings,
       documentDate,
