@@ -290,42 +290,113 @@ export function MissingRateCardAircraftNotice({
   );
 }
 
+type ReminderProps = {
+  stationCode: string | null | undefined;
+  handlingType: string;
+  /** Controlled open state; omit to let the component manage it. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  /** "button" renders only the ⓘ trigger, "panel" only the notice, default both stacked. */
+  part?: 'button' | 'panel';
+  className?: string;
+};
+
 export function MissingRateCardAircraftReminder({
   stationCode,
   handlingType,
-}: {
-  stationCode: string | null | undefined;
-  handlingType: string;
-}) {
+  open: openProp,
+  onOpenChange,
+  part,
+  className = '',
+}: ReminderProps) {
   const { items, period } = useStoredRateCardAircraftGaps(stationCode, handlingType);
+  const [openState, setOpenState] = useState(false);
+  const open = openProp ?? openState;
+  const setOpen = (next: boolean) => {
+    setOpenState(next);
+    onOpenChange?.(next);
+  };
   if (items.length === 0) return null;
   const label = monthLabel(period.from);
+  const panelId = `rate-card-gaps-${handlingType.trim().toLowerCase()}`;
 
+  const trigger = (
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={panelId}
+        onClick={() => setOpen(!open)}
+        title={open ? 'Hide aircraft not on a rate card' : 'Show aircraft not on a rate card'}
+        className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--billing-warning)] ${
+          open
+            ? 'border-[color:var(--billing-warning-border)] bg-[color:var(--billing-warning-soft)] text-[color:var(--billing-warning)]'
+            : 'border-[color:var(--billing-border-strong)] bg-[color:var(--billing-surface)] text-[color:var(--billing-text-secondary)] hover:border-[color:var(--billing-warning-border)] hover:bg-[color:var(--billing-warning-soft)] hover:text-[color:var(--billing-warning)]'
+        }`}
+      >
+        <span
+          aria-hidden
+          className="flex h-5 w-5 items-center justify-center rounded-full border border-current font-serif text-[11px] font-bold italic leading-none"
+        >
+          i
+        </span>
+        <span>
+          {items.length} airline{items.length === 1 ? '' : 's'} with aircraft not on a rate card
+        </span>
+        <span
+          aria-hidden
+          className={`transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+        >
+          ▾
+        </span>
+      </button>
+  );
+
+  const panel = (
+      <div
+        id={panelId}
+        className={`grid transition-[grid-template-rows,opacity,margin] duration-300 ease-out ${
+          open ? 'mb-4 grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
+        }`}
+        aria-hidden={!open}
+      >
+        <div className="min-h-0 overflow-hidden">
+          <section
+            className={`rounded-xl border border-[color:var(--billing-warning-border)] bg-[color:var(--billing-warning-soft)] px-4 py-3 text-sm text-[color:var(--billing-text)] transition-transform duration-300 ease-out ${
+              open ? 'translate-y-0' : '-translate-y-2'
+            }`}
+            aria-label="Airlines with aircraft missing from the rate card"
+          >
+            <p className="font-semibold text-[color:var(--billing-warning)]">
+              Aircraft from {label} flights are not on a rate card
+            </p>
+            <ul className="mt-2 space-y-1 text-xs leading-relaxed text-[color:var(--billing-text-secondary)]">
+              {items.map((item) => (
+                <li key={item.customerCode}>
+                  <span className="font-semibold text-[color:var(--billing-text)]">{item.airlineName}</span>{' '}
+                  ({item.customerCode}):{' '}
+                  {item.gaps
+                    .map(
+                      (gap) =>
+                        `${gap.aircraftType}${
+                          gap.flightNumbers.length > 0 ? ` (${gap.flightNumbers.slice(0, 4).join(', ')}${gap.flightNumbers.length > 4 ? '…' : ''})` : ''
+                        }`,
+                    )
+                    .join('; ')}
+                  . Open the airline to review the flights, then add the aircraft manually.
+                </li>
+              ))}
+            </ul>
+          </section>
+        </div>
+      </div>
+  );
+
+  if (part === 'button') return <div className={className}>{trigger}</div>;
+  if (part === 'panel') return <div className={className}>{panel}</div>;
   return (
-    <section
-      className="mb-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950"
-      aria-label="Airlines with aircraft missing from the rate card"
-    >
-      <p className="font-semibold">
-        Aircraft from {label} flights are not on a rate card
-      </p>
-      <ul className="mt-2 space-y-1 text-xs leading-relaxed">
-        {items.map((item) => (
-          <li key={item.customerCode}>
-            <span className="font-semibold">{item.airlineName}</span> ({item.customerCode}
-            ):{' '}
-            {item.gaps
-              .map(
-                (gap) =>
-                  `${gap.aircraftType}${
-                    gap.flightNumbers.length > 0 ? ` (${gap.flightNumbers.slice(0, 4).join(', ')}${gap.flightNumbers.length > 4 ? '…' : ''})` : ''
-                  }`,
-              )
-              .join('; ')}
-            . Open the airline to review the flights, then add the aircraft manually.
-          </li>
-        ))}
-      </ul>
-    </section>
+    <div className={className}>
+      <div className="mb-3">{trigger}</div>
+      {panel}
+    </div>
   );
 }
