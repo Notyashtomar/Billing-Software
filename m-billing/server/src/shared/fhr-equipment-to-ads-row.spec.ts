@@ -26,7 +26,12 @@ describe('parseAdsRemarksQuantity', () => {
     expect(parseAdsRemarksQuantity('05:55 02')).toBe(2);
   });
 
-  it('ignores pure duration remarks', () => {
+  it('reads SpiceJet coach remarks such as "02 trip arr"', () => {
+    expect(parseAdsRemarksQuantity('00:53 02 trip arr')).toBe(2);
+    expect(parseAdsRemarksQuantity('00:30 (01 TRIP FOR DEP PAX)')).toBe(1);
+    expect(parseAdsRemarksQuantity('01:10 03 trip')).toBe(3);
+    expect(parseAdsRemarksQuantity('00:25(ARR)')).toBeNull();
+  });
     expect(parseAdsRemarksQuantity('00:11')).toBeNull();
     expect(parseAdsRemarksQuantity('1:30')).toBeNull();
     expect(parseAdsRemarksQuantity('')).toBeNull();
@@ -126,6 +131,35 @@ describe('fhr-equipment-to-ads-row', () => {
     expect(gpu?.operationalData.particular).toBe('Ground Power Unit - 90KV');
     expect(gpu?.billingDate).toBe('2026-07-15');
     expect(rows.find((r) => r.operationalData.equipment_name === 'LDL')?.operationalData.qty).toBe(2);
+  });
+
+  it('bills passenger coach used units from the remarks trip count, not the duration', () => {
+    const rows = mapFhrDocToAdsRows(
+      {
+        SerialNo: 22011,
+        mainDetails: {
+          Airline: 'SpiceJet',
+          Arline_Code: 'SG123',
+          STADate: '18/09/2026',
+          ATDDate: '18/09/2026',
+        },
+        equipmentDetails: [
+          {
+            equipment_name: 'Passenger Coach',
+            equipment_quantity: 1,
+            from_date: '18/09/2026',
+            usage_time: '00:53',
+            remarks: '00:53 02 trip arr',
+            remarks_quantity: 2,
+          },
+        ],
+      },
+      buildAdsCatalogIndex([]),
+      { fromYmd: '2026-09-01', toYmd: '2026-09-30', flightWindowYmd: '2026-09-18' },
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0].operationalData.remarksQuantity).toBe(2);
+    expect(rows[0].operationalData.chargeableUnits).toBe(2);
   });
 
   it('parses legacy EQ: pipe-encoded equipment names', () => {

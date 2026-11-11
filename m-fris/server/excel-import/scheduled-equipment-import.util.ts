@@ -257,6 +257,43 @@ function normalizeQuantity(v: unknown): number {
   return Number.isFinite(n) && n > 0 ? Math.trunc(n) : 1;
 }
 
+/**
+ * Billable count written in the equipment remarks cell.
+ * `00:53 02 trip arr` → 2, `00:30 (01 TRIP FOR DEP PAX)` → 1.
+ * A bare duration (`00:25`) is not a count.
+ */
+export function parseEquipmentRemarksQuantity(raw: unknown): number | undefined {
+  const text = String(raw ?? '').trim();
+  if (!text || text === '-' || text === '–') return undefined;
+
+  const trip = text.match(/(\d+)\s*trips?\b/i);
+  if (trip) {
+    const n = Number(trip[1]);
+    if (Number.isFinite(n) && n > 0) return n;
+  }
+
+  const arrDep = text.match(
+    /arrival\s*[:=\-]?\s*(\d+)\s*(?:\/\/|\/|,|;|\||\s+)\s*departure\s*[:=\-]?\s*(\d+)/i,
+  );
+  if (arrDep) {
+    const sum = Number(arrDep[1]) + Number(arrDep[2]);
+    if (sum > 0) return sum;
+  }
+
+  const timeCount = text.match(/^\d{1,3}:\d{2}\s+(\d+)\b/);
+  if (timeCount) {
+    const n = Number(timeCount[1]);
+    if (Number.isFinite(n) && n > 0) return n;
+  }
+
+  if (/^\d{1,4}$/.test(text)) {
+    const n = Number(text);
+    if (Number.isFinite(n) && n > 0) return n;
+  }
+
+  return undefined;
+}
+
 /** Extracts + validates the `Serial Number` cell; `NaN` when missing/invalid. */
 export function scheduledEquipmentRowSerialNo(row: ScheduledEquipmentCanonicalRow): number {
   return parseSerialNumber(row.serialNo);
@@ -276,6 +313,8 @@ export function buildFhrEquipmentDetailItem(
   const from = parseExcelDateTimeCell(row.fromDateRaw);
   const to = parseExcelDateTimeCell(row.toDateRaw);
 
+  const remarks = textCell(row.remarks);
+  const remarksQuantity = parseEquipmentRemarksQuantity(remarks);
   return {
     equipment_name,
     equipment_quantity: normalizeQuantity(row.quantity),
@@ -284,7 +323,8 @@ export function buildFhrEquipmentDetailItem(
     to_date: to.date,
     to_time: to.time,
     usage_time: parseExcelTimeOnlyCell(row.usageTime),
-    remarks: textCell(row.remarks),
+    remarks,
+    ...(remarksQuantity != null ? { remarks_quantity: remarksQuantity } : {}),
   };
 }
 
