@@ -5,13 +5,15 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
-import { Connection, Model, Types } from 'mongoose';
+import { Connection, Model, Types, type ClientSession } from 'mongoose';
 import { withBillingTransaction } from '../common/billing-transaction';
 import {
   BillingContract,
   BillingContractDocument,
   BillingCustomer,
   BillingCustomerDocument,
+  BillingPriceCardAirline,
+  BillingPriceCardAirlineDocument,
   BillingRateCard,
   BillingRateCardDocument,
 } from '../schemas/billing.schemas';
@@ -126,6 +128,8 @@ export class BillingCustomersService {
     private readonly contractModel: Model<BillingContractDocument>,
     @InjectModel(BillingRateCard.name)
     private readonly rateCardModel: Model<BillingRateCardDocument>,
+    @InjectModel(BillingPriceCardAirline.name)
+    private readonly priceCardAirlineModel: Model<BillingPriceCardAirlineDocument>,
     @InjectModel(AdvanceAirlineRead.name)
     private readonly advanceAirlineModel: Model<AdvanceAirlineReadDocument>,
     @InjectModel(AdvanceGatewayScheduledAirlineRead.name)
@@ -313,6 +317,7 @@ export class BillingCustomersService {
     if (!doc) throw new NotFoundException('Customer not found');
     StationScope.assertOwnership(doc, ctx);
 
+    const previousName = String(doc.name ?? '').trim();
     const stationCode = doc.stationCode;
     const oldCode = doc.customerCode;
     const {
@@ -419,6 +424,12 @@ export class BillingCustomersService {
 
     if (!codeChanged) {
       await doc.save();
+      await this.syncPriceCardAirlineName(
+        doc.stationCode,
+        [doc.customerCode],
+        previousName,
+        doc.name,
+      );
       await this.auditEngine.log({
         entityType: 'customer',
         entityId: doc._id,
@@ -450,6 +461,13 @@ export class BillingCustomersService {
       }
 
       await doc.save({ session });
+      await this.syncPriceCardAirlineName(
+        doc.stationCode,
+        [oldCode, doc.customerCode],
+        previousName,
+        doc.name,
+        session,
+      );
 
       await this.auditEngine.log(
         {
@@ -467,6 +485,25 @@ export class BillingCustomersService {
 
       return successResponse(presentCustomer(doc.toObject()));
     });
+  }
+
+  /** Keep rate-card airline labels equal to the customer master name. */
+  private async syncPriceCardAirlineName(
+    stationCode: string,
+    customerCodes: string[],
+    previousName: string,
+    nextName: string | undefined,
+    session?: ClientSession,
+  ) {
+    const name = String(nextName ?? '').trim();
+    if (!name || name === previousName.trim()) return;
+    const codes = [...new Set(customerCodes.map((code) => code.trim().toUpperCase()).filter(Boolean))];
+    if (codes.length === 0) return;
+    await this.priceCardAirlineModel.updateMany(
+      { stationCode, customerCode: { $in: codes }, airlineName: { $ne: name } },
+      { $set: { airlineName: name } },
+      session ? { session } : {},
+    );
   }
 
   async remove(ctx: StationScopeContext, id: string, actor: BillingActor) {

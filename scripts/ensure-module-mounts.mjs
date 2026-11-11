@@ -188,7 +188,17 @@ function mountRouteTree(sourceRoot, destRoot) {
   function walk(dir) {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
       const full = path.join(dir, entry.name);
-      if (entry.isDirectory()) {
+      // Windows junctions are reparse points. Dirent.isDirectory() is false for
+      // them, so route folders such as billing/contracts were never copied.
+      let directory = entry.isDirectory();
+      if (!directory) {
+        try {
+          directory = fs.statSync(full).isDirectory();
+        } catch {
+          directory = false;
+        }
+      }
+      if (directory) {
         walk(full);
         continue;
       }

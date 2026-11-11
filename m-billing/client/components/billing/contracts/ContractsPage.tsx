@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, useRef, type ReactNode } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import {
+  ChevronDown,
   Download,
   Eye,
   FileText,
@@ -16,7 +17,6 @@ import { BillingDataTable } from '../BillingDataTable';
 import { MasterSectionTabs } from '../MasterSectionTabs';
 import { StatusBadge } from '../StatusBadge';
 import { billingUi } from '../billingUi';
-import { ContractFormDialog } from './ContractFormDialog';
 import { ContractExcelImportDialog } from './ContractExcelImportDialog';
 import { ContractExcelExportDialog } from './ContractExcelExportDialog';
 import { ContractHandlingPreviewDialog } from './ContractHandlingPreviewDialog';
@@ -48,6 +48,7 @@ import {
   filterRateCardsForHandling,
   filterRateCardsForPriceCardAirlineRow,
   findPriceCardEntry,
+  applyCustomerNamesToPriceCardAirlines,
   groupBhsPriceCardAirlines,
   listPriceCardEntriesForCustomer,
   type BhsAirlineCardGroup,
@@ -200,28 +201,75 @@ function contractIdentityIsFreighter(
   return /\b(CARGO|FREIGHT|FREIGHTER)\b/.test(blob);
 }
 
+function contractNatureLabels(
+  contract: Pick<BillingContract, 'category' | 'categories'>,
+  fromCustomer: string[] | undefined,
+): string[] {
+  const found = new Set<string>();
+  const add = (value: string | undefined) => {
+    if (value === 'Both') {
+      found.add('Domestic');
+      found.add('International');
+    } else if (value === 'Dom' || value === 'DomCargo') found.add('Domestic');
+    else if (value === 'Int' || value === 'IntCargo') found.add('International');
+  };
+  const stored = contract.categories?.length ? contract.categories : [contract.category];
+  for (const value of stored) add(value);
+  for (const value of fromCustomer ?? []) add(value);
+  return ['Domestic', 'International'].filter((label) => found.has(label));
+}
+
 function ContractCategoryCell({
   category,
+  categories,
   aircraftTypes,
   forceFreighter = false,
+  airlineName,
+  customerNatures,
 }: {
   category: BillingContract['category'] | string;
+  categories?: BillingContract['categories'];
   aircraftTypes?: string[];
   forceFreighter?: boolean;
+  airlineName?: string;
+  customerNatures?: string[];
 }) {
   const paxFreight = forceFreighter ? 'Freighter' : resolveContractPaxFreight(aircraftTypes);
+  const natures = contractNatureLabels({ category, categories }, customerNatures);
   return (
     <div className={contractUi.categoryCell}>
-      <span className={contractUi.pill}>{formatContractCategory(category)}</span>
-      {paxFreight ? <span className={contractUi.pillMuted}>{paxFreight}</span> : null}
+      {airlineName ? (
+        <p className="mb-1 text-sm font-bold leading-tight text-slate-900">{airlineName}</p>
+      ) : null}
+      <div className="flex flex-wrap gap-1">
+        {natures.map((label) => (
+          <span key={label} className={contractUi.pill}>
+            {label}
+          </span>
+        ))}
+        {paxFreight ? <span className={contractUi.pillMuted}>{paxFreight}</span> : null}
+      </div>
     </div>
   );
 }
 
-function ContractAircraftTypeCell({ aircraftTypes }: { aircraftTypes?: string[] }) {
+function ContractAircraftTypeCell({
+  aircraftTypes,
+  expanded = true,
+}: {
+  aircraftTypes?: string[];
+  expanded?: boolean;
+}) {
   const list = formatAircraftTypesList(aircraftTypes);
   if (list.length === 0) {
     return <span className="text-sm text-slate-400">—</span>;
+  }
+  if (!expanded) {
+    return (
+      <span className="text-sm text-slate-700" title={list.join(', ')}>
+        {list.length} aircraft
+      </span>
+    );
   }
   return (
     <div className={contractUi.aircraftCell}>
@@ -333,7 +381,13 @@ function ContractCoverageBadge({ contract }: { contract: BillingContract }) {
   );
 }
 
-function ContractSghaCell({ contract }: { contract: BillingContract }) {
+function ContractSghaCell({
+  contract,
+  expanded = true,
+}: {
+  contract: BillingContract;
+  expanded?: boolean;
+}) {
   const rows = CONTRACT_CONDITIONAL_CHARGE_SCENARIOS.map((key) => {
     const value = formatConditionalChargeCell(contract, key);
     if (value === '—') return null;
@@ -365,6 +419,17 @@ function ContractSghaCell({ contract }: { contract: BillingContract }) {
 
   if (rows.length === 0 && !cancelHoursOnly) {
     return <span className={contractUi.sghaEmpty}>—</span>;
+  }
+
+  if (!expanded) {
+    const first = rows[0];
+    const extra = rows.length + (cancelHoursOnly ? 1 : 0) - (first ? 1 : 0);
+    return (
+      <span className="text-sm text-slate-700">
+        {first ? `${first.shortLabel} ${first.value}` : `Cancel window ${cancelHoursOnly}`}
+        {extra > 0 ? ` · ${extra} more` : ''}
+      </span>
+    );
   }
 
   return (
@@ -430,12 +495,12 @@ export function ContractsPage({ api }: Props) {
   const activeStation = useBillingWorkspaceIdentity()?.stationCode;
   const [rows, setRows] = useState<BillingContract[]>([]);
   const [customerNameByCode, setCustomerNameByCode] = useState<Record<string, string>>({});
+  const [customerNatureByCode, setCustomerNatureByCode] = useState<Record<string, string[]>>({});
+  const [expandedContracts, setExpandedContracts] = useState<Set<string>>(new Set());
+  const [missingCustomersOpen, setMissingCustomersOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [createOpen, setCreateOpen] = useState(false);
-  const [editRecord, setEditRecord] = useState<BillingContract | null>(null);
-  const [focusCondition, setFocusCondition] = useState<string | null>(null);
   const [downloadingPdfId, setDownloadingPdfId] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [deleteRecord, setDeleteRecord] = useState<BillingContract | null>(null);
@@ -451,15 +516,6 @@ export function ContractsPage({ api }: Props) {
   const [aircraftFilter, setAircraftFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [fortnightFilter, setFortnightFilter] = useState('');
-  const dialogOpen = createOpen || editRecord != null;
-  const closeDialog = () => {
-    setCreateOpen(false);
-    setEditRecord(null);
-    setFocusCondition(null);
-    if (searchParams.get('contract')) {
-      router.replace('/billing/contracts', { scroll: false });
-    }
-  };
 
   const airlineOptions = useMemo(() => {
     const codes = new Set(
@@ -569,6 +625,15 @@ export function ContractsPage({ api }: Props) {
     statusFilter,
   ]);
 
+  const contractsWithoutCustomer = useMemo(
+    () =>
+      rows.filter((row) => {
+        const code = String(row.customerCode ?? '').trim().toUpperCase();
+        return !code || !customerNameByCode[code];
+      }),
+    [customerNameByCode, rows],
+  );
+
   const load = useCallback(async () => {
     setLoading(true);
     setError('');
@@ -591,6 +656,23 @@ export function ContractsPage({ api }: Props) {
         return acc;
       }, {});
       setCustomerNameByCode(names);
+      try {
+        const airlineRes = await api.listPriceCardAirlines();
+        const items = (
+          (airlineRes.data as { items?: BillingPriceCardAirline[] }).items ?? []
+        ).filter((row) => isCurrentStation(row.stationCode, activeStation));
+        const natures: Record<string, string[]> = {};
+        for (const item of items) {
+          const code = String(item.customerCode ?? '').trim().toUpperCase();
+          if (!code) continue;
+          const bucket = natures[code] ?? [];
+          if (!bucket.includes(item.category)) bucket.push(item.category);
+          natures[code] = bucket;
+        }
+        setCustomerNatureByCode(natures);
+      } catch {
+        setCustomerNatureByCode({});
+      }
       setSelected(new Set());
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load contracts');
@@ -611,12 +693,10 @@ export function ContractsPage({ api }: Props) {
     const condition = searchParams.get('condition')?.trim() ?? '';
     const token = `${contractId}|${condition}`;
     if (contractDeepLinkRef.current === token) return;
-    const match = rows.find((row) => row._id === contractId);
-    if (!match) return;
     contractDeepLinkRef.current = token;
-    setFocusCondition(condition || null);
-    setEditRecord(match);
-  }, [loading, rows, searchParams]);
+    const query = condition ? `?condition=${encodeURIComponent(condition)}` : '';
+    router.replace(`/billing/contracts/${contractId}${query}`);
+  }, [loading, router, searchParams]);
 
   const allSelected =
     visibleContractRows.length > 0 &&
@@ -790,10 +870,7 @@ export function ContractsPage({ api }: Props) {
             </button>
             <button
               type="button"
-              onClick={() => {
-                setEditRecord(null);
-                setCreateOpen(true);
-              }}
+              onClick={() => router.push('/billing/contracts/new')}
               className={contractUi.btnPrimary}
             >
               <Plus className="h-4 w-4" aria-hidden />
@@ -926,6 +1003,36 @@ export function ContractsPage({ api }: Props) {
 
       {error ? <ContractAlert tone="danger">{error}</ContractAlert> : null}
       {success ? <ContractAlert tone="accent">{success}</ContractAlert> : null}
+      {contractsWithoutCustomer.length > 0 ? (
+        <div className="mb-3 flex justify-end">
+          <button
+            type="button"
+            aria-expanded={missingCustomersOpen}
+            onClick={() => setMissingCustomersOpen((current) => !current)}
+            className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 hover:border-amber-300 hover:bg-amber-50 hover:text-amber-800"
+          >
+            <span
+              aria-hidden
+              className="flex h-5 w-5 items-center justify-center rounded-full border border-current font-serif text-[11px] font-bold italic leading-none"
+            >
+              i
+            </span>
+            {contractsWithoutCustomer.length} contract
+            {contractsWithoutCustomer.length === 1 ? '' : 's'} with no customer
+            <span aria-hidden>{missingCustomersOpen ? '▴' : '▾'}</span>
+          </button>
+        </div>
+      ) : null}
+      {missingCustomersOpen && contractsWithoutCustomer.length > 0 ? (
+        <ul className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-950">
+          {contractsWithoutCustomer.map((row) => (
+            <li key={row._id}>
+              <span className="font-semibold">{row.contractNumber}</span>
+              {row.customerCode ? ` · ${row.customerCode}` : ' · no customer code'}
+            </li>
+          ))}
+        </ul>
+      ) : null}
 
       {loading ? (
         <ContractLoadingBlock rows={5} />
@@ -941,10 +1048,7 @@ export function ContractsPage({ api }: Props) {
             rows.length === 0 ? (
               <button
                 type="button"
-                onClick={() => {
-                  setEditRecord(null);
-                  setCreateOpen(true);
-                }}
+                onClick={() => router.push('/billing/contracts/new')}
                 className={contractUi.btnPrimary}
               >
                 <Plus className="h-4 w-4" aria-hidden />
@@ -981,31 +1085,48 @@ export function ContractsPage({ api }: Props) {
                     aria-label={`Select ${r.contractNumber}`}
                     className={cn(billingUi.checkbox, 'mt-1')}
                   />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className={contractUi.identityPrimary}>{r.contractNumber}</p>
+                    <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div>
+                        {customerNameByCode[String(r.customerCode ?? '').trim().toUpperCase()] ? (
+                          <p className="text-sm font-bold text-slate-900">
+                            {customerNameByCode[String(r.customerCode ?? '').trim().toUpperCase()]}
+                          </p>
+                        ) : null}
+                        <p className="text-sm font-normal text-slate-600">{r.contractNumber}</p>
+                      </div>
                       <StatusBadge status={displayContractStatus(r)} />
+                    </div>
+                    <div className="mt-2">
                       <ContractCategoryCell
                         category={r.category}
+                        categories={r.categories}
                         aircraftTypes={r.aircraftTypes}
+                        airlineName={
+                          customerNameByCode[String(r.customerCode ?? '').trim().toUpperCase()]
+                        }
+                        customerNatures={
+                          customerNatureByCode[String(r.customerCode ?? '').trim().toUpperCase()]
+                        }
                         forceFreighter={contractIdentityIsFreighter(
                           r,
                           customerNameByCode[String(r.customerCode ?? '').trim().toUpperCase()],
                         )}
                       />
                     </div>
-                    <p className={contractUi.identitySecondary}>
-                      {customerNameByCode[String(r.customerCode ?? '').trim().toUpperCase()] ??
-                        r.customerCode}
-                    </p>
                     <ContractCoverageBadge contract={r} />
                     <div className="mt-2 space-y-2">
-                      <ContractAircraftTypeCell aircraftTypes={r.aircraftTypes} />
-                      <ContractValidityCell
-                        priceValidFrom={r.priceValidFrom}
-                        priceValidTo={r.priceValidTo}
+                      <ContractAircraftTypeCell
+                        aircraftTypes={r.aircraftTypes}
+                        expanded={expandedContracts.has(r._id)}
                       />
-                      <ContractSghaCell contract={r} />
+                      {expandedContracts.has(r._id) ? (
+                        <ContractValidityCell
+                          priceValidFrom={r.priceValidFrom}
+                          priceValidTo={r.priceValidTo}
+                        />
+                      ) : null}
+                      <ContractSghaCell contract={r} expanded={expandedContracts.has(r._id)} />
                     </div>
                     <div className="mt-3 flex flex-wrap items-center gap-1">
                       <button
@@ -1044,10 +1165,7 @@ export function ContractsPage({ api }: Props) {
                       </button>
                       <button
                         type="button"
-                        onClick={() => {
-                          setCreateOpen(false);
-                          setEditRecord(r);
-                        }}
+                        onClick={() => router.push(`/billing/contracts/${r._id}`)}
                         className={contractUi.iconBtn}
                         aria-label={`Edit ${r.contractNumber}`}
                         title="Edit"
@@ -1112,43 +1230,75 @@ export function ContractsPage({ api }: Props) {
                 {
                   key: 'identity',
                   header: 'Agreement',
-                  render: (r) => (
+                  render: (r) => {
+                    const code = String(r.customerCode ?? '').trim().toUpperCase();
+                    const airlineName = customerNameByCode[code];
+                    const expanded = expandedContracts.has(r._id);
+                    return (
                     <div className={contractUi.identityCell}>
-                      <p className={contractUi.identityPrimary}>{r.contractNumber}</p>
-                      <p className={contractUi.identitySecondary}>
-                        {customerNameByCode[String(r.customerCode ?? '').trim().toUpperCase()] ??
-                          r.customerCode}
-                        {r.stationCode ? ` · ${stationCodeOf(r.stationCode)}` : ''}
-                      </p>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setExpandedContracts((current) => {
+                            const next = new Set(current);
+                            if (next.has(r._id)) next.delete(r._id);
+                            else next.add(r._id);
+                            return next;
+                          })
+                        }
+                        className="mb-1 inline-flex items-center gap-1 text-xs font-semibold text-slate-500"
+                        aria-expanded={expanded}
+                      >
+                        <ChevronDown
+                          className={cn('h-3.5 w-3.5 transition-transform', expanded && 'rotate-180')}
+                          aria-hidden
+                        />
+                        {expanded ? 'Hide details' : 'Show details'}
+                      </button>
+                      {airlineName ? (
+                        <p className="text-sm font-bold leading-tight text-slate-900">{airlineName}</p>
+                      ) : null}
+                      <p className="text-sm font-normal text-slate-600">{r.contractNumber}</p>
                       <ContractCoverageBadge contract={r} />
                     </div>
-                  ),
+                    );
+                  },
                 },
                 {
                   key: 'cat',
                   header: 'Category',
-                  render: (r) => (
+                  render: (r) => {
+                    const code = String(r.customerCode ?? '').trim().toUpperCase();
+                    return (
                     <ContractCategoryCell
                       category={r.category}
+                      categories={r.categories}
                       aircraftTypes={r.aircraftTypes}
-                      forceFreighter={contractIdentityIsFreighter(
-                        r,
-                        customerNameByCode[String(r.customerCode ?? '').trim().toUpperCase()],
-                      )}
+                      airlineName={customerNameByCode[code]}
+                      customerNatures={customerNatureByCode[code]}
+                      forceFreighter={contractIdentityIsFreighter(r, customerNameByCode[code])}
                     />
-                  ),
+                    );
+                  },
                 },
                 {
                   key: 'aircraft',
                   header: 'Aircraft type',
-                  className: 'min-w-[10rem] max-w-[18rem]',
-                  render: (r) => <ContractAircraftTypeCell aircraftTypes={r.aircraftTypes} />,
+                  className: 'w-[8rem]',
+                  render: (r) => (
+                    <ContractAircraftTypeCell
+                      aircraftTypes={r.aircraftTypes}
+                      expanded={expandedContracts.has(r._id)}
+                    />
+                  ),
                 },
                 {
                   key: 'concessions',
                   header: 'SGHA',
-                  className: 'min-w-[15rem] max-w-[22rem]',
-                  render: (r) => <ContractSghaCell contract={r} />,
+                  className: 'w-[12rem]',
+                  render: (r) => (
+                    <ContractSghaCell contract={r} expanded={expandedContracts.has(r._id)} />
+                  ),
                 },
                 {
                   key: 'valid',
@@ -1208,10 +1358,7 @@ export function ContractsPage({ api }: Props) {
                       </button>
                       <button
                         type="button"
-                        onClick={() => {
-                          setCreateOpen(false);
-                          setEditRecord(r);
-                        }}
+                        onClick={() => router.push(`/billing/contracts/${r._id}`)}
                         className={contractUi.iconBtn}
                         aria-label={`Edit ${r.contractNumber}`}
                         title="Edit"
@@ -1250,20 +1397,6 @@ export function ContractsPage({ api }: Props) {
         onImported={async () => {
           setSuccess('Contracts imported from Excel.');
           await load();
-        }}
-      />
-
-      <ContractFormDialog
-        api={api}
-        open={dialogOpen}
-        onOpenChange={(open) => {
-          if (!open) closeDialog();
-        }}
-        record={editRecord}
-        focusCondition={focusCondition}
-        onSaved={() => {
-          setSuccess('Contract saved for your station.');
-          void load();
         }}
       />
 
@@ -1454,14 +1587,17 @@ export function RateCardsPage({ api }: Props) {
     ) {
       return null;
     }
-    const entries = allPriceCardAirlines.filter(
-      (entry) =>
-        entry.handlingType === selectedHandling &&
-        entry.customerCode === selectedCustomerCode,
+    const entries = applyCustomerNamesToPriceCardAirlines(
+      allPriceCardAirlines.filter(
+        (entry) =>
+          entry.handlingType === selectedHandling &&
+          entry.customerCode === selectedCustomerCode,
+      ),
+      customers,
     );
     if (entries.length === 0) return null;
     return groupBhsPriceCardAirlines(entries)[0] ?? null;
-  }, [allPriceCardAirlines, selectedCustomerCode, selectedHandling]);
+  }, [allPriceCardAirlines, customers, selectedCustomerCode, selectedHandling]);
 
   const rateCardSource = useMemo(() => {
     if (navLevel !== 'rates') return rows;

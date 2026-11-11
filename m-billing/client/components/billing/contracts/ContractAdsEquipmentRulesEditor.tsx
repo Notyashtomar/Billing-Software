@@ -13,7 +13,6 @@ import type {
   BillingContractAdsEquipmentRule,
   BillingServiceCatalogItem,
 } from '@/lib/billing-shared/types';
-import { formatBillingDateRange } from '@/lib/billing-shared/billing-date-format';
 import {
   adsCatalogServiceDisplayName,
   buildAdsContractCatalogOptions,
@@ -426,7 +425,6 @@ export function ContractAdsEquipmentRulesEditor({
   validFrom = '',
   validTo = '',
   rateToInr = null,
-  roeHint,
   disabled,
   airlineName = '',
   airlineCode = '',
@@ -726,36 +724,9 @@ export function ContractAdsEquipmentRulesEditor({
     }
   };
 
-  const validityLabel =
-    validFrom && validTo
-      ? formatBillingDateRange(validFrom, validTo)
-      : 'Set price validity on General first';
-
   return (
-    <div className="min-w-0 space-y-3">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <p className="text-sm font-medium text-gray-900">ADS conditions &amp; clauses</p>
-          <p className="mt-0.5 text-xs text-gray-600">
-            Equipment lines apply for the whole contract window{' '}
-            <strong>{validityLabel}</strong>. Charge uses the UOM saved on each line.
-            ADS invoices use FOC, Always bill, UOM, and price. Equipment ticked under Cumulative
-            monthly basis bills FOC × the airline’s flights in that month. Equipment with no priced
-            row is left off the invoice.
-          </p>
-          {roeHint ? (
-            <p
-              className={`mt-1 text-xs ${resolvedRate != null ? 'text-gray-500' : 'text-amber-800'}`}
-            >
-              {roeHint}
-              {resolvedRate != null ? ' — typing INR fills USD and vice versa.' : ''}
-            </p>
-          ) : null}
-        </div>
-      </div>
-
-      <div className="space-y-3">
-          {adsServices.length === 0 ? (
+    <div className="min-w-0">
+      {adsServices.length === 0 ? (
             <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
               No services in the catalog yet. Seed or add them under Service catalog first.
             </p>
@@ -830,12 +801,8 @@ export function ContractAdsEquipmentRulesEditor({
               {excelError}
             </p>
           ) : null}
-          <p className="text-xs text-gray-500">
-            Export the rows to Excel, edit them there, then upload to replace this table. Save the
-            contract afterwards.
-          </p>
 
-          <div className="relative w-full max-h-[min(36rem,58vh)] overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-sm">
+          <div className="w-full overflow-x-auto rounded-lg border border-gray-200 bg-white">
             <table className="w-full table-fixed border-separate border-spacing-0 text-sm">
               <colgroup>
                 <col className="w-[26%]" />
@@ -1070,12 +1037,6 @@ export function ContractAdsEquipmentRulesEditor({
               </tbody>
             </table>
           </div>
-
-          <p className="text-xs text-gray-500">
-            Example: free 1 pax loader / flight applies for every flight inside Price valid from → to.
-            Quantity billed follows the UOM on this line (each, per hour, per half hour, …).
-          </p>
-        </div>
     </div>
   );
 }
