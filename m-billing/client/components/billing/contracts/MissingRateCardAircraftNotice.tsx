@@ -222,71 +222,95 @@ export function MissingRateCardAircraftNotice({
   ]);
 
   const label = monthLabel(period.from);
+  const [open, setOpen] = useState(false);
 
-  if (loading) {
-    return (
-      <p className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
-        Checking {label} flights for aircraft that are not on this rate card…
-      </p>
-    );
-  }
-
-  if (failed) {
-    return (
-      <p className="mb-4 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600">
-        {label} flights could not be checked just now. Open this airline again to retry. The rate card is unchanged.
-      </p>
-    );
-  }
-
-  if (gaps.length === 0) return null;
+  if (loading || failed || gaps.length === 0) return null;
 
   const flightCount = gaps.reduce((sum, gap) => sum + gap.flightCount, 0);
+  const panelId = `rate-card-airline-gaps-${customerCode.trim().toLowerCase()}`;
+  const subject = `${gaps.length} aircraft from this month ${gaps.length === 1 ? 'is' : 'are'} not on the rate card`;
 
   return (
-    <section
-      className="mb-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-4 text-amber-950 shadow-sm"
-      aria-label="Aircraft missing from this rate card"
-    >
-      <h3 className="text-sm font-semibold">
-        {gaps.length} aircraft on {label} flights {gaps.length === 1 ? 'is' : 'are'} not on this rate card
-      </h3>
-      <p className="mt-1 text-xs leading-relaxed text-amber-900">
-        {airlineName} ({customerCode}) flew these aircraft in {label}
-        {flightCount > 0 ? ` across ${flightCount} flight${flightCount === 1 ? '' : 's'}` : ''}.
-        Add a rate card for each aircraft yourself when it should be billed.
-      </p>
-      <div className="mt-3 overflow-x-auto rounded-lg border border-amber-200 bg-white">
-        <table className="min-w-full text-left text-sm">
-          <thead className="bg-amber-100/80 text-xs uppercase tracking-wide text-amber-950">
-            <tr>
-              <th className="px-3 py-2 font-semibold">Airline</th>
-              <th className="px-3 py-2 font-semibold">Flight number</th>
-              <th className="px-3 py-2 font-semibold">Aircraft type</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-amber-100 text-gray-900">
-            {gaps.map((gap) => (
-              <tr key={gap.aircraftType}>
-                <td className="px-3 py-2 align-top">
-                  <span className="font-medium">{gap.airlineName || airlineName}</span>
-                  <span className="mt-0.5 block text-xs text-gray-500">{gap.customerCode}</span>
-                </td>
-                <td className="px-3 py-2 align-top">
-                  {gap.flightNumbers.length > 0 ? gap.flightNumbers.join(', ') : '—'}
-                  {gap.flightCount > gap.flightNumbers.length ? (
-                    <span className="mt-0.5 block text-xs text-gray-500">
-                      {gap.flightCount} flights in {label}
-                    </span>
-                  ) : null}
-                </td>
-                <td className="px-3 py-2 align-top font-medium">{gap.aircraftType}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+    <div className="mb-4">
+      <div className="flex justify-end">
+        <button
+          type="button"
+          aria-expanded={open}
+          aria-controls={panelId}
+          onClick={() => setOpen((current) => !current)}
+          title={open ? 'Hide aircraft not on this rate card' : 'Show aircraft not on this rate card'}
+          className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--billing-warning)] ${
+            open
+              ? 'border-[color:var(--billing-warning-border)] bg-[color:var(--billing-warning-soft)] text-[color:var(--billing-warning)]'
+              : 'border-[color:var(--billing-border-strong)] bg-[color:var(--billing-surface)] text-[color:var(--billing-text-secondary)] hover:border-[color:var(--billing-warning-border)] hover:bg-[color:var(--billing-warning-soft)] hover:text-[color:var(--billing-warning)]'
+          }`}
+        >
+          <span
+            aria-hidden
+            className="flex h-5 w-5 items-center justify-center rounded-full border border-current font-serif text-[11px] font-bold italic leading-none"
+          >
+            i
+          </span>
+          <span>{subject}</span>
+          <span aria-hidden className={`transition-transform duration-200 ${open ? 'rotate-180' : ''}`}>
+            ▾
+          </span>
+        </button>
       </div>
-    </section>
+      <div
+        id={panelId}
+        className={`grid transition-[grid-template-rows,opacity,margin] duration-300 ease-out ${
+          open ? 'mt-3 grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
+        }`}
+        aria-hidden={!open}
+      >
+        <div className="min-h-0 overflow-hidden">
+          <section
+            className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-4 text-amber-950 shadow-sm"
+            aria-label="Aircraft missing from this rate card"
+          >
+            <h3 className="text-sm font-semibold">
+              {gaps.length} aircraft on {label} flights {gaps.length === 1 ? 'is' : 'are'} not on this rate card
+            </h3>
+            <p className="mt-1 text-xs leading-relaxed text-amber-900">
+              {airlineName} ({customerCode}) flew these aircraft in {label}
+              {flightCount > 0 ? ` across ${flightCount} flight${flightCount === 1 ? '' : 's'}` : ''}.
+              Add a rate card for each aircraft yourself when it should be billed.
+            </p>
+            <div className="mt-3 overflow-x-auto rounded-lg border border-amber-200 bg-white">
+              <table className="min-w-full text-left text-sm">
+                <thead className="bg-amber-100/80 text-xs uppercase tracking-wide text-amber-950">
+                  <tr>
+                    <th className="px-3 py-2 font-semibold">Airline</th>
+                    <th className="px-3 py-2 font-semibold">Flight number</th>
+                    <th className="px-3 py-2 font-semibold">Aircraft type</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-amber-100 text-gray-900">
+                  {gaps.map((gap) => (
+                    <tr key={gap.aircraftType}>
+                      <td className="px-3 py-2 align-top">
+                        <span className="font-medium">{gap.airlineName || airlineName}</span>
+                        <span className="mt-0.5 block text-xs text-gray-500">{gap.customerCode}</span>
+                      </td>
+                      <td className="px-3 py-2 align-top">
+                        {gap.flightNumbers.length > 0 ? gap.flightNumbers.join(', ') : '—'}
+                        {gap.flightCount > gap.flightNumbers.length ? (
+                          <span className="mt-0.5 block text-xs text-gray-500">
+                            {gap.flightCount} flights in {label}
+                          </span>
+                        ) : null}
+                      </td>
+                      <td className="px-3 py-2 align-top font-medium">{gap.aircraftType}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
   );
 }
 

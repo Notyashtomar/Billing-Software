@@ -395,6 +395,8 @@ type Props = {
   record?: BillingContract | null;
   /** SGHA charge key to scroll into view when the dialog opens. */
   focusCondition?: string | null;
+  /** `page` renders a full screen with a sidebar. `dialog` keeps the window. */
+  presentation?: 'dialog' | 'page';
 };
 
 async function blobToBase64(blob: Blob): Promise<string> {
@@ -414,7 +416,9 @@ export function ContractFormDialog({
   onSaved,
   record,
   focusCondition,
+  presentation = 'dialog',
 }: Props) {
+  const visible = presentation === 'page' || open;
   const [form, setForm] = useState(emptyForm);
   const [clauses, setClauses] = useState<BillingContractClause[]>(defaultContractClauses());
   const [customers, setCustomers] = useState<BillingCustomer[]>([]);
@@ -458,6 +462,7 @@ export function ContractFormDialog({
     adding: boolean;
   } | null>(null);
   const [additionalCustomerQuery, setAdditionalCustomerQuery] = useState('');
+  const [additionalCustomersOpen, setAdditionalCustomersOpen] = useState(false);
   const [contractCategories, setContractCategories] = useState<ContractSector[]>(['Int']);
   const [billBmeEquipment, setBillBmeEquipment] = useState(false);
   const [inrUsdInvoiceEnabled, setInrUsdInvoiceEnabled] = useState(false);
@@ -812,7 +817,7 @@ export function ContractFormDialog({
   );
 
   useEffect(() => {
-    if (!open) return;
+    if (!visible) return;
     setError('');
     setActiveTab(focusCondition ? 'sgha' : 'general');
     void loadCustomers();
@@ -938,6 +943,7 @@ export function ContractFormDialog({
       setContractPdf(nextContractPdf);
       setFortnightBillingEnabled(nextFortnightEnabled);
       setFortnightEdgeDayCap(Boolean(record.fortnightEdgeDayCap));
+      setAdditionalCustomersOpen(false);
       setAdditionalCustomerCodes(
         (record.additionalCustomerCodes ?? [])
           .map((code) => String(code).trim().toUpperCase())
@@ -1044,6 +1050,7 @@ export function ContractFormDialog({
       setContractPdf(null);
       setFortnightBillingEnabled(false);
       setFortnightEdgeDayCap(false);
+      setAdditionalCustomersOpen(false);
       setAdditionalCustomerCodes([]);
       setAdditionalCustomerInherit([]);
       setInheritEditor(null);
@@ -1102,10 +1109,10 @@ export function ContractFormDialog({
       );
     }
     setAvailableAircraftTypes([]);
-  }, [open, record, focusCondition, loadCustomers, loadAdsServices, loadEquipmentMaster, loadAdvanceAircraftCatalog]);
+  }, [visible, record, focusCondition, loadCustomers, loadAdsServices, loadEquipmentMaster, loadAdvanceAircraftCatalog]);
 
   useEffect(() => {
-    if (!open || !focusCondition) return;
+    if (!visible || !focusCondition) return;
     const fieldId = contractChargeFieldId(focusCondition);
     const timer = window.setTimeout(() => {
       const el = document.getElementById(fieldId);
@@ -1114,20 +1121,20 @@ export function ContractFormDialog({
       if (el instanceof HTMLElement) el.focus({ preventScroll: true });
     }, 80);
     return () => window.clearTimeout(timer);
-  }, [open, focusCondition, activeTab]);
+  }, [visible, focusCondition, activeTab]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!visible) return;
     void loadRoe(form.priceValidFrom);
-  }, [open, form.priceValidFrom, loadRoe]);
+  }, [visible, form.priceValidFrom, loadRoe]);
 
   useEffect(() => {
-    if (!open || isEdit) return;
+    if (!visible || isEdit) return;
     setSelectedAircraftTypes([]);
-  }, [form.customerCode, isEdit, open]);
+  }, [form.customerCode, isEdit, visible]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!visible) return;
     const customerCode = form.customerCode.trim();
     const validFrom = form.priceValidFrom;
     const validTo = form.priceValidTo;
@@ -1165,7 +1172,7 @@ export function ContractFormDialog({
     form.customerCode,
     form.priceValidFrom,
     form.priceValidTo,
-    open,
+    visible,
     selectedCustomer,
   ]);
 
@@ -1547,7 +1554,7 @@ export function ContractFormDialog({
   ] as const;
 
   useEffect(() => {
-    if (!open || !record?._id || !record.contractPdfFileName || record.contractPdfBase64) return;
+    if (!visible || !record?._id || !record.contractPdfFileName || record.contractPdfBase64) return;
     let cancelled = false;
     void api
       .getContractSignedPdf(record._id)
@@ -1568,72 +1575,81 @@ export function ContractFormDialog({
     return () => {
       cancelled = true;
     };
-  }, [api, open, record]);
+  }, [api, visible, record]);
 
-  return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent
-        className={contractUi.dialogShell}
-        onPointerDownOutside={(event) => {
-          const target = event.target as HTMLElement | null;
-          if (
-            target?.closest('[data-ads-contract-floating]') ||
-            target?.closest('[data-datepicker-panel]')
-          ) {
-            event.preventDefault();
-          }
-        }}
-        onFocusOutside={(event) => {
-          const target = event.target as HTMLElement | null;
-          if (
-            target?.closest('[data-ads-contract-floating]') ||
-            target?.closest('[data-datepicker-panel]')
-          ) {
-            event.preventDefault();
-          }
-        }}
-        onInteractOutside={(event) => {
-          const target = event.target as HTMLElement | null;
-          if (
-            target?.closest('[data-ads-contract-floating]') ||
-            target?.closest('[data-datepicker-panel]')
-          ) {
-            event.preventDefault();
-          }
-        }}
+  const editorHeader = presentation === 'page' ? (
+    <header className="fixed inset-x-0 top-[3.3rem] z-30 flex h-10 items-center border-b border-slate-200 bg-white px-4">
+      <nav
+        className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center gap-3"
+        aria-label="Contract sections"
       >
-        <DialogHeader className={contractUi.dialogHeader}>
-          <div className="flex flex-wrap items-center gap-2">
-            <DialogTitle className="text-white">
-              {isEdit ? 'Edit contract' : 'New contract'}
-            </DialogTitle>
-            {isDirty ? (
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-[#F1FF5E]/50 bg-[#F1FF5E]/25 px-2 py-0.5 text-[11px] font-bold text-[#F1FF5E]">
-                <span className={contractUi.dirtyDot} aria-hidden />
-                Unsaved
-              </span>
-            ) : null}
-            {isEdit && form.contractNumber ? (
-              <span className="inline-flex items-center rounded-full border border-[#F1FF5E]/50 bg-[#F1FF5E]/25 px-2.5 py-0.5 text-[11px] font-bold tracking-wide text-[#F1FF5E]">
-                {form.contractNumber}
-              </span>
-            ) : null}
-          </div>
-          <DialogDescription className="text-[#F1FF5E]">
-            Station-scoped handling agreement. Move through sections, then save.
-          </DialogDescription>
-        </DialogHeader>
+        {formTabs.map((tab) => (
+          <button
+            key={tab.value}
+            type="button"
+            onClick={() => setActiveTab(tab.value)}
+            title={tab.hint}
+            className={cn(
+              'rounded-lg px-3 py-1.5 text-sm font-semibold transition-[background-color,color] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--billing-accent)]/40',
+              activeTab === tab.value ? contractUi.railItemActive : contractUi.railItemIdle,
+            )}
+            aria-current={activeTab === tab.value ? 'page' : undefined}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </nav>
+      <button
+        type="button"
+        onClick={() => handleOpenChange(false)}
+        className={cn(contractUi.btnSecondary, 'ml-auto')}
+      >
+        Back to contracts
+      </button>
+    </header>
+  ) : (
+    <DialogHeader className={contractUi.dialogHeader}>
+      <div className="flex flex-wrap items-center gap-2">
+        <DialogTitle className="text-white">
+          {isEdit ? 'Edit contract' : 'New contract'}
+        </DialogTitle>
+        {isDirty ? (
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-[#F1FF5E]/50 bg-[#F1FF5E]/25 px-2 py-0.5 text-[11px] font-bold text-[#F1FF5E]">
+            <span className={contractUi.dirtyDot} aria-hidden />
+            Unsaved
+          </span>
+        ) : null}
+        {isEdit && form.contractNumber ? (
+          <span className="inline-flex items-center rounded-full border border-[#F1FF5E]/50 bg-[#F1FF5E]/25 px-2.5 py-0.5 text-[11px] font-bold tracking-wide text-[#F1FF5E]">
+            {form.contractNumber}
+          </span>
+        ) : null}
+      </div>
+      <DialogDescription className="text-[#F1FF5E]">
+        Station-scoped handling agreement. Move through sections, then save.
+      </DialogDescription>
+    </DialogHeader>
+  );
+
+  const editor = (
+    <>
+      {editorHeader}
 
         <form
           onSubmit={(e) => void submit(e)}
-          className="flex min-h-0 flex-1 flex-col"
+          className={presentation === 'page' ? 'flex min-h-0 flex-1 flex-col pt-10' : 'flex min-h-0 flex-1 flex-col'}
         >
-          <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden px-4 py-4 sm:flex-row sm:px-6">
+          <div className={presentation === 'page'
+            ? 'flex min-h-0 w-full flex-1 flex-col'
+            : 'flex min-h-0 flex-1 flex-col gap-4 overflow-hidden px-4 py-4 sm:flex-row sm:px-6'}>
             <Tabs
               value={activeTab}
               onValueChange={setActiveTab}
-              className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 sm:flex-row"
+              className={presentation === 'page'
+                ? 'flex min-h-0 min-w-0 flex-1 flex-col'
+                : 'flex min-h-0 min-w-0 flex-1 flex-col gap-4 sm:flex-row'}
             >
+              {presentation === 'page' ? null : (
               <nav
                 className={cn(
                   sidebarCollapsed ? contractUi.railCollapsed : contractUi.rail,
@@ -1641,6 +1657,7 @@ export function ContractFormDialog({
                 )}
                 aria-label="Contract sections"
               >
+                {presentation === 'page' ? null : (
                 <button
                   type="button"
                   onClick={() => setSidebarCollapsed((v) => !v)}
@@ -1658,6 +1675,7 @@ export function ContractFormDialog({
                     </>
                   )}
                 </button>
+                )}
                 {formTabs.map((tab) => (
                   <button
                     key={tab.value}
@@ -1665,13 +1683,17 @@ export function ContractFormDialog({
                     onClick={() => setActiveTab(tab.value)}
                     title={`${tab.label} — ${tab.hint}`}
                     className={cn(
-                      sidebarCollapsed ? contractUi.railItemCollapsed : contractUi.railItem,
-                      !sidebarCollapsed && 'min-w-[7.5rem] sm:min-w-0',
+                      presentation === 'page'
+                        ? 'rounded-xl px-3 py-1.5 text-left text-sm font-semibold leading-tight transition-[background-color,color,transform] duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--billing-accent)]/40'
+                        : !sidebarCollapsed
+                          ? contractUi.railItem
+                          : contractUi.railItemCollapsed,
+                      presentation !== 'page' && !sidebarCollapsed && 'min-w-[7.5rem] sm:min-w-0',
                       activeTab === tab.value ? contractUi.railItemActive : contractUi.railItemIdle,
                     )}
                     aria-current={activeTab === tab.value ? 'page' : undefined}
                   >
-                    {sidebarCollapsed ? (
+                    {presentation !== 'page' && sidebarCollapsed ? (
                       <span aria-hidden>{tab.short}</span>
                     ) : (
                       <>
@@ -1679,12 +1701,15 @@ export function ContractFormDialog({
                         <span className={contractUi.railItemHint}>{tab.hint}</span>
                       </>
                     )}
-                    {sidebarCollapsed ? <span className="sr-only">{tab.label}</span> : null}
+                    {presentation !== 'page' && sidebarCollapsed ? <span className="sr-only">{tab.label}</span> : null}
                   </button>
                 ))}
               </nav>
+              )}
 
-              <div className="relative z-10 min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden bg-white pr-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+              <div className={presentation === 'page'
+                ? 'min-w-0 w-full flex-1 bg-white px-6 py-4'
+                : 'relative z-10 min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden bg-white pr-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden'}>
                 {!isEdit && loadingCustomers ? (
                   <p className="mb-4 text-sm text-[color:var(--billing-text-muted)]">Loading customers…</p>
                 ) : null}
@@ -1695,10 +1720,10 @@ export function ContractFormDialog({
               <TabsContent value="general" className="mt-0 bg-white focus-visible:outline-none data-[state=inactive]:hidden">
                 <ContractSection
                   title="Identity & validity"
-                  description="Contract number, airline, flight category, and price window."
+                  description="Contract name, airline, flight category, and price window."
                 >
                 <div className="grid min-w-0 gap-4">
-                  <ContractField label="Contract number" htmlFor="contractNumber">
+                  <ContractField label="Contract name" htmlFor="contractNumber">
                     <ContractInput
                       id="contractNumber"
                       value={form.contractNumber}
@@ -1817,14 +1842,51 @@ export function ContractFormDialog({
                     ) : null}
                   </fieldset>
 
-                  <fieldset className="min-w-0 rounded-xl border border-[color:var(--billing-border)] bg-[color:var(--billing-surface-muted)]/60 p-4">
-                    <legend className="px-1 text-sm font-semibold text-[color:var(--billing-heading)]">
-                      Also bill these customers
-                    </legend>
-                    <p className="mt-1 text-xs text-[color:var(--billing-text-muted)]">
-                      Each added airline gets its own invoice. Choose which masters from{' '}
-                      {form.customerCode || 'the primary customer'} apply. Unchecked masters stay on the added airline.
-                    </p>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <button
+                      type="button"
+                      className="rounded-md border border-[color:var(--billing-border)] bg-white px-3 py-1.5 text-sm font-semibold text-[color:var(--billing-heading)]"
+                      onClick={() => setAdditionalCustomersOpen(true)}
+                    >
+                      Include Customers in this Contract
+                    </button>
+                    {additionalCustomerCodes.length > 0 ? (
+                      <span className="text-xs text-[color:var(--billing-text-muted)]">
+                        {additionalCustomerCodes.join(', ')}
+                      </span>
+                    ) : null}
+                  </div>
+                  {additionalCustomersOpen ? (
+                    <div
+                      className="fixed inset-0 z-[70] flex items-end justify-center bg-black/40 p-4 sm:items-center"
+                      role="presentation"
+                      onClick={() => setAdditionalCustomersOpen(false)}
+                    >
+                      <div
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="include-customers-title"
+                        className="flex max-h-[min(32rem,85vh)] w-full max-w-lg flex-col rounded-xl border border-[color:var(--billing-border)] bg-white p-4 shadow-lg"
+                        onClick={(event) => event.stopPropagation()}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <h3 id="include-customers-title" className="text-sm font-semibold text-[color:var(--billing-heading)]">
+                              Include Customers in this Contract
+                            </h3>
+                            <p className="mt-1 text-xs text-[color:var(--billing-text-muted)]">
+                              Add one airline at a time. Each added airline gets its own invoice. Choose which masters from{' '}
+                              {form.customerCode || 'the primary customer'} apply. Unchecked masters stay on the added airline.
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            className="shrink-0 rounded-md border border-[color:var(--billing-border)] px-2 py-1 text-xs font-semibold"
+                            onClick={() => setAdditionalCustomersOpen(false)}
+                          >
+                            Close
+                          </button>
+                        </div>
                     <input
                       type="search"
                       value={additionalCustomerQuery}
@@ -1833,7 +1895,7 @@ export function ContractFormDialog({
                       className="mt-3 w-full rounded-lg border border-[color:var(--billing-border)] bg-white px-3 py-2 text-sm"
                       aria-label="Find a customer to bill on this contract"
                     />
-                    <div className="mt-3 grid max-h-40 gap-1 overflow-y-auto sm:grid-cols-2">
+                    <div className="mt-3 grid min-h-0 flex-1 gap-1 overflow-y-auto sm:grid-cols-2">
                       {customers
                         .filter((customer) => customer.customerCode !== form.customerCode)
                         .filter((customer) => {
@@ -1984,7 +2046,9 @@ export function ContractFormDialog({
                         })}
                       </ul>
                     ) : null}
-                  </fieldset>
+                      </div>
+                    </div>
+                  ) : null}
                   {inheritEditor ? (
                     <div
                       className="fixed inset-0 z-[80] flex items-end justify-center bg-black/40 p-4 sm:items-center"
@@ -2900,10 +2964,7 @@ export function ContractFormDialog({
 
               <TabsContent value="clauses" className="mt-0 bg-white focus-visible:outline-none data-[state=inactive]:hidden">
                 <div className="grid min-w-0 gap-4">
-                  <ContractSection
-                    title="ADS equipment rules"
-                    description="Uses the aircraft chosen on the Aircraft tab. Change a row only when that equipment covers a smaller set."
-                  >
+                  <ContractSection title="ADS equipment rules">
                     <ContractAdsEquipmentRulesEditor
                       rules={adsEquipmentRules}
                       onChange={setAdsEquipmentRules}
@@ -2915,15 +2976,7 @@ export function ContractFormDialog({
                       validFrom={form.priceValidFrom}
                       validTo={form.priceValidTo}
                       rateToInr={resolvedRoeRate}
-                      roeHint={
-                        resolvedRoeRate != null
-                          ? `ROE: 1 USD = ${resolvedRoeRate} INR${
-                              roe?.startingDate
-                                ? ` (from ${formatBillingDate(roe.startingDate)})`
-                                : ''
-                            }`
-                          : 'No USD exchange rate for this validity date — add one in Master → Conversion Rates'
-                      }
+                      roeHint=""
                       disabled={saving}
                     />
                   </ContractSection>
@@ -3000,6 +3053,50 @@ export function ContractFormDialog({
             </div>
           </div>
         </form>
+      </>
+  );
+
+  if (presentation === 'page') {
+    return (
+      <div className="-mx-3 -mt-3 flex min-h-[calc(100dvh-3.3rem)] w-[calc(100%+1.5rem)] flex-col bg-white sm:-mx-6 sm:-mt-6 sm:w-[calc(100%+3rem)]">
+        {editor}
+      </div>
+    );
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent
+        className={contractUi.dialogShell}
+        onPointerDownOutside={(event) => {
+          const target = event.target as HTMLElement | null;
+          if (
+            target?.closest('[data-ads-contract-floating]') ||
+            target?.closest('[data-datepicker-panel]')
+          ) {
+            event.preventDefault();
+          }
+        }}
+        onFocusOutside={(event) => {
+          const target = event.target as HTMLElement | null;
+          if (
+            target?.closest('[data-ads-contract-floating]') ||
+            target?.closest('[data-datepicker-panel]')
+          ) {
+            event.preventDefault();
+          }
+        }}
+        onInteractOutside={(event) => {
+          const target = event.target as HTMLElement | null;
+          if (
+            target?.closest('[data-ads-contract-floating]') ||
+            target?.closest('[data-datepicker-panel]')
+          ) {
+            event.preventDefault();
+          }
+        }}
+      >
+        {editor}
       </DialogContent>
     </Dialog>
   );
