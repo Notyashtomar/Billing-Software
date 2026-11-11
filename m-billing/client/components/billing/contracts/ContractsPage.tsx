@@ -48,6 +48,7 @@ import {
   filterRateCardsForHandling,
   filterRateCardsForPriceCardAirlineRow,
   findPriceCardEntry,
+  applyCustomerNamesToPriceCardAirlines,
   groupBhsPriceCardAirlines,
   listPriceCardEntriesForCustomer,
   type BhsAirlineCardGroup,
@@ -1454,14 +1455,17 @@ export function RateCardsPage({ api }: Props) {
     ) {
       return null;
     }
-    const entries = allPriceCardAirlines.filter(
-      (entry) =>
-        entry.handlingType === selectedHandling &&
-        entry.customerCode === selectedCustomerCode,
+    const entries = applyCustomerNamesToPriceCardAirlines(
+      allPriceCardAirlines.filter(
+        (entry) =>
+          entry.handlingType === selectedHandling &&
+          entry.customerCode === selectedCustomerCode,
+      ),
+      customers,
     );
     if (entries.length === 0) return null;
     return groupBhsPriceCardAirlines(entries)[0] ?? null;
-  }, [allPriceCardAirlines, selectedCustomerCode, selectedHandling]);
+  }, [allPriceCardAirlines, customers, selectedCustomerCode, selectedHandling]);
 
   const rateCardSource = useMemo(() => {
     if (navLevel !== 'rates') return rows;

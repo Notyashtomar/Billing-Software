@@ -30,6 +30,7 @@ import {
   buildServiceCategoryMap,
   countCustomersForHandling,
   countRateCardsForPriceCardEntry,
+  applyCustomerNamesToPriceCardAirlines,
   groupBhsPriceCardAirlines,
   listPriceCardEntriesInAircraftPeriod,
   type BhsAirlineCardGroup,
@@ -215,6 +216,11 @@ export function PriceCardHandlingSection({
     [services],
   );
 
+  const namedEntries = useMemo(
+    () => applyCustomerNamesToPriceCardAirlines(entries, customers),
+    [customers, entries],
+  );
+
   const loadEntries = useCallback(async () => {
     if (!selectedHandling) {
       setEntries([]);
@@ -278,7 +284,7 @@ export function PriceCardHandlingSection({
 
   const filteredEntries = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
-    return entries.filter((entry) => {
+    return namedEntries.filter((entry) => {
       if (airlineFilter && entry.customerCode.trim().toUpperCase() !== airlineFilter) {
         return false;
       }
@@ -308,7 +314,7 @@ export function PriceCardHandlingSection({
 
       return haystack.includes(query);
     });
-  }, [aircraftTypeFilter, airlineFilter, contracts, entries, searchQuery, statusFilter]);
+  }, [aircraftTypeFilter, airlineFilter, contracts, namedEntries, searchQuery, statusFilter]);
 
   const hasActiveAirlineFilters = Boolean(
     airlineFilter || aircraftTypeFilter || statusFilter || searchQuery.trim(),

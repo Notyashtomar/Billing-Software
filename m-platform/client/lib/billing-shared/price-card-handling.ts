@@ -388,6 +388,29 @@ export type BhsAirlineCardGroup = {
   aircraftGroups: BhsAirlineAircraftGroup[];
 };
 
+/**
+ * Rate-card airline labels follow the customer master. A stored price-card
+ * name is only used when that customer code has no name on the customer tab.
+ */
+export function applyCustomerNamesToPriceCardAirlines(
+  entries: BillingPriceCardAirline[],
+  customers: Array<Pick<BillingCustomer, 'customerCode' | 'name'>>,
+): BillingPriceCardAirline[] {
+  if (entries.length === 0 || customers.length === 0) return entries;
+  const names = new Map<string, string>();
+  for (const customer of customers) {
+    const code = String(customer.customerCode ?? '').trim().toUpperCase();
+    const name = String(customer.name ?? '').trim();
+    if (code && name) names.set(code, name);
+  }
+  if (names.size === 0) return entries;
+  return entries.map((entry) => {
+    const name = names.get(String(entry.customerCode ?? '').trim().toUpperCase());
+    if (!name || name === entry.airlineName) return entry;
+    return { ...entry, airlineName: name };
+  });
+}
+
 /** One card per unique airline — aircraft types and BHS package prices nested inside. */
 export function groupBhsPriceCardAirlines(
   entries: BillingPriceCardAirline[],
