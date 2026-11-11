@@ -30,6 +30,13 @@ export class FhrEquipmentDetailItem {
   @Prop({ default: '' })
   remarks: string;
 
+  /**
+   * Trip / unit count parsed from `remarks` (e.g. `02 trip`, `01 TRIP FOR DEP`).
+   * Per-trip equipment bills this count. Absent when remarks are duration only.
+   */
+  @Prop()
+  remarks_quantity?: number;
+
   /** Operator assigned on Equipment & Manpower form (GSE report). */
   @Prop({ default: '' })
   employee_name: string;

@@ -431,6 +431,16 @@ function pickCategoryOfFlight(main: Record<string, unknown>): string {
   ).trim();
 }
 
+/** Passenger / PAX coach is billed per trip; the remarks cell holds the trip count. */
+export function isPassengerCoachEquipmentLabel(raw: unknown): boolean {
+  const compact = String(raw ?? '')
+    .trim()
+    .toUpperCase()
+    .replace(/[–—]/g, '-')
+    .replace(/[^A-Z0-9]+/g, '');
+  return compact.includes('PASSENGERCOACH') || compact.includes('PAXCOACH');
+}
+
 /** True when equipment label is Crew Coach (FHR / catalog variants). */
 export function isCrewCoachEquipmentLabel(raw: unknown): boolean {
   const compact = String(raw ?? '')
@@ -596,19 +606,32 @@ function mapDetailLine(opts: {
     opts.line.equipment_quantity ?? opts.line.quantity ?? opts.line.qty ?? 1,
   );
   const qty = Number.isFinite(qtyRaw) && qtyRaw > 0 ? qtyRaw : 1;
-  const remarksQuantity = parseAdsRemarksQuantity(opts.line.remarks);
+  const storedRemarks = Number(
+    opts.line.remarks_quantity ?? opts.line.remarksQuantity,
+  );
+  const remarksQuantity =
+    Number.isFinite(storedRemarks) && storedRemarks > 0
+      ? storedRemarks
+      : parseAdsRemarksQuantity(opts.line.remarks);
   const usageHours =
     parseUsageHours(
       opts.line.usage_time ?? opts.line.usageTime ?? opts.line.remarks,
     ) ?? engagementHoursFromWindow(opts.line);
-  // Provisional chargeable units: prefer hours when present (hourly adhoc common);
-  // enrichment recomputes with final UOM (+ remarks qty for trip/service UOMs).
+  // Per-trip coaches bill the count written in remarks (`02 trip`), not the
+  // duration that shares that cell. Other equipment still prefers hours.
+  const perTripCoach =
+    isPassengerCoachEquipmentLabel(cleanedName) ||
+    isPassengerCoachEquipmentLabel(particular) ||
+    isCrewCoachEquipmentLabel(cleanedName) ||
+    isCrewCoachEquipmentLabel(particular);
   const provisionalUnits =
-    usageHours != null && usageHours > 0
-      ? qty * usageHours
-      : remarksQuantity != null
-        ? qty * remarksQuantity
-        : qty;
+    perTripCoach && remarksQuantity != null
+      ? qty * remarksQuantity
+      : usageHours != null && usageHours > 0
+        ? qty * usageHours
+        : remarksQuantity != null
+          ? qty * remarksQuantity
+          : qty;
 
   const flightNo = pickFlightNo(opts.main, opts.terminal);
   const customerCode = pickCustomerCode(opts.main, opts.terminal);
