@@ -1448,10 +1448,17 @@ export class BillingInvoiceDraftsService {
     this.taxEngine.clearCache();
     this.volumePopulationCache.clear();
 
+    let keptRates = 0;
     try {
-      await this.preparationService.refreshByIds(ctx, prepIds, actor);
+      const refreshed = await this.preparationService.refreshByIds(ctx, prepIds, actor);
+      keptRates = refreshed.keptRates;
     } catch {
       // Still rebuild from current prep + live contract compose.
+    }
+    if (keptRates > 0) {
+      throw new BadRequestException(
+        `Invoice was not regenerated. ${keptRates} flight${keptRates === 1 ? '' : 's'} on this draft no longer ${keptRates === 1 ? 'has' : 'have'} an active contract rate or price card for ${header.customerCode}, so regenerating would set the rate to 0. The existing rates were kept. Check the airline's contract and price cards, then regenerate again.`,
+      );
     }
 
     const linked = await this.preparationModel
@@ -3423,6 +3430,22 @@ export class BillingInvoiceDraftsService {
     },
   ) {
     if (records.length === 0) return;
+
+    // Flights can move to another customer code when an airline's code is
+    // replaced (Delhi CIF → CI). The draft follows them so the contract, name,
+    // and address come from the customer that now bills these flights.
+    const recordCodes = new Set(
+      records
+        .map((row) => String(row.customerCode ?? '').trim().toUpperCase())
+        .filter(Boolean),
+    );
+    const headerCode = String(header.customerCode ?? '').trim().toUpperCase();
+    if (recordCodes.size === 1 && !recordCodes.has(headerCode)) {
+      const [movedTo] = [...recordCodes];
+      auditMeta = { ...auditMeta, customerCodeMovedFrom: headerCode, customerCodeMovedTo: movedTo };
+      header.customerCode = movedTo;
+      header.contractId = undefined;
+    }
 
     const stationCode = StationScope.require(ctx);
     const linkedContract = await resolveActiveContractForInvoice(this.contractModel, ctx, {

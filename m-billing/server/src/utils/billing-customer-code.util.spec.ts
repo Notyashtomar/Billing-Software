@@ -73,6 +73,54 @@ describe('billing-customer-code.util', () => {
     ).toBe('SMR');
   });
 
+  describe('saved direct code whose contract was retired', () => {
+    const names: Record<string, string> = {
+      CIF: 'China Airlines Cargo',
+      CI: 'China Airlines',
+    };
+    const base = {
+      directCodes: ['CIF', 'CIF'],
+      flightCodes: ['CI5637'],
+      isKnown: (code: string) => code in names,
+      customerName: (code: string) => names[code] ?? '',
+      operationalName: 'China Airlines Cargo',
+    };
+
+    it('moves to the flight carrier that has a live contract', () => {
+      expect(
+        resolveKnownBillingCustomerCode({
+          ...base,
+          hasLiveContract: (code) => code === 'CI',
+        }),
+      ).toBe('CI');
+    });
+
+    it('keeps the direct code while its contract is live', () => {
+      expect(
+        resolveKnownBillingCustomerCode({ ...base, hasLiveContract: () => true }),
+      ).toBe('CIF');
+    });
+
+    it('keeps the direct code when the carrier has no live contract either', () => {
+      expect(
+        resolveKnownBillingCustomerCode({ ...base, hasLiveContract: () => false }),
+      ).toBe('CIF');
+    });
+
+    it('does not move to a different airline', () => {
+      expect(
+        resolveKnownBillingCustomerCode({
+          directCodes: ['LHF'],
+          flightCodes: ['LH8400'],
+          isKnown: (code) => code === 'LHF' || code === 'LH',
+          customerName: (code) => (code === 'LH' ? 'Lufthansa' : 'Aerologic Freight'),
+          operationalName: 'Aerologic Freight',
+          hasLiveContract: (code) => code === 'LH',
+        }),
+      ).toBe('LHF');
+    });
+  });
+
   it('maps cargo-suffixed direct code EYF to known EY using flight code', () => {
     expect(
       resolveKnownBillingCustomerCode({

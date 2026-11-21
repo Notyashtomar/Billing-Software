@@ -41,6 +41,10 @@ export function sameBillingAirlineName(
  * A direct code that already exists on the station master always wins.
  * An unknown direct code is replaced by the flight carrier only when that
  * carrier is a saved customer and the airline names are the same.
+ *
+ * Exception: a saved direct code whose contract was retired (Delhi CIF,
+ * replaced by CI) gives way to the flight carrier when that carrier is the
+ * same airline and has a live contract. Otherwise the flight re-prices at 0.
  */
 export function resolveKnownBillingCustomerCode(input: {
   directCodes: Array<string | undefined>;
@@ -48,18 +52,34 @@ export function resolveKnownBillingCustomerCode(input: {
   isKnown: (code: string) => boolean;
   customerName?: (code: string) => string;
   operationalName?: string;
+  /** Has a contract that is not expired for the flight date. Omit to skip the check. */
+  hasLiveContract?: (code: string) => boolean;
 }): string {
   const direct = input.directCodes
     .map((code) => normalizeBillingCustomerCode(code))
     .filter((code): code is string => Boolean(code));
-  for (const code of direct) {
-    if (input.isKnown(code)) return code;
-  }
-
   const flight = input.flightCodes
     .map((code) => normalizeBillingCustomerCode(code))
     .filter((code): code is string => Boolean(code));
   const operationalName = String(input.operationalName ?? '');
+
+  for (const code of direct) {
+    if (!input.isKnown(code)) continue;
+    const hasLiveContract = input.hasLiveContract;
+    if (!hasLiveContract || hasLiveContract(code)) return code;
+    const directName = input.customerName?.(code) ?? '';
+    const replacement = flight.find((candidate) => {
+      if (candidate === code || !input.isKnown(candidate)) return false;
+      if (!hasLiveContract(candidate)) return false;
+      const candidateName = input.customerName?.(candidate) ?? '';
+      return (
+        sameBillingAirlineName(candidateName, operationalName) ||
+        sameBillingAirlineName(candidateName, directName)
+      );
+    });
+    return replacement ?? code;
+  }
+
   const cargoHint = /\bcargo\b|\bfreight\b/i.test(operationalName);
   for (const code of flight) {
     if (direct.includes(code) || !input.isKnown(code)) continue;

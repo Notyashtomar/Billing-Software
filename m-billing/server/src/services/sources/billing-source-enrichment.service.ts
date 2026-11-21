@@ -591,9 +591,25 @@ export class BillingSourceEnrichmentService {
     );
   }
 
+  /** A contract covering this date that was not marked expired (retired). */
+  private hasLiveContract(
+    cache: EnrichmentCache,
+    customerCode: string,
+    billingDate: Date,
+  ): boolean {
+    return (cache.contractsByCustomer.get(customerCode) ?? []).some(
+      (contract) =>
+        String((contract as { status?: string }).status ?? '').trim().toLowerCase() !==
+          'expired' &&
+        contract.priceValidFrom <= billingDate &&
+        contract.priceValidTo >= billingDate,
+    );
+  }
+
   private resolveCustomerCode(
     cache: EnrichmentCache,
     input: EnrichSourceInput,
+    billingDate: Date,
   ): string {
     const op = input.operationalData;
     const operationalName = String(
@@ -616,6 +632,7 @@ export class BillingSourceEnrichmentService {
       customerName: (code) =>
         String(cache.customersByCode.get(code)?.name ?? ''),
       operationalName,
+      hasLiveContract: (code) => this.hasLiveContract(cache, code, billingDate),
     });
     if (resolved && cache.customersByCode.has(resolved)) return resolved;
     if (resolved) return resolved;
@@ -741,8 +758,8 @@ export class BillingSourceEnrichmentService {
     const isAds = isAdsFamilySourceType(input.sourceType);
     const isRaf = input.sourceType === 'raf';
     // Resolve code via master + name hints for BHS and ADS (spaced FHR / missing codes).
-    const customerCode = this.resolveCustomerCode(cache, input);
     const billingDate = this.resolveBillingDate(input);
+    const customerCode = this.resolveCustomerCode(cache, input, billingDate);
     const customer = cache.customersByCode.get(customerCode) ?? null;
     const flightCategoryHint = String(
       input.operationalData.categoryOfFlight ??
