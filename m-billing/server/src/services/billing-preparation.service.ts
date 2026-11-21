@@ -1206,7 +1206,7 @@ export class BillingPreparationService {
     ctx: StationScopeContext,
     ids: string[],
     actor: BillingActor,
-  ): Promise<{ refreshed: number; failed: number; total: number }> {
+  ): Promise<{ refreshed: number; failed: number; total: number; keptRates: number }> {
     const objectIds = [
       ...new Set(
         ids
@@ -1215,7 +1215,7 @@ export class BillingPreparationService {
       ),
     ].map((id) => new Types.ObjectId(id));
     if (objectIds.length === 0) {
-      return { refreshed: 0, failed: 0, total: 0 };
+      return { refreshed: 0, failed: 0, total: 0, keptRates: 0 };
     }
 
     const docs = await this.preparationModel
@@ -1227,8 +1227,16 @@ export class BillingPreparationService {
       )
       .exec();
     if (docs.length === 0) {
-      return { refreshed: 0, failed: 0, total: 0 };
+      return { refreshed: 0, failed: 0, total: 0, keptRates: 0 };
     }
+
+    // Rates as saved, before the source reload and re-enrichment touch the rows.
+    const savedUnitPrice = new Map(
+      docs.map((doc) => [
+        String(doc._id),
+        Number((doc.rateMatch as { unitPrice?: unknown } | undefined)?.unitPrice),
+      ]),
+    );
 
     const periodYmds = docs.flatMap((doc) =>
       [doc.billingPeriodStart, doc.billingPeriodEnd]
@@ -1252,6 +1260,7 @@ export class BillingPreparationService {
 
     let refreshed = 0;
     let failed = 0;
+    let keptRates = 0;
     const ops: Array<{
       updateOne: {
         filter: { _id: Types.ObjectId };
@@ -1273,6 +1282,20 @@ export class BillingPreparationService {
           doc.status === 'invoiced' ||
           doc.status === 'rejected' ||
           Boolean(doc.invoiceDraftId);
+        // A row already priced on an invoice must not drop to "no rate" because
+        // a contract or price card was switched off. ADS and custom rows are
+        // excluded: 0 is a valid result there (package inclusive, user lines).
+        const sourceType = String(doc.sourceType ?? '').trim().toLowerCase();
+        const losesSavedRate =
+          linked &&
+          sourceType !== 'custom' &&
+          !isAdsFamilySourceType(doc.sourceType) &&
+          (savedUnitPrice.get(String(doc._id)) ?? 0) > 0 &&
+          !(Number(enriched.rateMatch.unitPrice) > 0);
+        if (losesSavedRate) {
+          keptRates += 1;
+          continue;
+        }
         if (linked) {
           this.applyEnrichedPricingInMemory(doc, enriched, { skipDuplicateCheck: true });
           doc.status = this.deriveStatusAfterRefresh(doc.validationResults, doc);
@@ -1324,12 +1347,13 @@ export class BillingPreparationService {
           action: 'refresh_by_ids',
           refreshed,
           failed,
+          keptRates,
           total: docs.length,
         },
       });
     }
 
-    return { refreshed, failed, total: docs.length };
+    return { refreshed, failed, total: docs.length, keptRates };
   }
 
   /** Re-apply enrichment and save; retry once on optimistic-lock VersionError. */
