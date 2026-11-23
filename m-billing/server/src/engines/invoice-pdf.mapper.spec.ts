@@ -96,6 +96,70 @@ describe('buildInvoicePdfInput — flight category', () => {
     expect(input.lines[0].amount).toBe(35183.25);
   });
 
+  it('prints the package rate and the technical fraction in Charged', () => {
+    const input = buildInvoicePdfInput({
+      header,
+      lines: [
+        {
+          ...bhsLine({
+            bhsPackageRate: 4222,
+            concessionPercent: 50,
+            concessionAppliedToUnitPrice: true,
+            flightScenario: 'technical',
+            usedQuantity: 2,
+            categoryOfFlight: 'International-Cargo',
+          }),
+          description: 'Charges for Technical handling',
+          quantity: 2,
+          unitPrice: 2111,
+          lineAmountExclTax: 4222,
+        },
+      ],
+    });
+    expect(input.lines[0].used).toBe(2);
+    expect(input.lines[0].charged).toBe(1);
+    expect(input.lines[0].unitPrice).toBe(4222);
+    expect(input.lines[0].amount).toBe(4222);
+  });
+
+  it('keeps the billed rate when an add-on sits on top of the SGHA percent', () => {
+    const input = buildInvoicePdfInput({
+      header,
+      lines: [
+        {
+          ...bhsLine({
+            bhsPackageRate: 1000,
+            concessionPercent: 50,
+            concessionAppliedToUnitPrice: true,
+            additionalChargePercent: 10,
+            usedQuantity: 2,
+          }),
+          description: 'Charges for Technical handling [beyond 75 minutes ground time]',
+          quantity: 2,
+          unitPrice: 550,
+          lineAmountExclTax: 1100,
+        },
+      ],
+    });
+    expect(input.lines[0].charged).toBe(2);
+    expect(input.lines[0].unitPrice).toBe(550);
+  });
+
+  it('prints International Cargo for an international-only cargo airline', () => {
+    const input = buildInvoicePdfInput({
+      header,
+      lines: [
+        bhsLine({
+          categoryOfFlight: 'International-Cargo',
+          categoriesOfFlight: ['International-Cargo'],
+        }),
+      ],
+      contractCategory: 'Int',
+      contractCategories: [],
+    });
+    expect(input.flightCategory).toBe('International Cargo');
+  });
+
   it('prints International for an international-only airline when the flight is International-Domestic', () => {
     const input = buildInvoicePdfInput({
       header,
