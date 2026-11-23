@@ -1333,7 +1333,7 @@ function renderLineItemsTable(doc: PDFKit.PDFDocument, input: InvoicePdfInput, s
         taxAddPlaced = true;
       }
       const usdWords = input.amountInWordsUsd
-        ? `Total Amount Receivable In Words- ${wordsWithPaisa(input.amountInWordsUsd)} (In USD) (Rounded Off)`
+        ? `Total Amount Receivable In Words- ${input.amountInWordsUsd.trim()} (In USD) (Rounded Off)`
         : 'Total Amount Receivable in USD (Rounded Off)';
       const usdWordsH = Math.max(
         invDim(24),

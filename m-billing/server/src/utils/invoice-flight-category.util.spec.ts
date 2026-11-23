@@ -38,6 +38,28 @@ describe('invoice-flight-category.util', () => {
     );
   });
 
+  it('keeps the cargo sector on freighter invoices', () => {
+    expect(resolveInvoiceFlightCategory(['International-Cargo'])).toBe('International Cargo');
+    expect(resolveInvoiceFlightCategory(['IntCargo', 'International Cargo'])).toBe(
+      'International Cargo',
+    );
+    expect(resolveInvoiceFlightCategory(['Domestic-Cargo'])).toBe('Domestic Cargo');
+    expect(resolveInvoiceFlightCategory(['International', 'International-Cargo'])).toBe(
+      'International & International Cargo',
+    );
+  });
+
+  it('prints International Cargo for an international-only cargo airline', () => {
+    const cargoAirline = { category: 'Int', categories: [] };
+    expect(resolveInvoiceFlightCategory(['International-Cargo'], cargoAirline)).toBe(
+      'International Cargo',
+    );
+    expect(resolveInvoiceFlightCategory(['Domestic-Cargo'], cargoAirline)).toBe(
+      'International Cargo',
+    );
+    expect(resolveInvoiceFlightCategory([], cargoAirline)).toBe('International');
+  });
+
   it('collects distinct categories across the records behind a line', () => {
     expect(
       categoriesOfFlightFromSnapshots([

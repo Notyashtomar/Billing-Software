@@ -1,5 +1,5 @@
 /**
- * Invoice "Flight Category" (Domestic / International) shown on the tax invoice.
+ * Invoice "Flight Category" (Domestic / International / … Cargo) shown on the tax invoice.
  *
  * Source of truth is the flight: FHR `Cate_of_Flight` → preparation
  * `operationalSnapshot.categoryOfFlight` → invoice line `sourceRef`.
@@ -56,14 +56,40 @@ export function isInternationalOnlyAirline(contract?: {
   return category === 'int' || category === 'international';
 }
 
-export function flightCategoryLabel(raw: string): 'Domestic' | 'International' | '' {
-  const normalized = normalizeFlightCategory(raw);
-  if (normalized === 'Dom') return 'Domestic';
-  if (normalized === 'Int') return 'International';
+export type InvoiceFlightCategoryLabel =
+  | 'Domestic'
+  | 'International'
+  | 'Domestic Cargo'
+  | 'International Cargo';
+
+/** FHR writes freighter sectors as "International-Cargo" / "Domestic-Cargo". */
+function isCargoFlightCategory(raw: string): boolean {
+  return /cargo/i.test(raw);
+}
+
+/** Cargo sectors keep their own label so a freighter invoice does not print as passenger. */
+export function flightCategoryLabel(raw: string): InvoiceFlightCategoryLabel | '' {
+  const cargo = isCargoFlightCategory(raw);
+  // "International-Cargo" must not be read as an arrival-departure pair.
+  const sector = cargo ? raw.replace(/[\s/_-]*cargo/gi, '') : raw;
+  const normalized = normalizeFlightCategory(sector);
+  if (normalized === 'Dom') return cargo ? 'Domestic Cargo' : 'Domestic';
+  if (normalized === 'Int') return cargo ? 'International Cargo' : 'International';
   return '';
 }
 
-/** Mixed-category invoices (Dom + Int flights in one period) show both. */
+const INVOICE_FLIGHT_CATEGORY_ORDER: InvoiceFlightCategoryLabel[] = [
+  'Domestic',
+  'International',
+  'Domestic Cargo',
+  'International Cargo',
+];
+
+/**
+ * Mixed-category invoices show every sector billed (Dom + Int, passenger + cargo).
+ * An international-only airline never prints Domestic, but its cargo flights
+ * still print International Cargo.
+ */
 export function resolveInvoiceFlightCategory(
   candidates: Array<string | undefined | null>,
   contract?: {
@@ -71,20 +97,21 @@ export function resolveInvoiceFlightCategory(
     categories?: Array<string | null | undefined> | null;
   } | null,
 ): string {
-  if (isInternationalOnlyAirline(contract)) return 'International';
-  let domestic = false;
-  let international = false;
+  const internationalAirline = isInternationalOnlyAirline(contract);
+  const seen = new Set<InvoiceFlightCategoryLabel>();
 
   for (const candidate of candidates) {
-    const label = flightCategoryLabel(String(candidate ?? ''));
-    if (label === 'Domestic') domestic = true;
-    else if (label === 'International') international = true;
+    let label = flightCategoryLabel(String(candidate ?? ''));
+    if (!label) continue;
+    if (internationalAirline) {
+      if (label === 'Domestic') label = 'International';
+      else if (label === 'Domestic Cargo') label = 'International Cargo';
+    }
+    seen.add(label);
   }
 
-  if (domestic && international) return 'Domestic & International';
-  if (international) return 'International';
-  if (domestic) return 'Domestic';
-  return '';
+  if (seen.size === 0) return internationalAirline ? 'International' : '';
+  return INVOICE_FLIGHT_CATEGORY_ORDER.filter((label) => seen.has(label)).join(' & ');
 }
 
 /** Distinct raw categories across preparation records backing one invoice line. */

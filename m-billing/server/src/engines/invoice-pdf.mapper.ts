@@ -15,7 +15,6 @@ import {
   type InvoiceConcessionTotals,
 } from '../utils/invoice-concession.util';
 import {
-  isInternationalOnlyAirline,
   pickCategoryOfFlight,
   resolveInvoiceFlightCategory,
 } from '../utils/invoice-flight-category.util';
@@ -405,19 +404,24 @@ function mapLine(
       ref.flightScenario != null
         ? ref.flightScenario === 'diverted'
         : /diverted/i.test(`${line.description ?? ''}`);
-    const divertedFactor =
+    const percentReplacesPackage =
       ref.concessionAppliedToUnitPrice === true &&
-      isDivertedLine &&
       packageRate != null &&
       replacementPercent > 0 &&
       replacementPercent < 100;
-    if (divertedFactor) {
-      // Diverted handling keeps the package rate in Rate/Unit. Charged is the
-      // contract fraction (25% prints as 0.25) and Amount is rate × charged.
+    // Technical, LIFO / FILO, return to ramp and the other SGHA percents replace
+    // the package the same way. A line that also carries an add-on (ground time,
+    // delay) no longer equals package × percent, so it keeps its own rate.
+    const percentOnlyUnitPrice =
+      percentReplacesPackage &&
+      Math.abs(storedUnitPrice - (packageRate * replacementPercent) / 100) <=
+        Math.max(0.02, packageRate * 0.0005);
+    if (percentReplacesPackage && (isDivertedLine || percentOnlyUnitPrice)) {
+      // Rate/Unit keeps the package rate. Charged is the contract fraction of the
+      // flights (two technical flights at 50% print as 1) and Amount is rate × charged.
       charged = round2(flightQty * (replacementPercent / 100));
       unitPrice = packageRate;
     } else {
-      // Other BHS percents stay inside Rate/Unit so Charged remains the flight count.
       charged = flightQty;
       unitPrice = storedUnitPrice;
     }
@@ -897,7 +901,7 @@ function inferFlightCategory(
   contractCategories?: Array<string | null | undefined> | null,
 ): string {
   const airline = { category: contractCategory, categories: contractCategories };
-  if (isInternationalOnlyAirline(airline)) return 'International';
+  // An international-only airline still prints International Cargo for freighter flights.
   const fromLines = resolveInvoiceFlightCategory(
     lines.flatMap((line) => {
       const ref = line.sourceRef ?? {};
@@ -907,6 +911,7 @@ function inferFlightCategory(
         : [];
       return [...listed, pickCategoryOfFlight(ref, snap)];
     }),
+    airline,
   );
   if (fromLines) return fromLines;
 
