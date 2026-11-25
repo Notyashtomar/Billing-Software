@@ -982,8 +982,10 @@ export function InvoiceDraftsPage({ api }: Props) {
         setActionMsg(`Could not download PDFs for ${month.label} — missing draft ids.`);
         return;
       }
-      const category = (selectedCategory ?? 'INVOICES').toUpperCase();
-      const fileName = `${category}-${month.key}-all-airlines.pdf`;
+      const category = (selectedCategory ?? 'invoices').toLowerCase();
+      const station = (stationCode || 'station').trim().toLowerCase();
+      const monthAbbr = monthAbbrevFromKey(month.key);
+      const fileName = `${station}-${category}-${monthAbbr}.pdf`;
       await api.downloadCombinedInvoicePdfs(ids, fileName);
       setActionMsg(
         `Downloaded combined ${category} PDF for ${month.label} — ${ids.length} invoice${ids.length === 1 ? '' : 's'} across ${month.airlineCount} airline${month.airlineCount === 1 ? '' : 's'}.`,
@@ -1922,6 +1924,29 @@ function draftPeriodYearMonth(invoice: BillingInvoiceHeader): string {
     return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
   }
   return 'unknown';
+}
+
+const MONTH_ABBREV = [
+  'jan',
+  'feb',
+  'mar',
+  'apr',
+  'may',
+  'jun',
+  'jul',
+  'aug',
+  'sept',
+  'oct',
+  'nov',
+  'dec',
+] as const;
+
+/** `2026-09` → `sept`. Unknown periods fall back to the raw key. */
+function monthAbbrevFromKey(yearMonth: string): string {
+  const match = /^(\d{4})-(\d{2})$/.exec(yearMonth);
+  if (!match) return yearMonth.replace(/[^a-z0-9]+/gi, '-').toLowerCase() || 'period';
+  const index = Number(match[2]) - 1;
+  return MONTH_ABBREV[index] ?? yearMonth;
 }
 
 function formatDraftMonthLabel(yearMonth: string): string {
