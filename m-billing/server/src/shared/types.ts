@@ -117,6 +117,7 @@ export interface BillingContract {
   royaltyInclusive?: boolean;
   /** Concession already inside the BHS package, charged separately, or mixed. */
   bhsConcessionCoverage?: 'comprehensive' | 'non_comprehensive' | 'mixed';
+  adsConcessionCoverage?: 'comprehensive' | 'non_comprehensive' | null;
   extendedRoyaltyEnabled?: boolean;
   bhsConcessionNote?: string;
   fortnightBillingEnabled?: boolean;

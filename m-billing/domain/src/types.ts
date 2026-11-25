@@ -93,6 +93,7 @@ export interface BillingContract {
   royaltyAtGross?: number;
   royaltyInclusive?: boolean;
   bhsConcessionCoverage?: 'comprehensive' | 'non_comprehensive' | 'mixed';
+  adsConcessionCoverage?: 'comprehensive' | 'non_comprehensive' | null;
   extendedRoyaltyEnabled?: boolean;
   bhsConcessionNote?: string;
   fortnightBillingEnabled?: boolean;

@@ -350,6 +350,16 @@ export class BillingContractsService {
     if (dto.bhsConcessionCoverage !== undefined) {
       doc.bhsConcessionCoverage = dto.bhsConcessionCoverage;
     }
+    if (dto.adsConcessionCoverage !== undefined) {
+      if (
+        dto.adsConcessionCoverage === 'comprehensive' ||
+        dto.adsConcessionCoverage === 'non_comprehensive'
+      ) {
+        doc.adsConcessionCoverage = dto.adsConcessionCoverage;
+      } else {
+        doc.set('adsConcessionCoverage', undefined);
+      }
+    }
     if (dto.extendedRoyaltyEnabled !== undefined) {
       doc.extendedRoyaltyEnabled = Boolean(dto.extendedRoyaltyEnabled);
     }

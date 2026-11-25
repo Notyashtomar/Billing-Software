@@ -318,6 +318,8 @@ export interface BillingContract {
   royaltyInclusive?: boolean;
   /** Concession inside the BHS package, charged separately, or mixed by schedule type. */
   bhsConcessionCoverage?: 'comprehensive' | 'non_comprehensive' | 'mixed';
+  /** Empty means ADS uses the same royalty treatment as BHS. */
+  adsConcessionCoverage?: 'comprehensive' | 'non_comprehensive' | null;
   /** Exclusive pricing only: royalty uses 18/(100−18) instead of 18/100. */
   extendedRoyaltyEnabled?: boolean;
   /** Percent applies to the billed amount (default) or to the AERA ceiling rate per flight. */

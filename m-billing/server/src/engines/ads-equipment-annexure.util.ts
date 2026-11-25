@@ -287,8 +287,7 @@ function ymdSortKey(rec: AdsAnnexurePrepRecord): string {
   return raw;
 }
 
-function chargedUnits(used: number, alwaysChargeable: boolean, freePerFlight: number): number {
-  if (alwaysChargeable) return toWholeAdsUnits(used);
+function chargedUnits(used: number, _alwaysChargeable: boolean, freePerFlight: number): number {
   const allowance = Number.isFinite(freePerFlight) && freePerFlight > 0 ? Math.floor(freePerFlight) : 0;
   return toWholeAdsUnits(Math.max(0, used - allowance));
 }
