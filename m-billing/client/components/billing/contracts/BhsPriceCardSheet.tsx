@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { Eye, Pencil, Trash2 } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { ChevronDown, Eye, Pencil, Trash2 } from 'lucide-react';
 import type { BillingContract, BillingPriceCardAirline } from '@/lib/billing-shared/types';
 import {
   listBhsPriceCardSheetRows,
@@ -25,6 +25,7 @@ const COLUMNS = [
 type Props = {
   entries: BillingPriceCardAirline[];
   contracts: BillingContract[];
+  handlingType?: string;
   onEdit: (entry: BillingPriceCardAirline) => void;
   onDelete: (entry: BillingPriceCardAirline) => void;
   onViewServices: (entry: BillingPriceCardAirline) => void;
@@ -42,6 +43,90 @@ function rowKey(row: BhsPriceCardSheetRow): string {
   ].join('|');
 }
 
+function SheetFilterSelect({
+  label,
+  value,
+  onChange,
+  options,
+  allLabel,
+  className,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: string[];
+  allLabel: string;
+  className?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointer = (event: MouseEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('mousedown', onPointer);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onPointer);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  const current = value || allLabel;
+
+  return (
+    <div ref={rootRef} className={`relative flex min-w-[9rem] flex-col gap-1 text-xs font-medium text-gray-600 ${className ?? ''}`}>
+      {label}
+      <button
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen((prev) => !prev)}
+        className="flex items-center justify-between gap-2 rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-left text-sm font-normal text-gray-900 hover:border-[color:var(--billing-primary)]"
+      >
+        <span className="truncate">{current}</span>
+        <ChevronDown className={`h-4 w-4 shrink-0 text-gray-500 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden />
+      </button>
+      {open ? (
+        <ul
+          role="listbox"
+          aria-label={label}
+          className="absolute left-0 right-0 top-full z-40 mt-1 max-h-60 overflow-y-auto rounded-lg border border-gray-200 bg-white py-1 shadow-lg"
+        >
+          {[{ value: '', label: allLabel }, ...options.map((option) => ({ value: option, label: option }))].map((option) => {
+            const selected = option.value === value;
+            return (
+              <li key={option.value || 'all'} role="presentation">
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={selected}
+                  onClick={() => {
+                    onChange(option.value);
+                    setOpen(false);
+                  }}
+                  className={`block w-full truncate px-3 py-1.5 text-left text-sm ${
+                    selected
+                      ? 'bg-[color:var(--billing-primary)] font-medium text-white'
+                      : 'text-gray-800 hover:bg-[color:var(--billing-accent-soft)]'
+                  }`}
+                >
+                  {option.label}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
+
 function formatPrice(price: number | null, currency: string): string {
   if (price == null) return '';
   const locale = currency === 'INR' ? 'en-IN' : 'en-US';
@@ -54,6 +139,7 @@ function formatPrice(price: number | null, currency: string): string {
 export function BhsPriceCardSheet({
   entries,
   contracts,
+  handlingType = 'BHS',
   onEdit,
   onDelete,
   onViewServices,
@@ -69,7 +155,7 @@ export function BhsPriceCardSheet({
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    void listBhsPriceCardSheetRows(entries, contracts, { onlyActive: false })
+    void listBhsPriceCardSheetRows(entries, contracts, { onlyActive: false, handlingType })
       .then((next) => {
         if (!cancelled) setRows(next);
       })
@@ -79,7 +165,7 @@ export function BhsPriceCardSheet({
     return () => {
       cancelled = true;
     };
-  }, [contracts, entries]);
+  }, [contracts, entries, handlingType]);
 
   useEffect(() => {
     if (selectedKey && !rows.some((row) => rowKey(row) === selectedKey)) {
@@ -169,78 +255,46 @@ export function BhsPriceCardSheet({
   return (
     <div>
       <div className="mb-3 flex flex-wrap items-end gap-3 rounded-xl border border-gray-200 bg-white p-3 shadow-sm">
-        <label className="flex min-w-[12rem] flex-1 flex-col gap-1 text-xs font-medium text-gray-600">
-          Airline name
-          <select
-            value={airlineNameFilter}
-            onChange={(event) => {
-              const value = event.target.value;
-              setAirlineNameFilter(value);
-              if (
-                value &&
-                aircraftTypeFilter &&
-                !rows.some(
-                  (row) => row.airlineName === value && row.aircraftType === aircraftTypeFilter,
-                )
-              ) {
-                setAircraftTypeFilter('');
-              }
-            }}
-            className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
-          >
-            <option value="">All airlines</option>
-            {airlineNameOptions.map((name) => (
-              <option key={name} value={name}>
-                {name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="flex min-w-[10rem] flex-1 flex-col gap-1 text-xs font-medium text-gray-600">
-          Aircraft type
-          <select
-            value={aircraftTypeFilter}
-            onChange={(event) => setAircraftTypeFilter(event.target.value)}
-            className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
-          >
-            <option value="">All aircraft</option>
-            {aircraftTypeOptions.map((aircraftType) => (
-              <option key={aircraftType} value={aircraftType}>
-                {aircraftType}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="flex min-w-[9rem] flex-col gap-1 text-xs font-medium text-gray-600">
-          Price type
-          <select
-            value={priceTypeFilter}
-            onChange={(event) => setPriceTypeFilter(event.target.value)}
-            className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
-          >
-            <option value="">All price types</option>
-            {priceTypeOptions.map((priceType) => (
-              <option key={priceType} value={priceType}>
-                {priceType}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="flex min-w-[8rem] flex-col gap-1 text-xs font-medium text-gray-600">
-          Currency
-          <select
-            value={currencyFilter}
-            onChange={(event) => setCurrencyFilter(event.target.value)}
-            className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
-          >
-            <option value="">All currencies</option>
-            {currencyOptions.map((currency) => (
-              <option key={currency} value={currency}>
-                {currency}
-              </option>
-            ))}
-          </select>
-        </label>
+        <SheetFilterSelect
+          label="Airline name"
+          value={airlineNameFilter}
+          allLabel="All airlines"
+          options={airlineNameOptions}
+          className="min-w-[12rem] flex-1"
+          onChange={(value) => {
+            setAirlineNameFilter(value);
+            if (
+              value &&
+              aircraftTypeFilter &&
+              !rows.some((row) => row.airlineName === value && row.aircraftType === aircraftTypeFilter)
+            ) {
+              setAircraftTypeFilter('');
+            }
+          }}
+        />
+        <SheetFilterSelect
+          label="Aircraft type"
+          value={aircraftTypeFilter}
+          allLabel="All aircraft"
+          options={aircraftTypeOptions}
+          className="min-w-[10rem] flex-1"
+          onChange={setAircraftTypeFilter}
+        />
+        <SheetFilterSelect
+          label="Price type"
+          value={priceTypeFilter}
+          allLabel="All price types"
+          options={priceTypeOptions}
+          onChange={setPriceTypeFilter}
+        />
+        <SheetFilterSelect
+          label="Currency"
+          value={currencyFilter}
+          allLabel="All currencies"
+          options={currencyOptions}
+          className="min-w-[8rem]"
+          onChange={setCurrencyFilter}
+        />
         {filtersActive ? (
           <button
             type="button"
@@ -300,9 +354,9 @@ export function BhsPriceCardSheet({
         </div>
       ) : (
       <>
-      <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
+      <div className="h-[calc(100dvh-19.5rem)] min-h-[18rem] overflow-auto rounded-xl border border-gray-200 bg-white shadow-sm">
         <table className="min-w-full divide-y divide-gray-200 text-sm">
-          <thead className="bg-[#1C0770] text-white">
+          <thead className="sticky top-0 z-10 bg-[#1C0770] text-white">
             <tr>
               {COLUMNS.map((column) => (
                 <th
