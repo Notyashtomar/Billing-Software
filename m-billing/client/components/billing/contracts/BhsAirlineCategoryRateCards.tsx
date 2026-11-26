@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Pencil, Plane, Trash2 } from 'lucide-react';
+import { Eye, Pencil, Plane, Trash2 } from 'lucide-react';
 import type { BillingContract, BillingPriceCardAirline, BillingRateCard } from '@/lib/billing-shared/types';
 import { formatPriceCardAirlineCategory, isOpenEndedBillingDate } from '@/lib/billing-shared/enums';
 import { formatBillingDate, formatBillingDateRange } from '@/lib/billing-shared/billing-date-format';
@@ -63,6 +63,7 @@ export function BhsAirlineCategoryRateCards({
   const [categoryFilter, setCategoryFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
 
   const tableRows = useMemo((): RateCardRow[] => {
     const rows: RateCardRow[] = [];
@@ -143,6 +144,7 @@ export function BhsAirlineCategoryRateCards({
   const hasActiveFilters = Boolean(
     aircraftFilter || categoryFilter || statusFilter || searchQuery.trim(),
   );
+  const selectedRow = filteredRows.find((row) => row.rowKey === selectedKey) ?? null;
 
   const clearFilters = () => {
     setAircraftFilter('');
@@ -258,6 +260,41 @@ export function BhsAirlineCategoryRateCards({
         ) : null}
       </div>
 
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          disabled={!selectedRow}
+          onClick={() => selectedRow && onEditEntry(selectedRow.entry)}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-[color:var(--billing-primary)] hover:bg-[color:var(--billing-accent-soft)] disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <Pencil className="h-4 w-4" aria-hidden />
+          Edit
+        </button>
+        <button
+          type="button"
+          disabled={!selectedRow}
+          onClick={() => selectedRow && onDeleteEntry(selectedRow.entry)}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <Trash2 className="h-4 w-4" aria-hidden />
+          Delete
+        </button>
+        <button
+          type="button"
+          disabled={!selectedRow}
+          onClick={() => selectedRow && onSelectEntry(selectedRow.entry)}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-[color:var(--billing-primary)] px-3 py-1.5 text-sm font-medium text-white hover:bg-[color:var(--billing-primary-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <Eye className="h-4 w-4" aria-hidden />
+          View services
+        </button>
+        <p className="text-xs text-gray-500">
+          {selectedRow
+            ? `${selectedRow.aircraftType} · ${selectedRow.categoryLabel}`
+            : 'Select a price row, then edit, delete, or view its services.'}
+        </p>
+      </div>
+
       <div className="billing-table-scroll rounded-xl border border-gray-200 bg-white shadow-sm">
         <table className="min-w-full divide-y divide-gray-200 text-sm">
           <thead className="bg-gray-50">
@@ -287,15 +324,12 @@ export function BhsAirlineCategoryRateCards({
               <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
                 Price validity
               </th>
-              <th className="px-3 py-2.5 text-right text-xs font-semibold uppercase tracking-wide text-gray-600">
-                Actions
-              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {filteredRows.length === 0 ? (
               <tr>
-                <td colSpan={showPackageColumn ? 8 : 6} className="px-4 py-10 text-center text-sm text-gray-500">
+                <td colSpan={showPackageColumn ? 7 : 5} className="px-4 py-10 text-center text-sm text-gray-500">
                   No rate cards match your filters.
                 </td>
               </tr>
@@ -303,7 +337,18 @@ export function BhsAirlineCategoryRateCards({
               filteredRows.map((row) => {
                 const expired = isPriceCardEntryExpired(row.entry, contracts);
                 return (
-                <tr key={row.rowKey} className={expired ? 'bg-red-50/70 hover:bg-red-50' : 'hover:bg-gray-50'}>
+                <tr
+                  key={row.rowKey}
+                  onClick={() => setSelectedKey(selectedKey === row.rowKey ? null : row.rowKey)}
+                  aria-selected={selectedKey === row.rowKey}
+                  className={
+                    selectedKey === row.rowKey
+                      ? 'cursor-pointer bg-[color:var(--billing-accent-soft)]'
+                      : expired
+                        ? 'cursor-pointer bg-red-50/70 hover:bg-red-50'
+                        : 'cursor-pointer hover:bg-gray-50'
+                  }
+                >
                   <td className="px-3 py-2.5">
                     <div className="font-medium text-gray-900">{row.aircraftType}</div>
                   </td>
@@ -377,35 +422,6 @@ export function BhsAirlineCategoryRateCards({
                       openEndedTo:
                         row.entry.openEnded || isOpenEndedBillingDate(row.entry.validTo),
                     })}
-                  </td>
-                  <td className="px-3 py-2.5 text-right">
-                    <div className="inline-flex items-center justify-end gap-1">
-                      <button
-                        type="button"
-                        onClick={() => onEditEntry(row.entry)}
-                        className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-[color:var(--billing-primary)] shadow-xs transition-colors hover:border-[color:var(--billing-accent)] hover:bg-[color:var(--billing-accent-soft)]"
-                        aria-label={`Edit ${row.aircraftType} ${row.categoryLabel} rate card`}
-                        title="Edit"
-                      >
-                        <Pencil className="h-4 w-4" aria-hidden />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => onDeleteEntry(row.entry)}
-                        className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-red-200 bg-white text-red-600 shadow-xs transition-colors hover:bg-red-50"
-                        aria-label={`Delete ${row.aircraftType} ${row.categoryLabel} rate card`}
-                        title="Delete"
-                      >
-                        <Trash2 className="h-4 w-4" aria-hidden />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => onSelectEntry(row.entry)}
-                        className="ml-1 text-sm font-semibold text-[color:var(--billing-primary)] hover:underline"
-                      >
-                        View services →
-                      </button>
-                    </div>
                   </td>
                 </tr>
                 );

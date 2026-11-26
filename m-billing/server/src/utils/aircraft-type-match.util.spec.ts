@@ -26,6 +26,26 @@ describe('aircraft-type-match.util', () => {
     expect(aircraftTokenMatchesFlight('A321-200', 'A320')).toBe(false);
   });
 
+  it('uses the airline parent or similar price-card type for a flight variant', () => {
+    expect(aircraftTokenMatchesFlight('A321', 'A321-200')).toBe(true);
+    expect(aircraftTokenMatchesFlight('A320-200', 'A320')).toBe(true);
+    expect(aircraftTokenMatchesFlight('B787-9', 'B787-900')).toBe(true);
+    expect(aircraftTokenMatchesFlight('A20N', 'A320')).toBe(true);
+    expect(aircraftTokenMatchesFlight('B38M', 'B737-800')).toBe(true);
+    expect(aircraftTokenMatchesFlight('B777F', 'B777')).toBe(true);
+    expect(aircraftTokenMatchesFlight('B737-800', 'B737 MAX')).toBe(false);
+    expect(
+      pickBestRateCardForFlight(
+        [
+          { aircraftType: 'A320', category: 'Int', validFrom: '2026-01-01' },
+          { aircraftType: 'A321-200', category: 'Int', validFrom: '2026-01-01' },
+        ],
+        'A321',
+        'Int',
+      )?.aircraftType,
+    ).toBe('A321-200');
+  });
+
   it('prefers the longest matching aircraft token', () => {
     const cards = [
       { aircraftType: 'B737', serviceCode: 'TRND', validFrom: '2026-01-01' },

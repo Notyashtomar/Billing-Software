@@ -33,7 +33,8 @@ const TITLE_FILL = 'FF261CC1';
 const BAND_A = 'FFF7F8FC';
 const BAND_B = 'FFEEF2FF';
 
-type ExportRow = {
+export type BhsPriceCardSheetRow = {
+  entryId: string;
   station: string;
   airlineCode: string;
   airlineName: string;
@@ -119,19 +120,23 @@ function priceTypeLabel(
   return label === '—' ? '' : label;
 }
 
-function buildRows(
+export function buildBhsPriceCardSheetRows(
   entries: BillingPriceCardAirline[],
   contracts: BillingContract[],
   aircraftBodies: Map<string, 'NB' | 'WB'>,
-): ExportRow[] {
-  const rows: ExportRow[] = [];
+  options?: { onlyActive?: boolean },
+): BhsPriceCardSheetRow[] {
+  const onlyActive = options?.onlyActive !== false;
+  const rows: BhsPriceCardSheetRow[] = [];
   for (const entry of entries) {
-    if (entry.handlingType !== 'BHS' || entry.active === false) continue;
+    if (entry.handlingType !== 'BHS') continue;
+    if (onlyActive && entry.active === false) continue;
     const aircraftTypes = displayAircraftTypesForPriceCardEntry(entry);
     const price =
       entry.price != null && Number.isFinite(entry.price) ? entry.price : null;
     for (const aircraftType of aircraftTypes) {
       rows.push({
+        entryId: entry._id,
         station: String(entry.stationCode ?? '').trim().toUpperCase(),
         airlineCode: entry.customerCode.trim().toUpperCase(),
         airlineName: entry.airlineName.trim() || entry.customerCode.trim().toUpperCase(),
@@ -178,6 +183,15 @@ function buildRows(
     );
 }
 
+export async function listBhsPriceCardSheetRows(
+  entries: BillingPriceCardAirline[],
+  contracts: BillingContract[],
+  options?: { onlyActive?: boolean },
+): Promise<BhsPriceCardSheetRow[]> {
+  const aircraftBodies = await loadAircraftBodyCatalog();
+  return buildBhsPriceCardSheetRows(entries, contracts, aircraftBodies, options);
+}
+
 function cellText(value: string | number | null | undefined): string {
   if (value == null) return '';
   return String(value);
@@ -195,7 +209,7 @@ export async function exportBhsPriceCardsToExcel(
   contracts: BillingContract[],
 ): Promise<void> {
   const aircraftBodies = await loadAircraftBodyCatalog();
-  const rows = buildRows(entries, contracts, aircraftBodies);
+  const rows = buildBhsPriceCardSheetRows(entries, contracts, aircraftBodies);
   if (rows.length === 0) {
     throw new Error('No BHS price cards to export for this station.');
   }

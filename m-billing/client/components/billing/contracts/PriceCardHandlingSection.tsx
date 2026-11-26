@@ -16,6 +16,7 @@ import {
 import Link from 'next/link';
 import { AddPriceCardAirlineDialog } from './AddPriceCardAirlineDialog';
 import { BhsAirlineCardGrid } from './BhsAirlineCardGrid';
+import { BhsPriceCardSheet } from './BhsPriceCardSheet';
 import { BhsAirlineCategoryRateCards } from './BhsAirlineCategoryRateCards';
 import { PriceCardAirlineDeleteDialog } from './PriceCardAirlineDeleteDialog';
 import { PriceCardImportDialog } from './PriceCardImportDialog';
@@ -131,7 +132,7 @@ function HandlingCategoryCard({
         {PRICE_CARD_HANDLING_DESCRIPTIONS[handling]}
       </p>
       <span className="mt-4 text-sm font-semibold text-[color:var(--billing-secondary)] group-hover:underline">
-        Open airlines →
+        {handling === 'BHS' ? 'Open prices →' : 'Open airlines →'}
       </span>
     </button>
   );
@@ -298,6 +299,7 @@ export function PriceCardHandlingSection({
 
   const filteredEntries = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
+    const matchAirlinePrefix = selectedHandling === 'BHS';
     return namedEntries.filter((entry) => {
       if (airlineFilter && entry.customerCode.trim().toUpperCase() !== airlineFilter) {
         return false;
@@ -312,6 +314,12 @@ export function PriceCardHandlingSection({
       if (statusFilter === 'active' && expired) return false;
       if (statusFilter === 'expired' && !expired) return false;
       if (!query) return true;
+
+      if (matchAirlinePrefix) {
+        const code = entry.customerCode.trim().toLowerCase();
+        const name = entry.airlineName.trim().toLowerCase();
+        return code.startsWith(query) || name.startsWith(query);
+      }
 
       const haystack = [
         entry.customerCode,
@@ -328,7 +336,15 @@ export function PriceCardHandlingSection({
 
       return haystack.includes(query);
     });
-  }, [aircraftTypeFilter, airlineFilter, contracts, namedEntries, searchQuery, statusFilter]);
+  }, [
+    aircraftTypeFilter,
+    airlineFilter,
+    contracts,
+    namedEntries,
+    searchQuery,
+    selectedHandling,
+    statusFilter,
+  ]);
 
   const hasActiveAirlineFilters = Boolean(
     airlineFilter || aircraftTypeFilter || statusFilter || searchQuery.trim(),
@@ -336,14 +352,13 @@ export function PriceCardHandlingSection({
 
   const isBhsAirlinesView = selectedHandling === 'BHS';
   const isAdsAirlinesView = selectedHandling === 'ADS';
-  const usesAirlineCardGrid = isBhsAirlinesView || isAdsAirlinesView;
+  const usesAirlineCardGrid = isAdsAirlinesView;
+  const showsAirlineFilters = isBhsAirlinesView || usesAirlineCardGrid;
 
   const airlineGroups = useMemo(() => {
     if (!usesAirlineCardGrid) return [];
     return groupBhsPriceCardAirlines(filteredEntries);
   }, [filteredEntries, usesAirlineCardGrid]);
-
-  const bhsAirlineGroups = airlineGroups;
 
   const clearAirlineFilters = () => {
     setAirlineFilter('');
@@ -553,7 +568,7 @@ export function PriceCardHandlingSection({
                 {exportingPriceCard ? 'Exporting…' : 'Export price card'}
               </button>
             ) : null}
-            {usesAirlineCardGrid ? (
+            {showsAirlineFilters ? (
               <button
                 type="button"
                 onClick={() => setImportOpen(true)}
@@ -672,14 +687,14 @@ export function PriceCardHandlingSection({
           </div>
         ) : null}
 
-        {!loadingEntries && entries.length > 0 && usesAirlineCardGrid ? (
+        {!loadingEntries && entries.length > 0 && showsAirlineFilters ? (
           <div className="mb-4 flex flex-wrap items-center gap-2">
             <input
               type="search"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search airlines…"
-              aria-label="Search airlines"
+              placeholder={isBhsAirlinesView ? 'Airline code or name' : 'Search airlines…'}
+              aria-label={isBhsAirlinesView ? 'Search price rows' : 'Search airlines'}
               className="w-full max-w-sm rounded-lg border border-gray-300 px-3 py-2 text-sm"
             />
             <div
@@ -735,7 +750,7 @@ export function PriceCardHandlingSection({
         <MissingRateCardAircraftReminder
           stationCode={stationCode}
           handlingType={selectedHandling}
-          part={!loadingEntries && entries.length > 0 && usesAirlineCardGrid ? 'panel' : undefined}
+          part={!loadingEntries && entries.length > 0 && showsAirlineFilters ? 'panel' : undefined}
           open={gapsOpen}
           onOpenChange={setGapsOpen}
         />
@@ -758,11 +773,9 @@ export function PriceCardHandlingSection({
               Add airline
             </button>
           </div>
-        ) : filteredEntries.length === 0 || (isBhsAirlinesView && bhsAirlineGroups.length === 0) ? (
+        ) : filteredEntries.length === 0 ? (
           <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 px-4 py-10 text-center">
-            <p className="text-sm font-medium text-gray-800">
-              {isBhsAirlinesView ? 'No airlines match your filters' : 'No rows match your filters'}
-            </p>
+            <p className="text-sm font-medium text-gray-800">No rows match your filters</p>
             <p className="mt-1 text-xs text-gray-500">
               Try a different airline, aircraft type, or search term.
             </p>
@@ -774,6 +787,14 @@ export function PriceCardHandlingSection({
               Clear filters
             </button>
           </div>
+        ) : isBhsAirlinesView ? (
+          <BhsPriceCardSheet
+            entries={filteredEntries}
+            contracts={contracts}
+            onEdit={openEditDialog}
+            onDelete={openDeleteDialog}
+            onViewServices={onSelectCustomer}
+          />
         ) : usesAirlineCardGrid ? (
           <BhsAirlineCardGrid
             groups={airlineGroups}
@@ -781,6 +802,7 @@ export function PriceCardHandlingSection({
             onOpenRateCards={openRateCardsForGroup}
             missingAircraftCounts={missingAircraftCounts}
             serviceLabel={`${selectedHandling} service`}
+            showPackagePrice={selectedHandling === 'BHS'}
           />
         ) : (
           <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">

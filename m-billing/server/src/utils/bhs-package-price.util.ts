@@ -1,4 +1,5 @@
 import {
+  aircraftTokenMatchesFlight,
   normalizeStoredFlightCategory,
   pickBestRateCardForFlight,
   rateCardMatchesFlightCategory,
@@ -209,6 +210,18 @@ export function pickBhsPackagePriceEntry(
     (entry) => entry.price != null && Number.isFinite(Number(entry.price)) && Number(entry.price) > 0,
   );
   if (priced.length === 0) return null;
+
+  if (/cargo/i.test(categoryOfFlight)) {
+    const family = bhsAircraftFamily(flightAircraft);
+    const freighterHits = priced.filter((entry) => {
+      const compact = compactAircraft(entry.aircraftType);
+      if (!compact.endsWith('F') || compact.includes('P2F')) return false;
+      if (family && compact.includes(family)) return true;
+      return aircraftTokenMatchesFlight(flightAircraft, entry.aircraftType);
+    });
+    if (freighterHits.length === 1) return freighterHits[0];
+    if (freighterHits.length > 1) return pickBaseHandlingBand(freighterHits, categoryOfFlight);
+  }
 
   const aircraftMatches = collectAircraftMatches(priced, flightAircraft, categoryOfFlight);
   if (aircraftMatches.length === 1) return aircraftMatches[0];
