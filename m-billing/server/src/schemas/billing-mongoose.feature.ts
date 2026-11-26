@@ -26,6 +26,8 @@ import {
   BillingKycCaseSchema,
   BillingUldSheet,
   BillingUldSheetSchema,
+  BillingEbcCollection,
+  BillingEbcCollectionSchema,
   BillingParallelRunSnapshot,
   BillingParallelRunSnapshotSchema,
   BillingPreparationRecord,
@@ -151,6 +153,11 @@ export const billingMongooseFeature = {
       name: BillingUldSheet.name,
       schema: BillingUldSheetSchema,
       value: BillingDocType.UldSheet,
+    },
+    {
+      name: BillingEbcCollection.name,
+      schema: BillingEbcCollectionSchema,
+      value: BillingDocType.EbcCollection,
     },
     {
       name: BillingAeraTariff.name,

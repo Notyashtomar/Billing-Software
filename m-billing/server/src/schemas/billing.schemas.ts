@@ -2032,6 +2032,103 @@ export class BillingUldSheet {
 }
 
 export const BillingUldSheetSchema = SchemaFactory.createForClass(BillingUldSheet);
+
+/** One airline's excess-baggage collection register for one station-month. */
+@Schema({ timestamps: true })
+export class BillingEbcCollection {
+  @Prop({ required: true, uppercase: true, trim: true })
+  stationCode: string;
+
+  /** YYYY-MM */
+  @Prop({ required: true, trim: true })
+  month: string;
+
+  /** IATA designator, e.g. QP or VJ. */
+  @Prop({ required: true, uppercase: true, trim: true })
+  airline: string;
+
+  /** qp: kg × rate collection. vj: ancillary register with daily UPI / cash / card totals. */
+  @Prop({ required: true, enum: ['qp', 'vj'] })
+  layout: 'qp' | 'vj';
+
+  @Prop({
+    type: [
+      {
+        date: { type: String, default: '' },
+        flightNo: { type: String, default: '' },
+        passengerName: { type: String, default: '' },
+        pnr: { type: String, default: '' },
+        receiptNo: { type: String, default: '' },
+        chargeType: { type: String, default: '' },
+        quantity: { type: String, default: '' },
+        rate: { type: Number, default: null },
+        amount: { type: Number, default: null },
+        tax: { type: Number, default: null },
+        total: { type: Number, default: null },
+        paymentMode: { type: String, default: '' },
+        paymentNote: { type: String, default: '' },
+      },
+    ],
+    default: [],
+  })
+  rows: Array<{
+    date: string;
+    flightNo: string;
+    passengerName: string;
+    pnr: string;
+    receiptNo: string;
+    chargeType: string;
+    quantity: string;
+    rate: number | null;
+    amount: number | null;
+    tax: number | null;
+    total: number | null;
+    paymentMode: string;
+    paymentNote: string;
+  }>;
+
+  @Prop({
+    type: [
+      {
+        date: { type: String, default: '' },
+        upi: { type: Number, default: null },
+        cash: { type: Number, default: null },
+        card: { type: Number, default: null },
+        total: { type: Number, default: null },
+      },
+    ],
+    default: [],
+  })
+  dailyTotals: Array<{
+    date: string;
+    upi: number | null;
+    cash: number | null;
+    card: number | null;
+    total: number | null;
+  }>;
+
+  @Prop({
+    type: {
+      upi: { type: Number, default: null },
+      cash: { type: Number, default: null },
+      card: { type: Number, default: null },
+      total: { type: Number, default: null },
+    },
+    default: null,
+  })
+  monthSplit: {
+    upi: number | null;
+    cash: number | null;
+    card: number | null;
+    total: number | null;
+  } | null;
+}
+
+export const BillingEbcCollectionSchema = SchemaFactory.createForClass(BillingEbcCollection);
+BillingEbcCollectionSchema.index(
+  { stationCode: 1, month: 1, airline: 1 },
+  { unique: true, partialFilterExpression: { docType: BillingDocType.EbcCollection } },
+);
 BillingUldSheetSchema.index(
   { stationCode: 1, month: 1, airline: 1 },
   { unique: true, partialFilterExpression: { docType: BillingDocType.UldSheet } },

@@ -627,7 +627,9 @@ export function buildInvoicePdfInput(params: BuildInvoicePdfInputParams): Invoic
   const lineServiceCode =
     headerCategory === 'ADS' || headerCatRaw === 'CUSTOM'
       ? 'ADS'
-      : resolveInvoiceServiceCode(lines, airport.serviceCode);
+      : headerCatRaw === 'EBC'
+        ? 'EBC'
+        : resolveInvoiceServiceCode(lines, airport.serviceCode);
   const sacCode = catalogSac || airport.sacCode;
   const serviceCode = lineServiceCode || airport.serviceCode;
 

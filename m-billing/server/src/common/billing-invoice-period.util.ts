@@ -44,7 +44,7 @@ export function preparationListPeriodFilter(
 /** Invoice category for draft grouping — keeps ADS tax invoices separate from BHS. */
 export function preparationInvoiceCategory(
   sourceType: string | undefined,
-): 'BHS' | 'ADS' | 'RAF' | 'CUSTOM' | 'MAAS' | 'OTHER' {
+): 'BHS' | 'ADS' | 'RAF' | 'CUSTOM' | 'MAAS' | 'EBC' | 'OTHER' {
   const t = String(sourceType ?? '').trim().toLowerCase();
   if (t === 'scheduled_flight') return 'BHS';
   if (t === 'ads' || t === 'equipment' || t === 'manpower' || t === 'cleaning') {
@@ -53,6 +53,7 @@ export function preparationInvoiceCategory(
   if (t === 'raf') return 'RAF';
   if (t === 'custom') return 'CUSTOM';
   if (t === 'maas') return 'MAAS';
+  if (t === 'ebc') return 'EBC';
   return 'OTHER';
 }
 

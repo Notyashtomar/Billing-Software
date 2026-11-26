@@ -967,7 +967,13 @@ function royaltyContractForInvoice<T extends InvoiceChargeContractShape>(
 function isNonBhsInvoiceConcession(options?: InvoiceCurrencyTaxOptions): boolean {
   if (options?.adsConcession) return true;
   const category = invoiceCategoryCode(options);
-  return category === 'ADS' || category === 'RAF' || category === 'CUSTOM' || category === 'MAAS';
+  return (
+    category === 'ADS' ||
+    category === 'RAF' ||
+    category === 'CUSTOM' ||
+    category === 'MAAS' ||
+    category === 'EBC'
+  );
 }
 
 export type InvoiceConcessionTotals = {

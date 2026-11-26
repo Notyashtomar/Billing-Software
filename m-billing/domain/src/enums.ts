@@ -67,6 +67,7 @@ export const PREPARATION_SOURCE_TYPES = [
   'manpower',
   'non_scheduled',
   'custom',
+  'ebc',
 ] as const;
 export type PreparationSourceType = (typeof PREPARATION_SOURCE_TYPES)[number];
 

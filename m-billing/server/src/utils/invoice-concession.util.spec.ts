@@ -108,6 +108,32 @@ describe('late arrival / departure clock', () => {
     ).toBe(50);
   });
 
+  it('does not treat an arrival the previous calendar day as a long delay', () => {
+    expect(
+      lateArrivalMinutes(
+        line({
+          staDate: '27/10/2026',
+          staTime: '12:20',
+          ataDate: '2026-10-26',
+          ataTime: '22:56',
+        }),
+      ),
+    ).toBe(0);
+  });
+
+  it('does not turn an afternoon schedule and an after-midnight departure into a long delay', () => {
+    expect(
+      lateDepartureMinutes(
+        line({
+          stdDate: '2026-10-27',
+          stdTime: '13:50',
+          atdDate: '2026-10-27',
+          atdTime: '00:29',
+        }),
+      ),
+    ).toBe(0);
+  });
+
   it('does not bill an early arrival before midnight as a 23-hour delay', () => {
     // STA 00:30, landed 23:50 the previous evening but the sheet kept the STA date.
     const early = line({

@@ -38,7 +38,7 @@ function clause(label, body, appliesTo = ['BHS', 'ADS']) {
   return { clauseType: 'sgha', label, body, appliesTo };
 }
 
-const IX_AIRCRAFT = ['A320', 'B737', 'B737-8 MAX'];
+const IX_AIRCRAFT = ['A320', 'A321', 'B737', 'B737-800', 'B737-8 MAX'];
 const I5_AIRCRAFT = ['A319', 'A320', 'A321'];
 const QP_AIRCRAFT = ['B737-8 MAX', 'B737 MAX 200'];
 
