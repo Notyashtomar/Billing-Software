@@ -2350,7 +2350,9 @@ export class BillingInvoiceDraftsService {
   }
 
   /**
-   * Convert line amounts to INR when needed, then apply concession and CGST/SGST on the INR gross.
+   * USD invoices keep Rate/Unit, line amounts, concession, and gross in USD.
+   * The USD gross is converted with the master ROE, then CGST and SGST are
+   * calculated on that INR amount. Their sum is the INR receivable.
    */
   async setTotalReceivableInInr(
     ctx: StationScopeContext,
@@ -2363,14 +2365,12 @@ export class BillingInvoiceDraftsService {
         'Invoice receivable currency cannot be changed in its current status',
       );
     }
-    if (header.currencyCode !== 'INR') {
-      return this.convertToInr(ctx, id, actor);
-    }
 
     header.totalReceivableInUsd = false;
     await this.recalculateHeader(header, ctx);
     await this.audit(ctx, header._id, 'updated', actor, {
       totalReceivableInInr: true,
+      currencyCode: header.currencyCode,
       currencyFactor: header.currencyFactor,
     });
     return this.findOne(ctx, id);

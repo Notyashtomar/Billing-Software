@@ -852,7 +852,6 @@ export function ContractAdsEquipmentRulesEditor({
                   </tr>
                 ) : null}
                 {displayRules.map((rule, index) => {
-                  const selectedAircraft = selectedAircraftForUi(rule, aircraftTypes);
                   const wheelchair = isWheelchairAdsService(rule.serviceCode);
                   const freeDisabled = disabled;
                   return (
@@ -995,18 +994,12 @@ export function ContractAdsEquipmentRulesEditor({
                             Pick aircraft types on the contract first.
                           </p>
                         ) : (
-                          <CompactAircraftDropdown
-                            aircraftTypes={aircraftTypes}
-                            selected={selectedAircraft}
-                            disabled={disabled}
-                            labelledBy={`Aircraft types row ${index + 1}`}
-                            onChange={(next) =>
-                              updateRule(index, {
-                                aircraftTypes: next,
-                                aircraftType: undefined,
-                              })
-                            }
-                          />
+                          <p
+                            className="min-w-[8rem] text-xs leading-5 text-gray-700"
+                            title={aircraftTypes.join(', ')}
+                          >
+                            {aircraftTypes.join(', ')}
+                          </p>
                         )}
                       </td>
                       <td className="px-1 py-2 text-center">

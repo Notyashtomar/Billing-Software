@@ -18,6 +18,14 @@ function stationCodeOf(station: StationRecord): string {
   return (station.stationCode || station.code || '').trim().toUpperCase();
 }
 
+/** A saved invoice, contract, or KYC case belongs to one station. */
+function pathAfterStationChange(pathname: string): string {
+  if (/^\/billing\/invoices\/[^/]+$/.test(pathname)) return '/billing/invoice-drafts';
+  if (/^\/billing\/contracts\/(?!new$)[^/]+$/.test(pathname)) return '/billing/contracts';
+  if (/^\/billing\/kyc\/(?!invite\/)[^/]+$/.test(pathname)) return '/billing/kyc';
+  return pathname;
+}
+
 export function ChangeStationDialog({ open, currentCode, onClose }: Props) {
   const [stations, setStations] = useState<StationRecord[]>([]);
   const [loading, setLoading] = useState(false);
@@ -95,7 +103,12 @@ export function ChangeStationDialog({ open, currentCode, onClose }: Props) {
         stationName: station.name,
         stationCity: station.city,
       });
-      window.location.reload();
+      const nextPath = pathAfterStationChange(window.location.pathname);
+      if (nextPath === window.location.pathname) {
+        window.location.reload();
+      } else {
+        window.location.assign(nextPath);
+      }
     } catch (err: unknown) {
       setPendingCode(null);
       setError(err instanceof Error ? err.message : 'Could not change station.');
