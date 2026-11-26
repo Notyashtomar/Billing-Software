@@ -1848,7 +1848,7 @@ function isAdsHalfHourUom(uom: unknown): boolean {
 function isAdsHourlyUom(uom: unknown): boolean {
   const raw = String(uom ?? '').trim();
   if (!raw || isAdsHalfHourUom(raw) || isAdsFifteenMinuteUom(raw)) return false;
-  if (/^hr$/i.test(raw) || /per\s*hour/i.test(raw)) return true;
+  if (/^hr$/i.test(raw) || /per\s*hour/i.test(raw) || /per\s*60\s*minutes?\b/i.test(raw)) return true;
   return /\bhour\b/i.test(raw);
 }
 
