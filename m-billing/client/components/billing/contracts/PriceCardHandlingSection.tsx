@@ -15,7 +15,6 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { AddPriceCardAirlineDialog } from './AddPriceCardAirlineDialog';
-import { BhsAirlineCardGrid } from './BhsAirlineCardGrid';
 import { BhsPriceCardSheet } from './BhsPriceCardSheet';
 import { BhsAirlineCategoryRateCards } from './BhsAirlineCategoryRateCards';
 import { PriceCardAirlineDeleteDialog } from './PriceCardAirlineDeleteDialog';
@@ -44,7 +43,6 @@ import {
   countCustomersForHandling,
   countRateCardsForPriceCardEntry,
   applyCustomerNamesToPriceCardAirlines,
-  groupBhsPriceCardAirlines,
   listPriceCardEntriesInAircraftPeriod,
   type BhsAirlineCardGroup,
 } from '@/lib/billing-shared/price-card-handling';
@@ -195,7 +193,6 @@ export function PriceCardHandlingSection({
   navLevel,
   onSelectHandling,
   onSelectCustomer,
-  onOpenAirline,
   onBackToCategories,
   onBackToAirlines,
   onBackToAirlineRateCards,
@@ -351,14 +348,7 @@ export function PriceCardHandlingSection({
   );
 
   const isBhsAirlinesView = selectedHandling === 'BHS';
-  const isAdsAirlinesView = selectedHandling === 'ADS';
-  const usesAirlineCardGrid = isAdsAirlinesView;
-  const showsAirlineFilters = isBhsAirlinesView || usesAirlineCardGrid;
-
-  const airlineGroups = useMemo(() => {
-    if (!usesAirlineCardGrid) return [];
-    return groupBhsPriceCardAirlines(filteredEntries);
-  }, [filteredEntries, usesAirlineCardGrid]);
+  const showsAirlineFilters = true;
 
   const clearAirlineFilters = () => {
     setAirlineFilter('');
@@ -370,10 +360,6 @@ export function PriceCardHandlingSection({
   const openAddAirline = () => {
     setAddDialogCustomerCode(null);
     setAssignOpen(true);
-  };
-
-  const openRateCardsForGroup = (group: BhsAirlineCardGroup) => {
-    onOpenAirline(group);
   };
 
   const openAddRateCardForGroup = (group: BhsAirlineCardGroup) => {
@@ -581,111 +567,10 @@ export function PriceCardHandlingSection({
           </div>
         </div>
 
-        {!isBhsAirlinesView ? (
-          <div className="mb-3">
-            <h2 className="text-sm font-semibold text-gray-900">
-              {PRICE_CARD_HANDLING_LABELS[selectedHandling]}
-            </h2>
-            <p className="mt-0.5 text-xs text-gray-500">
-              {PRICE_CARD_HANDLING_DESCRIPTIONS[selectedHandling]}
-            </p>
-          </div>
-        ) : null}
-
         {selectedHandling === 'RAF' ? (
           <RafAdhocRatesPanel api={api} onError={onError} onSuccess={onSuccess} />
         ) : null}
 
-        {!loadingEntries && entries.length > 0 && !isBhsAirlinesView ? (
-          <div className="mb-4 flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-            <div className="flex flex-wrap items-end gap-3">
-              <label className="flex min-w-[10rem] flex-1 flex-col gap-1 text-xs font-medium text-gray-600 sm:max-w-[14rem]">
-                Airline
-                <select
-                  value={airlineFilter}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    setAirlineFilter(value);
-                    if (
-                      aircraftTypeFilter &&
-                      !entries.some(
-                        (entry) =>
-                          entry.customerCode.trim().toUpperCase() === value &&
-                          entry.aircraftType.trim().toUpperCase() === aircraftTypeFilter,
-                      )
-                    ) {
-                      setAircraftTypeFilter('');
-                    }
-                  }}
-                  className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
-                >
-                  <option value="">All airlines</option>
-                  {airlineOptions.map((code) => (
-                    <option key={code} value={code}>
-                      {code}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="flex min-w-[10rem] flex-1 flex-col gap-1 text-xs font-medium text-gray-600 sm:max-w-[14rem]">
-                Aircraft type
-                <select
-                  value={aircraftTypeFilter}
-                  onChange={(e) => setAircraftTypeFilter(e.target.value)}
-                  className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
-                >
-                  <option value="">All aircraft types</option>
-                  {aircraftTypeOptions.map((aircraftType) => (
-                    <option key={aircraftType} value={aircraftType}>
-                      {aircraftType}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="flex min-w-[9rem] flex-col gap-1 text-xs font-medium text-gray-600 sm:max-w-[12rem]">
-                Status
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
-                  aria-label="Filter by contract status"
-                >
-                  <option value="">All status</option>
-                  <option value="active">Active</option>
-                  <option value="expired">Discontinued</option>
-                </select>
-              </label>
-              <label className="flex min-w-[12rem] flex-[2] flex-col gap-1 text-xs font-medium text-gray-600">
-                Search
-                <input
-                  type="search"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Code, name, aircraft, category, remarks…"
-                  className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm"
-                />
-              </label>
-              {hasActiveAirlineFilters ? (
-                <button
-                  type="button"
-                  onClick={clearAirlineFilters}
-                  className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
-                >
-                  Clear filters
-                </button>
-              ) : null}
-            </div>
-            {hasActiveAirlineFilters ? (
-              <p className="text-xs text-gray-600">
-                Showing {filteredEntries.length} of {entries.length} row
-                {entries.length === 1 ? '' : 's'}
-                {airlineFilter ? ` · ${airlineFilter}` : ''}
-                {aircraftTypeFilter ? ` · ${aircraftTypeFilter}` : ''}
-                {searchQuery.trim() ? ` · “${searchQuery.trim()}”` : ''}
-              </p>
-            ) : null}
-          </div>
-        ) : null}
 
         {!loadingEntries && entries.length > 0 && showsAirlineFilters ? (
           <div className="mb-4 flex flex-wrap items-center gap-2">
@@ -787,132 +672,17 @@ export function PriceCardHandlingSection({
               Clear filters
             </button>
           </div>
-        ) : isBhsAirlinesView ? (
+        ) : (
           <BhsPriceCardSheet
             entries={filteredEntries}
             contracts={contracts}
+            handlingType={selectedHandling}
             onEdit={openEditDialog}
             onDelete={openDeleteDialog}
             onViewServices={onSelectCustomer}
           />
-        ) : usesAirlineCardGrid ? (
-          <BhsAirlineCardGrid
-            groups={airlineGroups}
-            contracts={contracts}
-            onOpenRateCards={openRateCardsForGroup}
-            missingAircraftCounts={missingAircraftCounts}
-            serviceLabel={`${selectedHandling} service`}
-            showPackagePrice={selectedHandling === 'BHS'}
-          />
-        ) : (
-          <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
-            <table className="min-w-full divide-y divide-gray-200 text-sm">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
-                    Code
-                  </th>
-                  <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
-                    Airline name
-                  </th>
-                  <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
-                    Valid from
-                  </th>
-                  <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
-                    Valid to
-                  </th>
-                  <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
-                    Remarks
-                  </th>
-                  <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
-                    Aircraft type
-                  </th>
-                  <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
-                    Category
-                  </th>
-                  <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
-                    Status
-                  </th>
-                  <th className="px-3 py-2.5 text-right text-xs font-semibold uppercase tracking-wide text-gray-600">
-                    Rates
-                  </th>
-                  <th className="w-28 px-2 py-2.5 text-right text-xs font-semibold uppercase tracking-wide text-gray-600">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {filteredEntries.map((entry) => {
-                  const expired = isPriceCardEntryExpired(entry, contracts);
-                  const missingCount =
-                    missingAircraftCounts[entry.customerCode.trim().toUpperCase()] ?? 0;
-                  return (
-                  <tr key={entry._id} className={expired ? 'bg-red-50/70 hover:bg-red-50' : 'hover:bg-gray-50'}>
-                    <td className="px-3 py-2.5 font-medium text-[color:var(--billing-accent-strong)]">{entry.customerCode}</td>
-                    <td className="px-3 py-2.5 text-gray-900">
-                      {entry.airlineName}
-                      {missingCount > 0 ? (
-                        <span className="mt-0.5 block text-xs font-semibold text-amber-800">
-                          {missingCount} from this month {missingCount === 1 ? 'is' : 'are'} not on the rate card
-                        </span>
-                      ) : null}
-                    </td>
-                    <td className="px-3 py-2.5 tabular-nums text-gray-700">{formatBillingDate(entry.validFrom)}</td>
-                    <td className="px-3 py-2.5 tabular-nums text-gray-700">{formatValidTo(entry.validTo, entry.openEnded)}</td>
-                    <td className="px-3 py-2.5 text-gray-600">{entry.remarks?.trim() || '—'}</td>
-                    <td className="px-3 py-2.5 font-medium text-gray-900">{entry.aircraftType}</td>
-                    <td className="px-3 py-2.5 text-gray-700">
-                      {formatPriceCardAirlineCategory(entry.category)}
-                    </td>
-                    <td className="px-3 py-2.5">
-                      <span
-                        className={
-                          expired
-                            ? 'inline-flex rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-800'
-                            : 'inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-800'
-                        }
-                      >
-                        {expired ? 'Discontinued' : 'Active'}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2.5 text-right">
-                      <button
-                        type="button"
-                        onClick={() => onSelectCustomer(entry)}
-                        className="text-sm font-medium text-[color:var(--billing-accent-strong)] hover:underline"
-                      >
-                        Rate cards →
-                      </button>
-                    </td>
-                    <td className="px-2 py-2.5">
-                      <div className="flex items-center justify-end gap-1">
-                        <button
-                          type="button"
-                          onClick={() => openEditDialog(entry)}
-                          className={contractUi.iconBtn}
-                          aria-label={`Edit ${entry.customerCode} ${entry.aircraftType}`}
-                          title="Edit"
-                        >
-                          <Pencil className="h-4 w-4" aria-hidden />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => openDeleteDialog(entry)}
-                          className={contractUi.iconDanger}
-                          aria-label={`Delete ${entry.customerCode} ${entry.aircraftType}`}
-                          title="Delete"
-                        >
-                          <Trash2 className="h-4 w-4" aria-hidden />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
         )}
+
 
         <AddPriceCardAirlineDialog
           api={api}

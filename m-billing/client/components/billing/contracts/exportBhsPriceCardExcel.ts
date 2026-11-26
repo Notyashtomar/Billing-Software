@@ -124,12 +124,13 @@ export function buildBhsPriceCardSheetRows(
   entries: BillingPriceCardAirline[],
   contracts: BillingContract[],
   aircraftBodies: Map<string, 'NB' | 'WB'>,
-  options?: { onlyActive?: boolean },
+  options?: { onlyActive?: boolean; handlingType?: string },
 ): BhsPriceCardSheetRow[] {
   const onlyActive = options?.onlyActive !== false;
+  const handlingType = options?.handlingType ?? 'BHS';
   const rows: BhsPriceCardSheetRow[] = [];
   for (const entry of entries) {
-    if (entry.handlingType !== 'BHS') continue;
+    if (entry.handlingType !== handlingType) continue;
     if (onlyActive && entry.active === false) continue;
     const aircraftTypes = displayAircraftTypesForPriceCardEntry(entry);
     const price =
@@ -186,7 +187,7 @@ export function buildBhsPriceCardSheetRows(
 export async function listBhsPriceCardSheetRows(
   entries: BillingPriceCardAirline[],
   contracts: BillingContract[],
-  options?: { onlyActive?: boolean },
+  options?: { onlyActive?: boolean; handlingType?: string },
 ): Promise<BhsPriceCardSheetRow[]> {
   const aircraftBodies = await loadAircraftBodyCatalog();
   return buildBhsPriceCardSheetRows(entries, contracts, aircraftBodies, options);

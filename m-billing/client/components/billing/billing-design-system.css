@@ -95,28 +95,52 @@
   -webkit-font-smoothing: antialiased;
 }
 
-/* Scrollbar — calm, thin */
+/* Scrollbar — slim thumb, no arrow buttons, same on every billing surface */
 .billing-app,
-.billing-app * {
+.billing-app *,
+.billing-shell-main {
   scrollbar-width: thin;
-  scrollbar-color: var(--billing-border-strong) transparent;
+  scrollbar-color: #b7bdd0 transparent;
 }
 
 .billing-app::-webkit-scrollbar,
-.billing-app *::-webkit-scrollbar {
+.billing-app *::-webkit-scrollbar,
+.billing-shell-main::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
+.billing-app::-webkit-scrollbar-track,
+.billing-app *::-webkit-scrollbar-track,
+.billing-shell-main::-webkit-scrollbar-track,
+.billing-app::-webkit-scrollbar-corner,
+.billing-app *::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
 .billing-app::-webkit-scrollbar-thumb,
-.billing-app *::-webkit-scrollbar-thumb {
-  background: var(--billing-border-strong);
+.billing-app *::-webkit-scrollbar-thumb,
+.billing-shell-main::-webkit-scrollbar-thumb {
+  background: #b7bdd0;
   border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
 }
 
 .billing-app::-webkit-scrollbar-thumb:hover,
-.billing-app *::-webkit-scrollbar-thumb:hover {
-  background: var(--billing-secondary);
+.billing-app *::-webkit-scrollbar-thumb:hover,
+.billing-shell-main::-webkit-scrollbar-thumb:hover {
+  background: #8b93ab;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.billing-app::-webkit-scrollbar-button,
+.billing-app *::-webkit-scrollbar-button,
+.billing-shell-main::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 /* Focus ring utility for native controls inside billing */
