@@ -27,7 +27,7 @@ export type MissingRateCardAircraftGap = {
   flightCount: number;
 };
 
-/** IATA equipment codes on FHR rows that mean the same type as a rate-card label. */
+/** Equipment codes on flight rows that mean the same type as a rate-card label. */
 const AIRCRAFT_CODE_ALIASES: Record<string, string> = {
   '77F': 'B777F',
   B77F: 'B777F',
@@ -39,6 +39,22 @@ const AIRCRAFT_CODE_ALIASES: Record<string, string> = {
   B773: 'B777',
   '77W': 'B777',
   B77W: 'B777',
+  A19N: 'A319',
+  A20N: 'A320',
+  A21N: 'A321',
+  B38M: 'B737',
+  B39M: 'B737',
+  B3XM: 'B737',
+  B738: 'B737',
+  B739: 'B737',
+  B788: 'B787',
+  B789: 'B787',
+  B78X: 'B787',
+  A359: 'A350',
+  A35K: 'A350',
+  A388: 'A380',
+  B744: 'B747',
+  B748: 'B747',
 };
 
 export function compactAircraftType(value: string): string {
@@ -75,6 +91,45 @@ function rowCoversBillingMonth(
   return start <= periodTo && end >= periodFrom;
 }
 
+function aircraftPriceFamily(value: string): string {
+  const compact = canonicalAircraftType(value);
+  if (!compact) return '';
+  if (compact === 'B777F' || /^B777\d*F$/.test(compact)) return 'B777F';
+  const airbusWide = compact.match(/^A3([3458])/);
+  if (airbusWide) return `A3${airbusWide[1]}0`;
+  const airbusNarrow = compact.match(/^A3(18|19|20|21)/);
+  if (airbusNarrow) return `A3${airbusNarrow[1]}`;
+  const boeing = compact.match(/^B7([3-8])/);
+  if (boeing) {
+    if (boeing[1] === '7' && /F$/.test(compact) && !compact.includes('P2F')) return 'B777F';
+    return `B7${boeing[1]}7`;
+  }
+  return '';
+}
+
+function aircraftSubtypeTag(compact: string): string {
+  if (compact.includes('MAX')) return 'MAX';
+  if (compact.includes('NEO')) return 'NEO';
+  return '';
+}
+
+/** A flight is covered when a saved card is that type, its parent, or the same family. */
+export function rateCardTokenCoversFlight(flightAircraft: string, token: string): boolean {
+  const haystack = canonicalAircraftType(flightAircraft);
+  const needle = canonicalAircraftType(token);
+  if (!haystack || !needle) return false;
+  if (haystack === needle || haystack.includes(needle)) return true;
+  const flightFamily = aircraftPriceFamily(haystack);
+  const cardFamily = aircraftPriceFamily(needle);
+  if (flightFamily && cardFamily && flightFamily !== cardFamily) return false;
+  if (needle.startsWith(haystack) || haystack.startsWith(needle)) return true;
+  return (
+    flightFamily.length > 0 &&
+    flightFamily === cardFamily &&
+    aircraftSubtypeTag(haystack) === aircraftSubtypeTag(needle)
+  );
+}
+
 function flightCoveredByRateCard(
   flightAircraft: string,
   rows: RateCardAircraftRow[],
@@ -84,7 +139,7 @@ function flightCoveredByRateCard(
   return rows.some((row) => {
     const tokens = rateCardAircraftTokens(String(row.aircraftType ?? ''));
     if (tokens.length === 0) return true;
-    return tokens.some((token) => canonicalAircraftType(token) === flightKey);
+    return tokens.some((token) => rateCardTokenCoversFlight(flightAircraft, token));
   });
 }
 

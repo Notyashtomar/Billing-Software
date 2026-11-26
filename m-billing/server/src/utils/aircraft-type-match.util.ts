@@ -7,7 +7,10 @@ function compactAircraft(value: string): string {
   return value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
 }
 
-/** IATA equipment codes used on FHR rows → the marketing type stored on rate cards. */
+/**
+ * Equipment codes on flight rows → the marketing type stored on rate cards.
+ * Neo and MAX codes that do not contain the parent digits are listed here.
+ */
 const AIRCRAFT_CODE_ALIASES: Record<string, string> = {
   '77F': 'B777F',
   B77F: 'B777F',
@@ -19,6 +22,22 @@ const AIRCRAFT_CODE_ALIASES: Record<string, string> = {
   B773: 'B777',
   '77W': 'B777',
   B77W: 'B777',
+  A19N: 'A319',
+  A20N: 'A320',
+  A21N: 'A321',
+  B38M: 'B737',
+  B39M: 'B737',
+  B3XM: 'B737',
+  B738: 'B737',
+  B739: 'B737',
+  B788: 'B787',
+  B789: 'B787',
+  B78X: 'B787',
+  A359: 'A350',
+  A35K: 'A350',
+  A388: 'A380',
+  B744: 'B747',
+  B748: 'B747',
 };
 
 function canonicalAircraft(value: string): string {
@@ -121,13 +140,48 @@ export function rateCardAircraftTokens(rateCard: RateCardAircraftShape): string[
   return unique;
 }
 
+/** A320-200 and A20N share A320. A330-300 shares A330. B777F stays off B777. */
+export function aircraftPriceFamily(value: string): string {
+  const compact = canonicalAircraft(value);
+  if (!compact) return '';
+  if (compact === 'B777F' || /^B777\d*F$/.test(compact)) return 'B777F';
+  const airbusWide = compact.match(/^A3([3458])/);
+  if (airbusWide) return `A3${airbusWide[1]}0`;
+  const airbusNarrow = compact.match(/^A3(18|19|20|21)/);
+  if (airbusNarrow) return `A3${airbusNarrow[1]}`;
+  const boeing = compact.match(/^B7([3-8])/);
+  if (boeing) {
+    if (boeing[1] === '7' && /F$/.test(compact) && !compact.includes('P2F')) return 'B777F';
+    return `B7${boeing[1]}7`;
+  }
+  const other = compact.match(/^(A380|Q400|ATR\d{2,3}|CRJ\d{0,3}|E1\d{2})/);
+  return other?.[1] ?? '';
+}
+
+function aircraftSubtypeTag(compact: string): string {
+  if (compact.includes('MAX')) return 'MAX';
+  if (compact.includes('NEO')) return 'NEO';
+  return '';
+}
+
 export function aircraftTokenMatchesFlight(
   flightAircraft: string,
   token: string,
 ): boolean {
   const haystack = canonicalAircraft(flightAircraft);
   const needle = canonicalAircraft(token);
-  return needle.length > 0 && haystack.includes(needle);
+  if (!haystack || !needle) return false;
+  if (haystack === needle || haystack.includes(needle)) return true;
+
+  const flightFamily = aircraftPriceFamily(haystack);
+  const cardFamily = aircraftPriceFamily(needle);
+  if (flightFamily && cardFamily && flightFamily !== cardFamily) return false;
+  if (needle.startsWith(haystack) || haystack.startsWith(needle)) return true;
+  return (
+    flightFamily.length > 0 &&
+    flightFamily === cardFamily &&
+    aircraftSubtypeTag(haystack) === aircraftSubtypeTag(needle)
+  );
 }
 
 export function rateCardMatchesFlightAircraft(
@@ -166,12 +220,23 @@ function categorySpecificity(
   return card === flight ? 2 : 1;
 }
 
+/** Higher score wins. An exact type beats a parent, and a parent beats a sibling variant. */
+function tokenMatchScore(flightAircraft: string, token: string): number {
+  if (!aircraftTokenMatchesFlight(flightAircraft, token)) return 0;
+  const haystack = canonicalAircraft(flightAircraft);
+  const needle = canonicalAircraft(token);
+  if (haystack === needle) return 3000;
+  if (haystack.startsWith(needle) || needle.startsWith(haystack)) {
+    return 2000 + Math.min(haystack.length, needle.length);
+  }
+  if (haystack.includes(needle)) return 1000 + needle.length;
+  return 100 - Math.min(99, Math.abs(haystack.length - needle.length));
+}
+
 function bestTokenMatchLength(flightAircraft: string, tokens: string[]): number {
   let max = 0;
   for (const token of tokens) {
-    if (aircraftTokenMatchesFlight(flightAircraft, token)) {
-      max = Math.max(max, compactAircraft(token).length);
-    }
+    max = Math.max(max, tokenMatchScore(flightAircraft, token));
   }
   return max;
 }

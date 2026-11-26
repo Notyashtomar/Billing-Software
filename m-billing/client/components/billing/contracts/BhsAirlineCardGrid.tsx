@@ -13,6 +13,8 @@ type Props = {
   missingAircraftCounts?: Record<string, number>;
   /** Column heading for the price column, e.g. "BHS service". */
   serviceLabel?: string;
+  /** BHS package amounts stay on the BHS sheet. ADS lists airlines only. */
+  showPackagePrice?: boolean;
 };
 
 type AirlineStatus = 'active' | 'discontinued' | 'mixed';
@@ -121,10 +123,12 @@ function AirlineRow({
   status,
   onOpenRateCards,
   missingAircraftCount = 0,
+  showPackagePrice = false,
 }: {
   group: BhsAirlineCardGroup;
   status: AirlineStatus;
   missingAircraftCount?: number;
+  showPackagePrice?: boolean;
 } & Pick<Props, 'onOpenRateCards'>) {
   const discontinued = status === 'discontinued';
   const badge = STATUS_BADGE[status];
@@ -181,14 +185,16 @@ function AirlineRow({
         </span>
 
         <span className="flex flex-col items-end gap-1">
-          {priceRangesByCurrency(group).map((range) => (
-            <span
-              key={range}
-              className="text-sm font-semibold tabular-nums text-[color:var(--billing-text)]"
-            >
-              {range}
-            </span>
-          ))}
+          {showPackagePrice
+            ? priceRangesByCurrency(group).map((range) => (
+                <span
+                  key={range}
+                  className="text-sm font-semibold tabular-nums text-[color:var(--billing-text)]"
+                >
+                  {range}
+                </span>
+              ))
+            : null}
           <span
             className={`inline-flex whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-semibold ${badge.className}`}
           >
@@ -211,6 +217,7 @@ export function BhsAirlineCardGrid({
   onOpenRateCards,
   missingAircraftCounts,
   serviceLabel = 'Service price',
+  showPackagePrice = false,
 }: Props) {
   const sorted = sortAirlineGroupsForList(groups, contracts);
   const firstDiscontinued = sorted.findIndex((item) => item.status === 'discontinued');
@@ -223,7 +230,7 @@ export function BhsAirlineCardGrid({
         <span aria-hidden />
         <span>Airline</span>
         <span>Aircraft types</span>
-        <span className="text-right">{serviceLabel} · Status</span>
+        <span className="text-right">{showPackagePrice ? `${serviceLabel} · Status` : 'Status'}</span>
         <span aria-hidden />
       </div>
 
@@ -250,6 +257,7 @@ export function BhsAirlineCardGrid({
               missingAircraftCount={
                 missingAircraftCounts?.[group.customerCode.trim().toUpperCase()] ?? 0
               }
+              showPackagePrice={showPackagePrice}
             />,
           );
           return items;
