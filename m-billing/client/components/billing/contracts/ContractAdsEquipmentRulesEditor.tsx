@@ -854,7 +854,7 @@ export function ContractAdsEquipmentRulesEditor({
                 {displayRules.map((rule, index) => {
                   const selectedAircraft = selectedAircraftForUi(rule, aircraftTypes);
                   const wheelchair = isWheelchairAdsService(rule.serviceCode);
-                  const freeDisabled = disabled || rule.alwaysChargeable;
+                  const freeDisabled = disabled;
                   return (
                     <tr key={`ads-rule-${index}-${rule.serviceCode || 'new'}`}>
                       <td className="px-2 py-2">
@@ -945,17 +945,6 @@ export function ContractAdsEquipmentRulesEditor({
                           onChange={(e) =>
                             updateRule(index, {
                               alwaysChargeable: e.target.checked,
-                              freePerFlight: e.target.checked ? 0 : rule.freePerFlight,
-                              freePerFlightNb: e.target.checked
-                                ? wheelchair
-                                  ? 0
-                                  : undefined
-                                : rule.freePerFlightNb,
-                              freePerFlightWb: e.target.checked
-                                ? wheelchair
-                                  ? 0
-                                  : undefined
-                                : rule.freePerFlightWb,
                             })
                           }
                           className="h-4 w-4 rounded border-gray-300 text-[color:var(--billing-accent)] focus:ring-[color:var(--billing-accent)]"

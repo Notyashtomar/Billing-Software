@@ -366,6 +366,51 @@ describe('exclusive BHS invoice concession', () => {
     expect(totals.grossAmount).toBe(roundBillingMoney(1000 + extended));
   });
 
+  it('lets ADS royalty differ from BHS while BHS stays unchanged', () => {
+    const contract = {
+      bhsConcessionCoverage: 'comprehensive' as const,
+      adsConcessionCoverage: 'non_comprehensive' as const,
+      extendedRoyaltyEnabled: false,
+      concessionRates: { int: 18 },
+    };
+    const line = {
+      lineAmountExclTax: 1000,
+      sourceType: 'ads',
+      sourceRef: { categoryOfFlight: 'International' },
+    };
+    const ads = calculateInvoiceConcessionFromLines(1000, [line], contract, {
+      invoiceCategory: 'ADS',
+    });
+    expect(ads.concessionFeePercent).toBe(18);
+    expect(ads.concessionFeeAmount).toBe(180);
+    const bhs = calculateInvoiceConcessionFromLines(
+      1000,
+      [{ lineAmountExclTax: 1000, sourceType: 'scheduled_flight', sourceRef: { categoryOfFlight: 'International' } }],
+      contract,
+      { invoiceCategory: 'BHS' },
+    );
+    expect(bhs.concessionFeeAmount).toBe(0);
+  });
+
+  it('keeps ADS on the BHS royalty treatment when ADS is not set apart', () => {
+    const totals = calculateInvoiceConcessionFromLines(
+      1000,
+      [
+        {
+          lineAmountExclTax: 1000,
+          sourceType: 'ads',
+          sourceRef: { categoryOfFlight: 'International' },
+        },
+      ],
+      {
+        bhsConcessionCoverage: 'comprehensive',
+        concessionRates: { int: 18 },
+      },
+      { invoiceCategory: 'ADS' },
+    );
+    expect(totals.concessionFeeAmount).toBe(0);
+  });
+
   it('adds no separate ADS concession for inclusive contracts', () => {
     const totals = calculateInvoiceConcessionFromLines(
       1502743,

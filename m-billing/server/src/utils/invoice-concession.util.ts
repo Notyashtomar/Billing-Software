@@ -142,6 +142,8 @@ export type InvoiceChargeContractShape = {
   /** Contracts-page conditional charges (BHS Charged / Amount). */
   conditionalCharges?: ContractConditionalChargesShape | null;
   bhsConcessionCoverage?: 'comprehensive' | 'non_comprehensive' | 'mixed' | null;
+  /** When set, ADS invoices use this instead of bhsConcessionCoverage. */
+  adsConcessionCoverage?: 'comprehensive' | 'non_comprehensive' | null;
   extendedRoyaltyEnabled?: boolean | null;
   /**
    * What the concession percent is applied to. `invoice_amount` (default) uses
@@ -943,6 +945,24 @@ function invoiceCategoryCode(options?: InvoiceCurrencyTaxOptions): string {
   return String(options?.invoiceCategory ?? '').trim().toUpperCase();
 }
 
+/**
+ * ADS uses its own royalty treatment only when the contract saved one.
+ * Otherwise ADS stays on the BHS treatment. RAF and other categories follow BHS.
+ */
+function royaltyContractForInvoice<T extends InvoiceChargeContractShape>(
+  contract: T | null | undefined,
+  options?: InvoiceCurrencyTaxOptions,
+): T | null | undefined {
+  if (!contract) return contract;
+  const category = invoiceCategoryCode(options);
+  const adsInvoice = category === 'ADS' || options?.adsConcession === true;
+  if (!adsInvoice) return contract;
+  const ads = contract.adsConcessionCoverage;
+  if (ads !== 'comprehensive' && ads !== 'non_comprehensive') return contract;
+  if (ads === contract.bhsConcessionCoverage) return contract;
+  return { ...contract, bhsConcessionCoverage: ads };
+}
+
 /** ADS, RAF, custom, and MAAS — same Inclusive/Exclusive percent, no BHS flight ceiling. */
 function isNonBhsInvoiceConcession(options?: InvoiceCurrencyTaxOptions): boolean {
   if (options?.adsConcession) return true;
@@ -1534,6 +1554,7 @@ export function calculateInvoiceConcessionFromLines(
   let concessionFeeAmount: number;
   let concessionFeePercentFinal: number;
   const typedConcession = Number(options?.concessionPercentOverride);
+  const royaltyContract = royaltyContractForInvoice(contract, options);
   const nonBhs = isNonBhsInvoiceConcession(options);
   const magFloorRaw = Number(options?.magFloorAmount);
   const magFloor = Number.isFinite(magFloorRaw) && magFloorRaw >= 0 ? magFloorRaw : null;
@@ -1554,14 +1575,14 @@ export function calculateInvoiceConcessionFromLines(
     concessionFeeAmount =
       magFloor != null ? roundBillingMoney(Math.max(aeraBased.amount, magFloor)) : aeraBased.amount;
     concessionFeePercentFinal = 0;
-  } else if (isInclusiveBhsConcessionContract(contract)) {
+  } else if (isInclusiveBhsConcessionContract(royaltyContract)) {
     concessionFeeAmount = 0;
     concessionFeePercentFinal = 0;
-  } else if (isExclusiveBhsConcessionContract(contract) && nonBhs) {
+  } else if (isExclusiveBhsConcessionContract(royaltyContract) && nonBhs) {
     const exclusiveNonBhs = exclusiveNonBhsInvoiceConcession(
       particulars,
-      contract,
-      usesExtendedRoyalty(contract),
+      royaltyContract,
+      usesExtendedRoyalty(royaltyContract),
     );
     if (magFloor != null) {
       const floored = exclusiveWithMagFloor(
@@ -1575,25 +1596,25 @@ export function calculateInvoiceConcessionFromLines(
       concessionFeeAmount = exclusiveNonBhs.amount;
       concessionFeePercentFinal = exclusiveNonBhs.labelPercent;
     }
-  } else if (isExclusiveBhsConcessionContract(contract) && magFloor != null) {
+  } else if (isExclusiveBhsConcessionContract(royaltyContract) && magFloor != null) {
     const fromSaved = exclusivePercentConcession(
       particulars,
-      contract,
-      usesExtendedRoyalty(contract),
+      royaltyContract,
+      usesExtendedRoyalty(royaltyContract),
     );
     const floored = exclusiveWithMagFloor(fromSaved.amount, fromSaved.labelPercent, magFloor);
     concessionFeeAmount = floored.concessionFeeAmount;
     concessionFeePercentFinal = floored.concessionFeePercent;
-  } else if (isExclusiveBhsConcessionContract(contract)) {
+  } else if (isExclusiveBhsConcessionContract(royaltyContract)) {
     const exclusive = exclusiveBhsInvoiceConcession({
       particulars,
       subtotal,
-      contract,
+      contract: royaltyContract,
       currencyCode: currency,
       flightCount,
       ceilingFromLines,
       currencyFactor: options?.currencyFactor,
-      extendedRoyalty: usesExtendedRoyalty(contract),
+      extendedRoyalty: usesExtendedRoyalty(royaltyContract),
     });
     concessionFeeAmount = exclusive.concessionFeeAmount;
     concessionFeePercentFinal = exclusive.concessionFeePercent;

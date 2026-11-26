@@ -222,6 +222,8 @@ function sghaPanelForFocus(focus: string | null | undefined): string | null {
 type EditableSnapshotInput = {
   form: ContractFormState;
   bhsConcessionCoverage: BhsPricingMode;
+  adsRoyaltySeparate: boolean;
+  adsConcessionCoverage: BhsPricingMode;
   clauses: BillingContractClause[];
   flightConcessions: ContractConcessionRatesForm;
   showDivertedConcessions: boolean;
@@ -482,6 +484,9 @@ export function ContractFormDialog({
   const [baselineSnapshot, setBaselineSnapshot] = useState('');
   const [bhsConcessionCoverage, setBhsConcessionCoverage] =
     useState<BhsPricingMode>('comprehensive');
+  const [adsRoyaltySeparate, setAdsRoyaltySeparate] = useState(false);
+  const [adsConcessionCoverage, setAdsConcessionCoverage] =
+    useState<BhsPricingMode>('comprehensive');
   const [loadedMixedCoverage, setLoadedMixedCoverage] = useState(false);
   /** Airline-specific: concession percent applied to the AERA ceiling rate instead of the billed amount. */
   const [aeraConcessionEnabled, setAeraConcessionEnabled] = useState(false);
@@ -505,6 +510,8 @@ export function ContractFormDialog({
       buildEditableSnapshot({
         form,
         bhsConcessionCoverage,
+        adsRoyaltySeparate,
+        adsConcessionCoverage,
         clauses,
         flightConcessions,
         showDivertedConcessions: false,
@@ -536,6 +543,8 @@ export function ContractFormDialog({
     [
       form,
       bhsConcessionCoverage,
+      adsRoyaltySeparate,
+      adsConcessionCoverage,
       clauses,
       flightConcessions,
       adsEquipmentRules,
@@ -978,6 +987,12 @@ export function ContractFormDialog({
           : 'comprehensive';
       setLoadedMixedCoverage(record.bhsConcessionCoverage === 'mixed');
       setBhsConcessionCoverage(nextBhsCoverage);
+      const savedAds = record.adsConcessionCoverage;
+      const nextAdsSeparate =
+        savedAds === 'comprehensive' || savedAds === 'non_comprehensive';
+      const nextAdsCoverage: BhsPricingMode = nextAdsSeparate ? savedAds : nextBhsCoverage;
+      setAdsRoyaltySeparate(nextAdsSeparate);
+      setAdsConcessionCoverage(nextAdsCoverage);
       const nextAeraEnabled = record.concessionBase === 'aera_ceiling';
       const nextAeraInt =
         nextAeraEnabled && record.concessionRates?.int != null ? String(record.concessionRates.int) : '';
@@ -997,6 +1012,8 @@ export function ContractFormDialog({
         buildEditableSnapshot({
           form: nextForm,
           bhsConcessionCoverage: nextBhsCoverage,
+          adsRoyaltySeparate: nextAdsSeparate,
+          adsConcessionCoverage: nextAdsCoverage,
           clauses: nextClauses,
           flightConcessions: nextFlightConcessions,
           showDivertedConcessions: false,
@@ -1064,6 +1081,8 @@ export function ContractFormDialog({
       setRoeEditor(null);
       setLoadedMixedCoverage(false);
       setBhsConcessionCoverage('comprehensive');
+      setAdsRoyaltySeparate(false);
+      setAdsConcessionCoverage('comprehensive');
       setAeraConcessionEnabled(false);
       setAeraConcessionIntPercent('');
       setAeraConcessionDomPercent('');
@@ -1078,6 +1097,8 @@ export function ContractFormDialog({
         buildEditableSnapshot({
           form: nextForm,
           bhsConcessionCoverage: 'comprehensive',
+          adsRoyaltySeparate: false,
+          adsConcessionCoverage: 'comprehensive',
           clauses: nextClauses,
           flightConcessions: nextFlightConcessions,
           showDivertedConcessions: false,
@@ -1307,9 +1328,9 @@ export function ContractFormDialog({
           const selectedAircraft = fromRule.length > 0 ? fromRule : aircraftTypes;
           return {
             serviceCode: canonicalizeWchrSServiceCode(rule.serviceCode) || String(rule.serviceCode ?? '').trim(),
-            freePerFlight: rule.alwaysChargeable ? 0 : rule.freePerFlight,
-            freePerFlightNb: rule.alwaysChargeable ? 0 : rule.freePerFlightNb,
-            freePerFlightWb: rule.alwaysChargeable ? 0 : rule.freePerFlightWb,
+            freePerFlight: rule.freePerFlight,
+            freePerFlightNb: rule.freePerFlightNb,
+            freePerFlightWb: rule.freePerFlightWb,
             alwaysChargeable: Boolean(rule.alwaysChargeable),
             cumulativeMonthlyBasis:
               !rule.alwaysChargeable &&
@@ -1442,6 +1463,7 @@ export function ContractFormDialog({
           adsEquipmentRules: adsRulesPayload,
           bhsVolumeSchedules: volumePayload,
           bhsConcessionCoverage,
+          adsConcessionCoverage: adsRoyaltySeparate ? adsConcessionCoverage : null,
           extendedRoyaltyEnabled: false,
           ...aeraConcessionPayload,
           fortnightBillingEnabled,
@@ -1490,6 +1512,7 @@ export function ContractFormDialog({
           adsEquipmentRules: adsRulesPayload,
           bhsVolumeSchedules: volumePayload,
           bhsConcessionCoverage,
+          adsConcessionCoverage: adsRoyaltySeparate ? adsConcessionCoverage : null,
           extendedRoyaltyEnabled: false,
           ...aeraConcessionPayload,
           fortnightBillingEnabled,
@@ -2145,6 +2168,7 @@ export function ContractFormDialog({
                           checked={bhsConcessionCoverage === 'comprehensive'}
                           onChange={() => {
                             setBhsConcessionCoverage('comprehensive');
+                            if (!adsRoyaltySeparate) setAdsConcessionCoverage('comprehensive');
                             setExtendedRoyaltyEnabled(false);
                             setLoadedMixedCoverage(false);
                           }}
@@ -2155,8 +2179,9 @@ export function ContractFormDialog({
                             Inclusive
                           </span>
                           <span className="mt-0.5 block text-xs text-[color:var(--billing-text-muted)]">
-                            Concession is part of the BHS package. BHS, ADS, and RAF invoices do not
-                            add a separate concession line.
+                            {adsRoyaltySeparate
+                              ? 'Concession is part of the BHS package. The BHS invoice does not add a separate concession line. RAF follows BHS.'
+                              : 'Concession is part of the package. BHS and ADS invoices do not add a separate concession line. RAF follows BHS.'}
                           </span>
                         </span>
                       </label>
@@ -2168,6 +2193,7 @@ export function ContractFormDialog({
                           checked={bhsConcessionCoverage === 'non_comprehensive'}
                           onChange={() => {
                             setBhsConcessionCoverage('non_comprehensive');
+                            if (!adsRoyaltySeparate) setAdsConcessionCoverage('non_comprehensive');
                             setLoadedMixedCoverage(false);
                           }}
                           disabled={saving}
@@ -2177,11 +2203,9 @@ export function ContractFormDialog({
                             Exclusive
                           </span>
                           <span className="mt-0.5 block text-xs text-[color:var(--billing-text-muted)]">
-                            Concession is billed separately on BHS, ADS, and RAF invoices. The percent
-                            comes from Royalty Setup for international, domestic, and general aviation
-                            flights. Royalty on Gross uses percent / (100 − percent). Royalty on Net
-                            uses percent / 100. When MAG rates are uploaded, the invoice uses the
-                            higher of that royalty and the MAG for the airline&apos;s flights that month.
+                            {adsRoyaltySeparate
+                              ? 'Concession is billed separately on the BHS invoice. RAF follows BHS. The percent comes from Royalty Setup. Royalty on Gross uses percent / (100 − percent). Royalty on Net uses percent / 100.'
+                              : 'Concession is billed separately on BHS and ADS invoices. RAF follows BHS. The percent comes from Royalty Setup. Royalty on Gross uses percent / (100 − percent). Royalty on Net uses percent / 100. When MAG rates are uploaded, the invoice uses the higher of that royalty and the MAG for the airline’s flights that month.'}
                           </span>
                         </span>
                       </label>
@@ -2236,6 +2260,51 @@ export function ContractFormDialog({
                             </p>
                           </div>
                         ) : null}
+                      </div>
+                    ) : null}
+                    <div className="mt-3">
+                      <ContractToggleCard
+                        checked={adsRoyaltySeparate}
+                        onChange={(checked) => {
+                          setAdsRoyaltySeparate(checked);
+                          if (!checked) setAdsConcessionCoverage(bhsConcessionCoverage);
+                        }}
+                        disabled={saving}
+                        title="ADS royalty is different from BHS"
+                        description="Leave this off to keep BHS and ADS on the same treatment. Turn it on when one service is inclusive and the other is exclusive. Regenerate invoice applies the matching treatment to each draft."
+                      />
+                    </div>
+                    {adsRoyaltySeparate ? (
+                      <div className="mt-3 flex flex-col gap-3">
+                        <p className="text-sm font-semibold text-[color:var(--billing-heading)]">
+                          ADS royalty
+                        </p>
+                        <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-[color:var(--billing-border)] bg-white p-3 has-[:checked]:border-[color:var(--billing-primary)] has-[:checked]:ring-1 has-[:checked]:ring-[color:var(--billing-primary)]">
+                          <input
+                            type="radio"
+                            name="adsConcessionCoverage"
+                            className="mt-1 h-4 w-4 shrink-0 accent-[color:var(--billing-primary)]"
+                            checked={adsConcessionCoverage === 'comprehensive'}
+                            onChange={() => setAdsConcessionCoverage('comprehensive')}
+                            disabled={saving}
+                          />
+                          <span className="text-sm font-semibold text-[color:var(--billing-heading)]">
+                            Inclusive
+                          </span>
+                        </label>
+                        <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-[color:var(--billing-border)] bg-white p-3 has-[:checked]:border-[color:var(--billing-primary)] has-[:checked]:ring-1 has-[:checked]:ring-[color:var(--billing-primary)]">
+                          <input
+                            type="radio"
+                            name="adsConcessionCoverage"
+                            className="mt-1 h-4 w-4 shrink-0 accent-[color:var(--billing-primary)]"
+                            checked={adsConcessionCoverage === 'non_comprehensive'}
+                            onChange={() => setAdsConcessionCoverage('non_comprehensive')}
+                            disabled={saving}
+                          />
+                          <span className="text-sm font-semibold text-[color:var(--billing-heading)]">
+                            Exclusive
+                          </span>
+                        </label>
                       </div>
                     ) : null}
                   </fieldset>

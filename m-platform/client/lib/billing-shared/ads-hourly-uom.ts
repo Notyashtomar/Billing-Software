@@ -4,6 +4,7 @@ export function isAdsHourlyUom(uom: unknown): boolean {
   if (!raw) return false;
   if (/^hr$/i.test(raw)) return true;
   if (/per\s*hour/i.test(raw)) return true;
+  if (/per\s*60\s*minutes?\b/i.test(raw)) return true;
   return /hour/i.test(raw);
 }
 

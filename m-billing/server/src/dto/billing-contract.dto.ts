@@ -560,6 +560,11 @@ export class CreateBillingContractDto {
   @IsIn(['comprehensive', 'non_comprehensive', 'mixed'])
   bhsConcessionCoverage?: 'comprehensive' | 'non_comprehensive' | 'mixed';
 
+  /** Null keeps ADS on the same royalty treatment as BHS. */
+  @IsOptional()
+  @IsIn(['comprehensive', 'non_comprehensive'])
+  adsConcessionCoverage?: 'comprehensive' | 'non_comprehensive' | null;
+
   @IsOptional()
   @IsBoolean()
   extendedRoyaltyEnabled?: boolean;
@@ -732,6 +737,11 @@ export class UpdateBillingContractDto {
   @IsOptional()
   @IsIn(['comprehensive', 'non_comprehensive', 'mixed'])
   bhsConcessionCoverage?: 'comprehensive' | 'non_comprehensive' | 'mixed';
+
+  /** Null keeps ADS on the same royalty treatment as BHS. */
+  @IsOptional()
+  @IsIn(['comprehensive', 'non_comprehensive'])
+  adsConcessionCoverage?: 'comprehensive' | 'non_comprehensive' | null;
 
   @IsOptional()
   @IsBoolean()

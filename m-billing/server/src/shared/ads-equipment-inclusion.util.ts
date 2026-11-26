@@ -4,7 +4,10 @@
  */
 
 import { sanitizeContractAircraftTypes } from './contract-aircraft-type.util';
-import { normalizeFlightCategory } from '../utils/aircraft-type-match.util';
+import {
+  aircraftTokenMatchesFlight,
+  normalizeFlightCategory,
+} from '../utils/aircraft-type-match.util';
 import { resolveAircraftBodyLabel } from '../utils/scheduled-flight-display.util';
 import { toBillingTrackableFullName } from 'src/common/billing-trackable-equipment-name';
 
@@ -489,10 +492,10 @@ export function cumulativeMonthlyFreeUnits(
 
 function aircraftMatchesRule(ruleAircraft: string[], flightAircraft: string): boolean {
   if (ruleAircraft.length === 0) return true;
-  const flight = normalizeToken(flightAircraft);
-  // A rule that names aircraft applies only when the FHR aircraft is one of them.
+  const flight = String(flightAircraft ?? '').trim();
+  // Contract type A320 covers the FHR type A320-200. An empty flight type does not.
   if (!flight) return false;
-  return ruleAircraft.some((ac) => tokensMatch(flight, normalizeToken(ac)));
+  return ruleAircraft.some((ac) => aircraftTokenMatchesFlight(flight, ac));
 }
 
 function ruleListsOwnAircraft(rule: AdsEquipmentInclusionRule): boolean {
@@ -705,7 +708,7 @@ export function resolveAdsPricingFromContractRule(
     particular: opts.particular,
     equipmentName: opts.equipmentName,
   });
-  const freePerFlight = alwaysChargeable || match.excluded ? 0 : freeRaw;
+  const freePerFlight = match.excluded ? 0 : freeRaw;
   const ruleFreePerFlight = nonNegInt(rule.freePerFlight) ?? 0;
   const ruleFreePerFlightNb = nonNegInt(rule.freePerFlightNb);
   const ruleFreePerFlightWb = nonNegInt(rule.freePerFlightWb);

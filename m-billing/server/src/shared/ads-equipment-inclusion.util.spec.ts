@@ -162,6 +162,32 @@ describe('ads-equipment-inclusion.util', () => {
     expect(priced.unitPrice).toBeNull();
   });
 
+  it('applies an A320 contract rule to an A320-200 flight', () => {
+    const priced = resolveAdsPricingFromContractRule(
+      {
+        adsBillingEnabled: true,
+        aircraftTypes: ['A320'],
+        adsEquipmentRules: [
+          {
+            serviceCode: 'Ambulift',
+            includedForAds: true,
+            unitPriceINR: 9196,
+            uom: 'Per Lift',
+            freePerFlight: 0,
+          },
+        ],
+      },
+      {
+        particular: 'Ambulift',
+        aircraftType: 'A320-200',
+        billingCurrency: 'INR',
+      },
+    );
+    expect(priced.matched).toBe(true);
+    expect(priced.unitPrice).toBe(9196);
+    expect(priced.uom).toBe('Per Lift');
+  });
+
   it('uses contract ADS lines for any flight month (ignores stored effectiveMonth)', () => {
     const priced = resolveAdsPricingFromContractRule(
       {

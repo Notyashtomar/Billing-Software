@@ -1021,8 +1021,7 @@ export class BillingSourceEnrichmentService {
           usedUnits = this.resolveAdsUsedUnits(input.operationalData, null, adsUom);
         } else {
           adsUom = rulePricing.uom;
-          const alwaysChargeable = rulePricing.alwaysChargeable;
-          freeAllowance = alwaysChargeable ? 0 : rulePricing.freePerFlight;
+          freeAllowance = rulePricing.freePerFlight;
           fullyPackageIncluded = false;
           usedUnits = this.resolveAdsUsedUnits(input.operationalData, null, adsUom);
 

@@ -321,6 +321,13 @@ export class BillingContract {
   @Prop({ enum: ['comprehensive', 'non_comprehensive', 'mixed'] })
   bhsConcessionCoverage?: 'comprehensive' | 'non_comprehensive' | 'mixed';
 
+  /**
+   * ADS royalty treatment. Empty means ADS uses bhsConcessionCoverage, so both
+   * services stay the same until the contract sets them apart.
+   */
+  @Prop({ enum: ['comprehensive', 'non_comprehensive'] })
+  adsConcessionCoverage?: 'comprehensive' | 'non_comprehensive';
+
   /** Exclusive contracts only: royalty = amount × p/(100−p) using this contract's saved concession %. */
   @Prop({ default: false })
   extendedRoyaltyEnabled?: boolean;
