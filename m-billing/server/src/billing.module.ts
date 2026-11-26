@@ -47,6 +47,7 @@ import {
 } from './services/billing-settings.service';
 import { BillingSourcesService } from './services/billing-sources.service';
 import { BillingUldService } from './services/billing-uld.service';
+import { BillingEbcService } from './services/billing-ebc.service';
 import { BillingSourceEnrichmentService } from './services/sources/billing-source-enrichment.service';
 import { BillingSourcesScheduledService } from './services/sources/billing-sources-scheduled.service';
 import { BillingSourcesCustomService } from './services/sources/billing-sources-custom.service';
@@ -249,6 +250,7 @@ import type { StationScopeContext } from 'src/common/station/station-scope';
     BillingSourcesCustomService,
     BillingSourcesService,
     BillingUldService,
+    BillingEbcService,
     BillingPreparationService,
     TaxEngineService,
     CurrencyEngineService,

@@ -61,6 +61,7 @@ describe('ADS billing helpers', () => {
     expect(preparationInvoiceCategory('raf')).toBe('RAF');
     expect(preparationInvoiceCategory('custom')).toBe('CUSTOM');
     expect(preparationInvoiceCategory('maas')).toBe('MAAS');
+    expect(preparationInvoiceCategory('ebc')).toBe('EBC');
     expect(preparationInvoiceGroupKey({ ...base, sourceType: 'custom' })).toContain('|CUSTOM');
     expect(
       preparationInvoiceGroupKey({ ...base, sourceType: 'custom' }),

@@ -49,6 +49,23 @@ export function RafSourcePage({ api }: Props) {
   );
 }
 
+export function EbcSourceBillingPage({ api }: Props) {
+  return (
+    <OperationalSourcePage
+      api={api}
+      config={{
+        title: 'EBC',
+        description:
+          'Commission on excess baggage collected at the station. QP and VJ are charged 7% of the amount collected. UL is charged 5% of cash collections only. Service code is EBC.',
+        fetchMethod: 'listEbcBilling',
+        bcAuditRef: 'EBC collection → billing',
+        defaultFrom: '2026-09-01',
+        defaultTo: '2026-09-30',
+      }}
+    />
+  );
+}
+
 export function MaasSourcePage({ api }: Props) {
   return (
     <OperationalSourcePage

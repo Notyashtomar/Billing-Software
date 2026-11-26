@@ -468,6 +468,7 @@ const CUSTOMER_DROPDOWN_FETCH_METHODS: OperationalSourceConfig['fetchMethod'][] 
   'listAds',
   'listRaf',
   'listMaas',
+  'listEbcBilling',
 ];
 
 function usesCustomerDropdown(fetchMethod: OperationalSourceConfig['fetchMethod']): boolean {
@@ -679,6 +680,8 @@ function sourcePageReturnPath(
       return '/billing/raf';
     case 'listMaas':
       return '/billing/maas';
+    case 'listEbcBilling':
+      return '/billing/ebc';
     case 'listCleaning':
       return '/billing/cleaning';
     default:
@@ -694,6 +697,7 @@ export type OperationalSourceConfig = {
     | 'listCleaning'
     | 'listRaf'
     | 'listMaas'
+    | 'listEbcBilling'
     | 'listAds'
     | 'listXxldScheduled'
     | 'listXxldNonScheduled'
@@ -1563,6 +1567,7 @@ export function OperationalSourcePage({ api, config }: Props) {
   const isAds = config.fetchMethod === 'listAds';
   const isRaf = config.fetchMethod === 'listRaf';
   const isMaas = config.fetchMethod === 'listMaas';
+  const isEbc = config.fetchMethod === 'listEbcBilling';
 
   const maasStats = useMemo(() => {
     if (!isMaas) return null;
@@ -2061,7 +2066,7 @@ export function OperationalSourcePage({ api, config }: Props) {
           ? rafRowsBeforeColumnFilter.length !== rows.length
           : false);
 
-  const supportsUnsend = isScheduledFlights || isAds || isRaf || isMaas;
+  const supportsUnsend = isScheduledFlights || isAds || isRaf || isMaas || isEbc;
   const supportsSendToPreparation = true;
 
   const handleExportAdsExcel = async () => {
@@ -2794,6 +2799,44 @@ export function OperationalSourcePage({ api, config }: Props) {
                   },
                 },
               ]),
+          ...(isEbc
+            ? [
+                {
+                  key: 'ebcPassenger',
+                  header: 'Passenger',
+                  className: 'min-w-[8rem]',
+                  render: (r: BillingSourceRow) => String(r.operationalData.passengerName ?? '—'),
+                },
+                {
+                  key: 'ebcCharge',
+                  header: 'Charge',
+                  className: 'min-w-[8rem]',
+                  render: (r: BillingSourceRow) =>
+                    String(r.operationalData.particular ?? r.operationalData.quantity ?? '—'),
+                },
+                {
+                  key: 'ebcCollected',
+                  header: 'Collected',
+                  className: 'min-w-[6rem] text-right',
+                  render: (r: BillingSourceRow) => {
+                    const amount = Number(r.operationalData.collectedAmount);
+                    return Number.isFinite(amount) && amount > 0 ? amount.toLocaleString('en-IN') : '—';
+                  },
+                },
+                {
+                  key: 'ebcCommission',
+                  header: 'Commission',
+                  className: 'min-w-[6rem] text-right',
+                  render: (r: BillingSourceRow) => {
+                    const percent = Number(r.operationalData.commissionPercent);
+                    const amount = Number(r.rateMatch.unitPrice);
+                    if (!(amount > 0)) return '—';
+                    const rate = Number.isFinite(percent) && percent > 0 ? `${percent}% · ` : '';
+                    return `${rate}${amount.toLocaleString('en-IN')}`;
+                  },
+                },
+              ]
+            : []),
           ...(isMaas
             ? [
                 {

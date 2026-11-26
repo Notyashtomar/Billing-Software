@@ -266,16 +266,25 @@ export function durationMinutes(value: unknown): number | null {
 
 /**
  * Minutes the actual movement ran past the scheduled one.
- * Early movements are 0 (not late). Only a real midnight crossing — actual clock
- * more than 12 h "before" schedule because the date did not roll — adds a day;
- * otherwise an ATA of 22:57 against an STA of 23:15 would read as 23 h 42 m late.
+ * Early movements are 0 (not late). A same-date midnight crossing — schedule still
+ * in the evening, actual clock just after midnight because the date was not
+ * advanced — adds a day. An afternoon schedule with an after-midnight actual
+ * time is early, not a delay.
  */
 const HALF_DAY_MINUTES = 12 * 60;
 
 function minutesPastSchedule(scheduled: Date, actual: Date): number | null {
   const dayMs = 24 * 60 * 60 * 1000;
   let diff = actual.getTime() - scheduled.getTime();
-  if (diff < -dayMs / 2) diff += dayMs;
+  const sameCalendarDay =
+    scheduled.getFullYear() === actual.getFullYear() &&
+    scheduled.getMonth() === actual.getMonth() &&
+    scheduled.getDate() === actual.getDate();
+  const scheduledIsEvening = scheduled.getHours() >= 18;
+  const actualIsAfterMidnight = actual.getHours() < 6;
+  if (sameCalendarDay && scheduledIsEvening && actualIsAfterMidnight && diff < 0) {
+    diff += dayMs;
+  }
   if (!Number.isFinite(diff)) return null;
   return Math.max(0, diff / 60000);
 }

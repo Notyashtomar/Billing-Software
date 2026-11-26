@@ -102,6 +102,7 @@ function ingestCategorySourceTypes(
   if (category === 'ADS') return ['ads', 'equipment', 'manpower', 'cleaning'];
   if (category === 'RAF') return ['raf'];
   if (category === 'CUSTOM') return ['custom'];
+  if (category === 'EBC') return ['ebc'];
   return [String(sourceType ?? '').trim()].filter(Boolean);
 }
 
@@ -3291,7 +3292,13 @@ export class BillingPreparationService {
             k === 'customerCode' ||
             k === 'customerName' ||
             k === 'flightScenario' ||
-            k === 'aircraftTariffCode',
+            k === 'aircraftTariffCode' ||
+            (String(doc.sourceType ?? '').trim().toLowerCase() === 'ebc' &&
+              (k === 'commissionPercent' ||
+                k === 'commissionAmount' ||
+                k === 'cashOnlyCommission' ||
+                k === 'collectedAmount' ||
+                k === 'paymentMode')),
         ),
       );
       doc.operationalSnapshot = { ...snapshot, ...adsPatch };

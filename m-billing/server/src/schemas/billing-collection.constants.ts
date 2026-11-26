@@ -28,6 +28,8 @@ export const BillingDocType = {
   AircraftMaster: 'aircraft_master',
   EquipmentMaster: 'equipment_master',
   UldSheet: 'uld_sheet',
+  /** Station excess-baggage / ancillary collection register for one airline-month. */
+  EbcCollection: 'ebc_collection',
   /** AERA ground-handling tariff order (ceiling rates) for a station. */
   AeraTariff: 'aera_tariff',
 } as const;

@@ -2,16 +2,17 @@
 
 import dynamic from 'next/dynamic';
 import { Suspense } from 'react';
+import { billingApi } from '@/lib/billing-api';
 
 const PageComponent = dynamic(
-  () => import('@/components/billing/sources/PlaceholderSourcePage').then((m) => m.PlaceholderSourcePage),
+  () => import('@/components/billing/sources/SourcePages').then((m) => m.EbcSourceBillingPage),
   { ssr: false },
 );
 
 export default function Page() {
   return (
     <Suspense fallback={null}>
-      <PageComponent title="EBC" description="Excess Baggage Collection charges" />
+      <PageComponent api={billingApi} />
     </Suspense>
   );
 }

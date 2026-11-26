@@ -36,6 +36,7 @@ import {
   resolveAeraCeiling,
 } from '../utils/aera-ceiling.util';
 import { BillingAeraTariffService } from '../services/billing-aera-tariff.service';
+import { EBC_COMMISSION_RULES } from '../utils/ebc-commission.util';
 import { isAdsFamilySourceType } from '../shared/ads-adhoc-tariff';
 import {
   aircraftKeysMatch,
@@ -258,18 +259,34 @@ export class InvoiceEngineService {
     const rafRecords = records.filter(
       (r) => String(r.sourceType ?? '').trim().toLowerCase() === 'raf',
     );
+    const ebcRecords = records.filter(
+      (r) => String(r.sourceType ?? '').trim().toLowerCase() === 'ebc',
+    );
     const otherRecords = records.filter(
       (r) =>
         !isAdsFamilySourceType(r.sourceType) &&
         String(r.sourceType ?? '').trim().toLowerCase() !== 'custom' &&
-        String(r.sourceType ?? '').trim().toLowerCase() !== 'raf',
+        String(r.sourceType ?? '').trim().toLowerCase() !== 'raf' &&
+        String(r.sourceType ?? '').trim().toLowerCase() !== 'ebc',
     );
 
     // Prefer pure ADS compose when the draft group is ADS-only (group key separates categories).
     const lines: ComposedInvoiceLine[] = [];
     let lineNo = 0;
 
-    if (customRecords.length > 0 && adsRecords.length === 0 && otherRecords.length === 0 && rafRecords.length === 0) {
+    if (
+      ebcRecords.length > 0 &&
+      adsRecords.length === 0 &&
+      otherRecords.length === 0 &&
+      customRecords.length === 0 &&
+      rafRecords.length === 0
+    ) {
+      const ebcLines = await this.composeEbcLines(ctx, ebcRecords, documentDate);
+      for (const line of ebcLines) {
+        lineNo += 1;
+        lines.push({ ...line, lineNo });
+      }
+    } else if (customRecords.length > 0 && adsRecords.length === 0 && otherRecords.length === 0 && rafRecords.length === 0 && ebcRecords.length === 0) {
       const customLines = await this.composeCustomLines(
         ctx,
         customRecords,
@@ -284,7 +301,8 @@ export class InvoiceEngineService {
       adsRecords.length > 0 &&
       otherRecords.length === 0 &&
       customRecords.length === 0 &&
-      rafRecords.length === 0
+      rafRecords.length === 0 &&
+      ebcRecords.length === 0
     ) {
       const adsLines = await this.composeAdsLines(
         ctx,
@@ -301,7 +319,8 @@ export class InvoiceEngineService {
       rafRecords.length > 0 &&
       adsRecords.length === 0 &&
       otherRecords.length === 0 &&
-      customRecords.length === 0
+      customRecords.length === 0 &&
+      ebcRecords.length === 0
     ) {
       const rafLines = await this.composeRafLines(ctx, rafRecords, documentDate, contract);
       for (const line of rafLines) {
@@ -312,6 +331,13 @@ export class InvoiceEngineService {
       if (rafRecords.length > 0) {
         const rafLines = await this.composeRafLines(ctx, rafRecords, documentDate, contract);
         for (const line of rafLines) {
+          lineNo += 1;
+          lines.push({ ...line, lineNo });
+        }
+      }
+      if (ebcRecords.length > 0) {
+        const ebcLines = await this.composeEbcLines(ctx, ebcRecords, documentDate);
+        for (const line of ebcLines) {
           lineNo += 1;
           lines.push({ ...line, lineNo });
         }
@@ -622,6 +648,93 @@ export class InvoiceEngineService {
       });
     }
 
+    return out;
+  }
+
+  /**
+   * One EBC line: the airline is charged a percent of the amount collected.
+   * QP and VJ are 7% of every receipt. UL is 5% of cash receipts only.
+   */
+  private async composeEbcLines(
+    ctx: StationScopeContext,
+    records: BillingPreparationRecordDocument[],
+    documentDate: Date,
+  ): Promise<Omit<ComposedInvoiceLine, 'lineNo'>[]> {
+    const groups = new Map<
+      string,
+      {
+        percent: number;
+        cashOnly: boolean;
+        collected: number;
+        commission: number;
+        records: BillingPreparationRecordDocument[];
+      }
+    >();
+    for (const rec of records) {
+      const rateMatch = (rec.rateMatch ?? {}) as { unitPrice?: number };
+      const snap = (rec.operationalSnapshot ?? {}) as Record<string, unknown>;
+      const commission = Number(rateMatch.unitPrice ?? 0);
+      if (!(commission > 0)) continue;
+      const customer = String(rec.customerCode ?? snap.customerCode ?? '').trim().toUpperCase();
+      const rule = EBC_COMMISSION_RULES[customer];
+      const storedPercent = Number(snap.commissionPercent ?? 0);
+      const percent = storedPercent > 0 ? storedPercent : (rule?.percent ?? 0);
+      const cashOnly =
+        snap.cashOnlyCommission === true || (rule?.cashOnly === true && snap.cashOnlyCommission !== false);
+      const key = `${percent}|${cashOnly ? 'cash' : 'all'}`;
+      const bucket = groups.get(key) ?? {
+        percent,
+        cashOnly,
+        collected: 0,
+        commission: 0,
+        records: [],
+      };
+      bucket.collected += Number(snap.collectedAmount ?? 0);
+      bucket.commission += commission;
+      bucket.records.push(rec);
+      groups.set(key, bucket);
+    }
+
+    const out: Omit<ComposedInvoiceLine, 'lineNo'>[] = [];
+    for (const bucket of groups.values()) {
+      const lineAmountExclTax = round2(bucket.commission);
+      if (!(lineAmountExclTax > 0)) continue;
+      const collected = round2(bucket.collected);
+      const scope = bucket.cashOnly ? ' on cash' : '';
+      const tax = await this.taxEngine.calculateLine(ctx, {
+        lineAmountExclTax,
+        serviceCode: 'EBC',
+        documentDate,
+      });
+      const preparationRecordIds = bucket.records.map((r) => r._id as Types.ObjectId);
+      out.push({
+        lineType: 'service',
+        serviceCode: 'EBC',
+        description: `Excess baggage collection commission @ ${bucket.percent}%${scope}`,
+        quantity: 1,
+        uom: 'Lump sum',
+        unitPrice: lineAmountExclTax,
+        lineDiscountPercent: 0,
+        lineAmountExclTax,
+        ...tax,
+        sourceType: 'ebc',
+        sourceRef: {
+          particular: `EBC collection commission ${bucket.percent}%`,
+          collectedAmount: collected,
+          commissionPercent: bucket.percent,
+          cashOnly: bucket.cashOnly,
+          usedQuantity: bucket.records.length,
+          chargedQuantity: 1,
+          flights: bucket.records.map(flightLabel).filter(Boolean),
+          preparationRecordIds,
+          sourceRefs: bucket.records.map((r) => r.sourceRef as Record<string, unknown>),
+          invoiceCategory: 'EBC',
+          pricingBasis: 'row',
+        },
+        preparationRecordIds,
+        preparationRecordId: preparationRecordIds[0],
+      });
+    }
     return out;
   }
 

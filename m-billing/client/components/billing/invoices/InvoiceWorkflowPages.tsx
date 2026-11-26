@@ -1848,6 +1848,7 @@ function resolveInvoiceServiceTypeLabel(
     .toUpperCase();
   if (cat === 'ADS' || cat === 'CUSTOM') return 'ADS';
   if (cat === 'MAAS') return 'MAAS';
+  if (cat === 'EBC') return 'EBC';
   const code = String(serviceCode ?? '').trim();
   if (/^custom(\s+billing)?$/i.test(code)) return 'ADS';
   return code || '—';

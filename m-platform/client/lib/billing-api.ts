@@ -979,6 +979,72 @@ export function createBillingApi({ getApiBase, fetch }: BillingApiConfig) {
       );
     },
 
+    listEbc: (params: { month?: string; airline?: string } = {}) => {
+      const q = new URLSearchParams();
+      if (params.month) q.set('month', params.month);
+      if (params.airline) q.set('airline', params.airline);
+      const qs = q.toString();
+      return request(`/billing/sources/ebc${qs ? `?${qs}` : ''}`).then((r) =>
+        parseJson<{
+          success?: boolean;
+          months: Array<{ month: string; label: string; airlines: number; rows: number }>;
+          month: string | null;
+          airlines: string[];
+          sheet: {
+            airline: string;
+            layout: 'qp' | 'vj';
+            rows: Array<{
+              date: string;
+              flightNo: string;
+              passengerName: string;
+              pnr: string;
+              receiptNo: string;
+              chargeType: string;
+              quantity: string;
+              rate: number | null;
+              amount: number | null;
+              tax: number | null;
+              total: number | null;
+              paymentMode: string;
+              paymentNote: string;
+            }>;
+            dailyTotals: Array<{
+              date: string;
+              upi: number | null;
+              cash: number | null;
+              card: number | null;
+              total: number | null;
+            }>;
+            monthSplit: {
+              upi: number | null;
+              cash: number | null;
+              card: number | null;
+              total: number | null;
+            } | null;
+          } | null;
+        }>(r),
+      );
+    },
+
+    importEbc: async (file: File) => {
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      let binary = '';
+      const chunk = 0x8000;
+      for (let i = 0; i < bytes.length; i += chunk) {
+        binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+      }
+      return request('/billing/sources/ebc/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dataBase64: btoa(binary), fileName: file.name }),
+      }).then((r) =>
+        parseJson<{
+          success?: boolean;
+          months: Array<{ month: string; label: string; airline: string; rows: number; total: number | null }>;
+        }>(r),
+      );
+    },
+
     importUld: async (file: File, kind: 'others' | 'ua-vs') => {
       const bytes = new Uint8Array(await file.arrayBuffer());
       let binary = '';
@@ -1014,6 +1080,9 @@ export function createBillingApi({ getApiBase, fetch }: BillingApiConfig) {
 
     listMaas: (params: { from: string; to: string; customerCode?: string }) =>
       listSources('maas', params),
+
+    listEbcBilling: (params: { from: string; to: string; customerCode?: string }) =>
+      listSources('ebc/lines', params),
 
     listAds: (params: {
       from: string;

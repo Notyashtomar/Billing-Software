@@ -2,6 +2,7 @@ import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import { IsIn, IsString, MaxLength } from 'class-validator';
 import { BillingSourcesService } from '../services/billing-sources.service';
 import { BillingUldService } from '../services/billing-uld.service';
+import { BillingEbcService } from '../services/billing-ebc.service';
 import { BillingSourcesQueryDto } from '../dto/billing-sources-query.dto';
 import {
   CurrentBillingStation,
@@ -15,6 +16,16 @@ import type { StationScopeContext } from '../common/station-scope';
  */
 import { BillingPageAccess } from '../common/billing-page-access.decorator';
 import { SkipTimeout } from 'src/protection/decorators/skip-timeout.decorator';
+
+class ImportEbcWorkbookDto {
+  @IsString()
+  @MaxLength(20_000_000)
+  dataBase64: string;
+
+  @IsString()
+  @MaxLength(180)
+  fileName: string;
+}
 
 class ImportUldWorkbookDto {
   @IsString()
@@ -32,7 +43,34 @@ export class BillingSourcesController {
   constructor(
     private readonly sourcesService: BillingSourcesService,
     private readonly uldService: BillingUldService,
+    private readonly ebcService: BillingEbcService,
   ) {}
+
+  @Get('ebc/lines')
+  ebcLines(
+    @CurrentBillingStation() station: StationScopeContext,
+    @Query() query: BillingSourcesQueryDto,
+  ) {
+    return this.ebcService.listBillable(station, query);
+  }
+
+  @Get('ebc')
+  ebc(
+    @CurrentBillingStation() station: StationScopeContext,
+    @Query('month') month?: string,
+    @Query('airline') airline?: string,
+  ) {
+    return this.ebcService.list(station, month, airline);
+  }
+
+  @Post('ebc/import')
+  importEbc(
+    @CurrentBillingStation() station: StationScopeContext,
+    @Body() body: ImportEbcWorkbookDto,
+  ) {
+    const buffer = Buffer.from(body.dataBase64, 'base64');
+    return this.ebcService.importFile(station, buffer, body.fileName);
+  }
 
   @Get('uld')
   uld(
