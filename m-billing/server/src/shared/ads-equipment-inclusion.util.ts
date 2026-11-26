@@ -282,15 +282,11 @@ function equipmentFamilyMatches(a: string, b: string): boolean {
 }
 
 function ruleAircraftTypes(
-  rule: AdsEquipmentInclusionRule,
+  _rule: AdsEquipmentInclusionRule,
   contractAircraft: string[],
 ): string[] {
-  const multi = sanitizeContractAircraftTypes(rule.aircraftTypes ?? []);
-  if (multi.length > 0) return multi;
-  if (rule.aircraftType?.trim()) {
-    const legacy = sanitizeContractAircraftTypes([rule.aircraftType]);
-    if (legacy.length > 0) return legacy;
-  }
+  // Flight aircraft is taken from the contract aircraft page only.
+  // A per-rule aircraft list cannot add types that are not on the contract.
   return sanitizeContractAircraftTypes(contractAircraft);
 }
 

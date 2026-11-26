@@ -162,6 +162,35 @@ describe('ads-equipment-inclusion.util', () => {
     expect(priced.unitPrice).toBeNull();
   });
 
+  it('bills ADS equipment only for aircraft on the contract aircraft page', () => {
+    const contract = {
+      adsBillingEnabled: true,
+      aircraftTypes: ['A320'],
+      adsEquipmentRules: [
+        {
+          serviceCode: 'GPU',
+          includedForAds: true,
+          unitPriceINR: 100,
+          uom: 'Per Hour',
+          aircraftTypes: ['B777'],
+        },
+      ],
+    };
+    const onContract = resolveAdsPricingFromContractRule(contract, {
+      particular: 'GPU',
+      aircraftType: 'A320-200',
+      billingCurrency: 'INR',
+    });
+    const notOnContract = resolveAdsPricingFromContractRule(contract, {
+      particular: 'GPU',
+      aircraftType: 'B777',
+      billingCurrency: 'INR',
+    });
+    expect(onContract.matched).toBe(true);
+    expect(onContract.unitPrice).toBe(100);
+    expect(notOnContract.matched).toBe(false);
+  });
+
   it('applies an A320 contract rule to an A320-200 flight', () => {
     const priced = resolveAdsPricingFromContractRule(
       {

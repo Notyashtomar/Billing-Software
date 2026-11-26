@@ -2921,7 +2921,9 @@ export function InvoiceDetailPage({ api, id }: Props & { id: string }) {
   const usdReceivableActive =
     header?.currencyCode === 'USD' && Boolean(header.totalReceivableInUsd);
   const inrReceivableActive =
-    header?.currencyCode === 'INR' && !header.totalReceivableInUsd;
+    header?.currencyCode === 'USD'
+      ? !header.totalReceivableInUsd
+      : header?.currencyCode === 'INR';
 
   const handleSetTotalReceivableUsd = async () => {
     if (!header || usdReceivableActive) return;
@@ -2948,7 +2950,7 @@ export function InvoiceDetailPage({ api, id }: Props & { id: string }) {
       await api.setDraftTotalReceivableInr(id);
       await reload();
       setMsg(
-        'Amounts converted to INR. Concession and CGST/SGST are calculated on the INR gross.',
+        'USD amounts are unchanged through the gross. That gross is converted to INR at the master rate, then CGST and SGST are added.',
       );
     } catch (e) {
       setMsg(e instanceof Error ? e.message : 'Could not set INR receivable');
@@ -3202,7 +3204,7 @@ export function InvoiceDetailPage({ api, id }: Props & { id: string }) {
                       disabled={settingUsdReceivable || settingInrReceivable || inrReceivableActive}
                       onClick={() => void handleSetTotalReceivableInr()}
                       aria-pressed={inrReceivableActive}
-                      title="Convert amounts to INR, then calculate concession and CGST/SGST on the INR gross."
+                      title="Keep USD amounts through the gross. Convert that gross to INR at the master rate, then add CGST and SGST."
                       className={`rounded-lg border px-4 py-2.5 text-sm font-medium transition-opacity disabled:cursor-not-allowed ${
                         inrReceivableActive
                           ? 'border-emerald-400 bg-emerald-100 text-emerald-950'
