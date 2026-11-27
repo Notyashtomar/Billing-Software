@@ -113,6 +113,15 @@ function collectInvoicePreparationIds(
   return [...ids].map((id) => new Types.ObjectId(id));
 }
 
+/** INR totals show whole rupees. Only USD carries decimals. */
+function formatInvoiceTotal(currencyCode: unknown, value: unknown): string {
+  const amount = Number(value ?? 0);
+  const safe = Number.isFinite(amount) ? amount : 0;
+  return String(currencyCode ?? '').trim().toUpperCase() === 'USD'
+    ? safe.toFixed(2)
+    : String(Math.round(Math.round(safe * 100) / 100));
+}
+
 function formatInvoiceDate(value?: Date | string): string {
   if (!value) return '—';
   const date = value instanceof Date ? value : new Date(value);
@@ -709,7 +718,7 @@ export class BillingInvoicesService {
       `Invoice: ${invoiceLabel}`,
       `Customer: ${header.customerName} (${header.customerCode})`,
       `Billing period: ${period}`,
-      `Total: ${header.currencyCode} ${Number(header.totalInclTax ?? 0).toFixed(2)}`,
+      `Total: ${header.currencyCode} ${formatInvoiceTotal(header.currencyCode, header.totalInclTax)}`,
       '',
       'Please find the tax invoice attached as a PDF.',
       '',
@@ -720,7 +729,7 @@ export class BillingInvoicesService {
       <p><strong>Invoice:</strong> ${invoiceLabel}<br/>
       <strong>Customer:</strong> ${header.customerName} (${header.customerCode})<br/>
       <strong>Billing period:</strong> ${period}<br/>
-      <strong>Total:</strong> ${header.currencyCode} ${Number(header.totalInclTax ?? 0).toFixed(2)}</p>
+      <strong>Total:</strong> ${header.currencyCode} ${formatInvoiceTotal(header.currencyCode, header.totalInclTax)}</p>
       <p>Please find the tax invoice attached as a PDF.</p>
       <p>BIRD AIRPORT SERVICES</p>
     `.trim();

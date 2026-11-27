@@ -69,6 +69,11 @@ import {
 import type { BillingApi } from '@/lib/billing-api';
 import type { BillingInvoiceHeader, BillingPreparationRecord } from '@/lib/billing-shared/types';
 import { formatBillingDate, formatBillingDateRange } from '@/lib/billing-shared/billing-date-format';
+import {
+  formatBillingDisplayCurrency,
+  formatBillingDisplayNumber,
+  sortParticularsAlphabetically,
+} from '@/lib/billing-shared/currency-convert';
 
 type Props = { api: BillingApi };
 
@@ -141,14 +146,11 @@ function canDeleteInvoice(header: BillingInvoiceHeader) {
   return ['approved', 'generated', 'cancelled', 'archived'].includes(header.status);
 }
 
-const fmt = (n: number) =>
-  new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(n);
+/** INR shows whole rupees. Only USD carries decimals. */
+const fmt = (n: number) => formatBillingDisplayCurrency(n, 'INR');
 
 function formatInvoiceCurrency(amount: number, currencyCode: string) {
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: currencyCode === 'USD' ? 'USD' : 'INR',
-  }).format(amount);
+  return formatBillingDisplayCurrency(amount, currencyCode);
 }
 
 type InvoiceLineItem = {
@@ -396,7 +398,7 @@ function InvoiceCalculationDetails({
             </tr>
           </thead>
           <tbody className="divide-y divide-[color:var(--billing-border)] text-gray-800">
-            {lines.map((line) => {
+            {sortParticularsAlphabetically(lines).map((line, lineIndex) => {
               const discountFactor =
                 line.lineDiscountPercent && line.lineDiscountPercent > 0
                   ? 1 - line.lineDiscountPercent / 100
@@ -416,7 +418,7 @@ function InvoiceCalculationDetails({
                     </td>
                   ) : null}
                   <td className="px-2 py-2 align-top">
-                    #{line.lineNo}
+                    #{lineIndex + 1}
                     <div className="text-[11px] text-gray-600">
                       {resolveInvoiceServiceTypeLabel(header.invoiceCategory, line.serviceCode)}
                     </div>
@@ -437,7 +439,7 @@ function InvoiceCalculationDetails({
                       ? ` × (1 - ${line.lineDiscountPercent.toFixed(2)}%)`
                       : ''}
                     <br />
-                    Line amount ({currency}) = {computedExcl.toFixed(2)}
+                    Line amount ({currency}) = {formatBillingDisplayNumber(computedExcl, currency, { grouping: false })}
                   </td>
                   <td className="px-2 py-2 text-right align-top">
                     <div className="font-medium">
@@ -3726,10 +3728,12 @@ export function InvoiceDetailPage({ api, id }: Props & { id: string }) {
 
       {tab === 'lines' ? (
         <BillingDataTable
-          rows={lines.filter((line) => !isCeilingParticularLine(line))}
+          rows={sortParticularsAlphabetically(
+            lines.filter((line) => !isCeilingParticularLine(line)),
+          ).map((line, index) => ({ ...line, displayNo: index + 1 }))}
           getRowKey={(l) => String(l.lineNo)}
           columns={[
-            { key: 'no', header: '#', render: (l) => String(l.lineNo) },
+            { key: 'no', header: '#', render: (l) => String(l.displayNo) },
             { key: 'desc', header: 'Description', render: (l) => String(l.description) },
             { key: 'service', header: 'Service', render: (l) => resolveInvoiceServiceTypeLabel(header.invoiceCategory, l.serviceCode) },
             { key: 'qty', header: 'Qty', render: (l) => String(l.quantity) },
@@ -3749,9 +3753,9 @@ export function InvoiceDetailPage({ api, id }: Props & { id: string }) {
               key: 'tax',
               header: 'Tax split',
               render: (l) =>
-                `CGST ${asNumber(l.cgstAmount).toFixed(2)} + SGST ${asNumber(l.sgstAmount).toFixed(2)}${
+                `CGST ${formatBillingDisplayNumber(asNumber(l.cgstAmount), header.currencyCode, { grouping: false })} + SGST ${formatBillingDisplayNumber(asNumber(l.sgstAmount), header.currencyCode, { grouping: false })}${
                   asNumber(l.igstAmount) > 0
-                    ? ` + IGST ${asNumber(l.igstAmount).toFixed(2)}`
+                    ? ` + IGST ${formatBillingDisplayNumber(asNumber(l.igstAmount), header.currencyCode, { grouping: false })}`
                     : ''
                 }`,
             },

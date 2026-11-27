@@ -260,17 +260,21 @@ export function createBillingApi({ getApiBase, fetch }: BillingApiConfig) {
     return { blob: new Blob([bytes], { type: contentType }), fileName };
   };
 
+  /** Invoice numbers contain slashes. A download name cannot. */
+  const downloadFileName = (fileName: string) =>
+    (fileName || 'invoice.pdf').replace(/[\\/:*?"<>|\r\n\u0000]/g, '-').trim() || 'invoice.pdf';
+
   /** Trigger a real file download (works; Chrome PDF-viewer Download on blob: URLs does not). */
   const triggerBlobDownload = (blob: Blob, fileName: string) => {
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = url;
-    anchor.download = fileName || 'invoice.pdf';
+    anchor.download = downloadFileName(fileName);
     anchor.rel = 'noopener';
     document.body.appendChild(anchor);
     anchor.click();
     anchor.remove();
-    URL.revokeObjectURL(url);
+    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
   };
 
   const mergePdfBlobs = async (blobs: Blob[]): Promise<Blob> => {
@@ -310,7 +314,7 @@ export function createBillingApi({ getApiBase, fetch }: BillingApiConfig) {
       throw new Error('Pop-up blocked — allow pop-ups to view the PDF.');
     }
 
-    const safeName = (fileName || 'invoice.pdf').replace(/[\r\n\u0000]/g, '').trim() || 'invoice.pdf';
+    const safeName = downloadFileName(fileName);
     const title = escapeHtml(safeName);
     const urlJson = JSON.stringify(url);
     const nameJson = JSON.stringify(safeName);
@@ -378,7 +382,7 @@ export function createBillingApi({ getApiBase, fetch }: BillingApiConfig) {
     <h1>${title}</h1>
     <button type="button" id="download-btn">Download PDF</button>
   </header>
-  <iframe title="${title}" src="${url}"></iframe>
+  <iframe title="${title}" src="${url}#toolbar=0&navpanes=0"></iframe>
   <script>
     document.getElementById('download-btn').addEventListener('click', function () {
       var a = document.createElement('a');

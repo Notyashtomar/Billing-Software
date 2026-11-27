@@ -104,12 +104,20 @@ function fmtUsd(n: number): string {
   return new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
 }
 
+/** Whole rupees, half up. Cleans float noise first so 100.5 never prints as 100. */
+function wholeRupees(n: number): number {
+  const value = Number(n);
+  if (!Number.isFinite(value)) return 0;
+  return Math.round(Math.round(value * 100) / 100);
+}
+
+/** INR never prints paise on an invoice. Only USD amounts carry decimals. */
 function fmtInr(n: number): string {
-  return new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
+  return new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(wholeRupees(n));
 }
 
 function fmtRoundedInr(n: number): string {
-  return new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(Math.round(n));
+  return fmtInr(n);
 }
 
 function fmtRoundedUsd(n: number): string {
@@ -139,7 +147,13 @@ function concessionAmountRows(
   return [];
 }
 
+/** INR without digit grouping and without paise (reference unit rate: 1091). */
 function fmtPlainInr(n: number): string {
+  return String(wholeRupees(n));
+}
+
+/** USD without digit grouping, two decimals (reference unit rate: 4222.49). */
+function fmtPlainUsd(n: number): string {
   return n.toFixed(2);
 }
 
@@ -155,6 +169,14 @@ function wordsWithPaisa(words: string): string {
 function fmtRoe(n: number): string {
   return n.toFixed(5);
 }
+
+/** Exported for unit tests: the money formats printed on the tax invoice. */
+export const invoiceMoneyFormat = {
+  inr: fmtInr,
+  plainInr: fmtPlainInr,
+  usd: fmtUsd,
+  plainUsd: fmtPlainUsd,
+};
 
 const STATION_LOGO_BRANDS: Record<string, InvoiceLogoBrand> = {
   CHENNAI: 'BAS',
@@ -1184,7 +1206,7 @@ function renderLineItemsTable(doc: PDFKit.PDFDocument, input: InvoicePdfInput, s
           String(line.charged),
           line.aircraftType ?? '',
           line.uom,
-          fmtPlainInr(line.unitPrice),
+          fmtPlainUsd(line.unitPrice),
           fmtUsd(line.amount),
         ]
       : [
@@ -1194,7 +1216,7 @@ function renderLineItemsTable(doc: PDFKit.PDFDocument, input: InvoicePdfInput, s
           String(line.charged),
           line.aircraftType ?? '',
           line.uom,
-          // Reference prints the unit rate without digit grouping (1091.00).
+          // Reference prints the unit rate without digit grouping. INR carries no paise (1091).
           fmtPlainInr(line.unitPrice),
           fmtInr(line.amount),
         ],
@@ -1317,7 +1339,7 @@ function renderLineItemsTable(doc: PDFKit.PDFDocument, input: InvoicePdfInput, s
       if (input.cgstUsd != null && input.cgstUsd > 0) {
         addAmountRow(
           `CGST @ ${fmtPct(input.cgstPercent ?? 9)}%`,
-          fmtPlainInr(input.cgstUsd),
+          fmtPlainUsd(input.cgstUsd),
           false,
           taxAddPlaced ? undefined : 'Add:',
         );
@@ -1326,7 +1348,7 @@ function renderLineItemsTable(doc: PDFKit.PDFDocument, input: InvoicePdfInput, s
       if (input.sgstUsd != null && input.sgstUsd > 0) {
         addAmountRow(
           `SGST @ ${fmtPct(input.sgstPercent ?? 9)}%`,
-          fmtPlainInr(input.sgstUsd),
+          fmtPlainUsd(input.sgstUsd),
           false,
           taxAddPlaced ? undefined : 'Add:',
         );
@@ -1693,6 +1715,10 @@ export function buildInvoicePlainTextSummary(input: InvoicePdfInput): string {
     `Invoice: ${input.invoiceNumber}  Date: ${input.invoiceDate}`,
     `Customer: ${input.billTo.name}`,
     `Period: ${input.billingPeriodLabel}`,
-    `Total: ${fmtInr(input.totalInclTax)}`,
+    `Total: ${
+      input.totalReceivableUsd != null && input.totalReceivableInr == null
+        ? fmtUsd(input.totalReceivableUsd)
+        : fmtInr(input.totalInclTax)
+    }`,
   ].join('\n');
 }

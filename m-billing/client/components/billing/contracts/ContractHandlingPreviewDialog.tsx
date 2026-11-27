@@ -76,7 +76,9 @@ function formatMoney(amount: number | undefined, currency: 'INR' | 'USD') {
   return new Intl.NumberFormat(currency === 'INR' ? 'en-IN' : 'en-US', {
     style: 'currency',
     currency,
-    maximumFractionDigits: 2,
+    // INR shows whole rupees. Only USD carries decimals.
+    minimumFractionDigits: 0,
+    maximumFractionDigits: currency === 'INR' ? 0 : 2,
   }).format(amount);
 }
 

@@ -263,8 +263,8 @@ export function PriceCardHandlingSection({
       (entry) => entry.handlingType === selectedHandling,
     );
     setEntries(fromParent);
-    setLoadingEntries(false);
-  }, [allPriceCardAirlines, navLevel, selectedHandling]);
+    void loadEntries();
+  }, [allPriceCardAirlines, loadEntries, navLevel, selectedHandling]);
 
   useEffect(() => {
     setAirlineFilter('');

@@ -59,7 +59,7 @@ function formatInr(amount: number, signed = false): string {
       ? `₹${(abs / 1_00_00_000).toFixed(2)} Cr`
       : abs >= 1_00_000
         ? `₹${(abs / 1_00_000).toFixed(2)} L`
-        : `₹${abs.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
+        : `₹${abs.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
   return `${sign}${body}`;
 }
 

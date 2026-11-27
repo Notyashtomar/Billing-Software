@@ -7,6 +7,7 @@ import {
   listBhsPriceCardSheetRows,
   type BhsPriceCardSheetRow,
 } from './exportBhsPriceCardExcel';
+import { formatBillingDisplayNumber } from '@/lib/billing-shared/currency-convert';
 
 const COLUMNS = [
   'Station',
@@ -129,11 +130,7 @@ function SheetFilterSelect({
 
 function formatPrice(price: number | null, currency: string): string {
   if (price == null) return '';
-  const locale = currency === 'INR' ? 'en-IN' : 'en-US';
-  return new Intl.NumberFormat(locale, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(price);
+  return formatBillingDisplayNumber(price, currency);
 }
 
 export function BhsPriceCardSheet({

@@ -255,8 +255,9 @@ export function formatAdsQty(value: number): string {
 
 export function formatAdsInr(value: number): string {
   if (!value) return '';
+  // INR shows whole rupees.
   return value.toLocaleString('en-IN', {
     minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
+    maximumFractionDigits: 0,
   });
 }

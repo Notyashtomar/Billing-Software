@@ -5,6 +5,10 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from '@/components/ui/hover-card';
+import {
+  formatBillingDisplayCurrency,
+  formatBillingDisplayNumber,
+} from '@/lib/billing-shared/currency-convert';
 
 type RateLine = {
   description: string;
@@ -29,12 +33,7 @@ function num(value: unknown): number | null {
 }
 
 function money(amount: number, currency: string): string {
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: currency === 'USD' ? 'USD' : 'INR',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount);
+  return formatBillingDisplayCurrency(amount, currency);
 }
 
 function scenarioLabel(value: string): string {
@@ -227,7 +226,7 @@ export function InvoiceRatePathHover({
   currency: string;
 }) {
   const steps = buildInvoiceRateSteps(line, currency);
-  const label = `Rate(${line.unitPrice.toFixed(2)})`;
+  const label = `Rate(${formatBillingDisplayNumber(line.unitPrice, currency, { grouping: false })})`;
   return (
     <HoverCard openDelay={120} closeDelay={80}>
       <HoverCardTrigger asChild>

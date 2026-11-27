@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Loader2, Trash2 } from 'lucide-react';
 import type { BillingApi } from '@/lib/billing-api';
+import { formatBillingDisplayCurrency } from '@/lib/billing-shared/currency-convert';
 
 export type InvoiceEditLine = {
   lineNo: number;
@@ -25,10 +26,7 @@ type Props = {
 };
 
 function formatPreview(amount: number, currencyCode: string) {
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: currencyCode === 'USD' ? 'USD' : 'INR',
-  }).format(amount);
+  return formatBillingDisplayCurrency(amount, currencyCode);
 }
 
 export function linesToInvoiceEditLines(

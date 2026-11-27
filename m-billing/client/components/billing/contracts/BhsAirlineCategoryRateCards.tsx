@@ -381,9 +381,9 @@ export function BhsAirlineCategoryRateCards({
                         ) : row.entry.aeraCeiling != null ? (
                           <span
                             className="text-[10px] text-gray-400"
-                            title={`AERA ceiling ${row.entry.aeraCeiling.toLocaleString('en-IN')} (FY ${row.entry.aeraFinancialYear}, Code ${row.entry.aeraAircraftCode})`}
+                            title={`AERA ceiling ${row.entry.aeraCeiling.toLocaleString('en-IN', { maximumFractionDigits: 0 })} (FY ${row.entry.aeraFinancialYear}, Code ${row.entry.aeraAircraftCode})`}
                           >
-                            ≤{row.entry.aeraCeiling.toLocaleString('en-IN')}
+                            ≤{row.entry.aeraCeiling.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
                           </span>
                         ) : null}
                       </div>

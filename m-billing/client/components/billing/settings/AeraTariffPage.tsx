@@ -17,7 +17,7 @@ const CLASS_LABEL: Record<AeraTariffOrder['scheduled'][number]['flightClass'], s
 
 function inr(value: number | null | undefined): string {
   if (value == null) return 'N/A';
-  return value.toLocaleString('en-IN');
+  return value.toLocaleString('en-IN', { maximumFractionDigits: 0 });
 }
 
 function currentFinancialYear(): string {
