@@ -1,6 +1,7 @@
 import PDFDocument from 'pdfkit';
 import type { InvoicePdfInput } from './invoice-pdf.types';
 import { chandigarhBhsTerms, isChandigarhBhsLayout } from './invoice-pdf-chandigarh-bhs.util';
+import { isJewarBhsLayout, jewarBhsTerms } from './invoice-pdf-jewar-bhs.util';
 import { CHENNAI_INVOICE_FOOTER, resolveInvoiceContacts } from './invoice-pdf.defaults';
 import {
   getInvoiceLogoBuffer,
@@ -204,7 +205,11 @@ const STATION_LOGO_BRANDS: Record<string, InvoiceLogoBrand> = {
   IXC: 'BAS',
   DELHI: 'BFS',
   DEL: 'BFS',
+  JEWAR: 'BFS',
+  NOIDA: 'BFS',
+  DXN: 'BFS',
   KOCHI: 'BFS',
+  COCHIN: 'BFS',
   COK: 'BFS',
   TRIVANDRUM: 'GSEC',
   THIRUVANANTHAPURAM: 'GSEC',
@@ -1587,7 +1592,13 @@ function renderBankTable(doc: PDFKit.PDFDocument, input: InvoicePdfInput, startY
  * placement/typography is shared so every invoice reads the same.
  */
 function resolveInvoiceTermsForLayout(input: InvoicePdfInput): string[] {
-  return isChandigarhBhsLayout(input) ? chandigarhBhsTerms(input.company.name) : invoiceTerms(input.company.name);
+  if (input.termsOverride && input.termsOverride.length > 0) {
+    const entity = input.company.name.trim() || 'THE COMPANY';
+    return input.termsOverride.map((term) => term.split('{{ENTITY}}').join(entity));
+  }
+  if (isChandigarhBhsLayout(input)) return chandigarhBhsTerms(input.company.name);
+  if (isJewarBhsLayout(input)) return jewarBhsTerms(input.company.name);
+  return invoiceTerms(input.company.name);
 }
 
 /** Page 1 is identical for every station / service: brand, IRN, header grid, particulars, bank block. */
