@@ -21,7 +21,7 @@ import {
   BillingRateCard,
   BillingRateCardDocument,
 } from '../../schemas/billing.schemas';
-import { applyEbcCommission } from '../../utils/ebc-commission.util';
+import { applyEbcCommission, ebcRuleFromCustomer } from '../../utils/ebc-commission.util';
 import { reportDateYmd } from '../../utils/invoicing-flight-report.mapper';
 import {
   bakedAnnualSteps,
@@ -154,11 +154,12 @@ export class BillingSourceEnrichmentService {
     const yieldEvery = 150;
     for (let i = 0; i < inputs.length; i += 1) {
       const built = this.buildEnrichedRow(inputs[i], cache);
-      out.push(
-        String(inputs[i].sourceType ?? '').trim().toLowerCase() === 'ebc'
-          ? applyEbcCommission(built)
-          : built,
-      );
+      if (String(inputs[i].sourceType ?? '').trim().toLowerCase() === 'ebc') {
+        const airline = String(built.operationalData.customerCode ?? '').trim().toUpperCase();
+        out.push(applyEbcCommission(built, ebcRuleFromCustomer(cache.customersByCode.get(airline))));
+      } else {
+        out.push(built);
+      }
       if (i > 0 && i % yieldEvery === 0) {
         await new Promise<void>((resolve) => setImmediate(resolve));
       }

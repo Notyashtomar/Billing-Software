@@ -56,7 +56,7 @@ export function EbcSourceBillingPage({ api }: Props) {
       config={{
         title: 'EBC',
         description:
-          'Commission on excess baggage collected at the station. QP and VJ are charged 7% of the amount collected. UL is charged 5% of cash collections only. Service code is EBC.',
+          'Commission on excess baggage collected at the station. The percentage is set on the customer: all collections, or only cash, card, or UPI. QP and VJ are 7% of every collection. UL is 5% of cash only. Service code is EBC.',
         fetchMethod: 'listEbcBilling',
         bcAuditRef: 'EBC collection → billing',
         defaultFrom: '2026-09-01',

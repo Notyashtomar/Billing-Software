@@ -117,6 +117,20 @@ export class BillingCustomer {
   @Prop({ default: false })
   intermediaryAccountEnabled?: boolean;
 
+  /**
+   * When true, this airline is charged a percent of excess-baggage collections.
+   * Left unset until saved, so existing QP / VJ / UL rules keep working.
+   */
+  @Prop()
+  ebcCommissionEnabled?: boolean;
+
+  @Prop()
+  ebcCommissionPercent?: number;
+
+  /** all = cash, card, and UPI. Otherwise exactly one of those modes. */
+  @Prop({ enum: ['all', 'cash', 'card', 'upi'] })
+  ebcCommissionMode?: 'all' | 'cash' | 'card' | 'upi';
+
   @Prop({
     type: {
       bankName: { type: String, trim: true },

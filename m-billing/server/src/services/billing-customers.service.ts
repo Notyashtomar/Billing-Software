@@ -101,6 +101,40 @@ function cleanIntermediaryAccount(
   return Object.values(cleaned).some(Boolean) ? cleaned : undefined;
 }
 
+const EBC_COMMISSION_MODES = ['all', 'cash', 'card', 'upi'] as const;
+
+function assignEbcCommission(
+  doc: {
+    ebcCommissionEnabled?: boolean;
+    ebcCommissionPercent?: number;
+    ebcCommissionMode?: 'all' | 'cash' | 'card' | 'upi';
+  },
+  dto: {
+    ebcCommissionEnabled?: boolean;
+    ebcCommissionPercent?: number;
+    ebcCommissionMode?: 'all' | 'cash' | 'card' | 'upi';
+  },
+) {
+  if (dto.ebcCommissionEnabled === undefined) return;
+  const enabled = dto.ebcCommissionEnabled === true;
+  doc.ebcCommissionEnabled = enabled;
+  if (!enabled) {
+    doc.ebcCommissionPercent = undefined;
+    doc.ebcCommissionMode = undefined;
+    return;
+  }
+  const percent = Number(dto.ebcCommissionPercent);
+  if (!Number.isFinite(percent) || percent <= 0 || percent > 100) {
+    throw new BadRequestException('Enter an EBC percentage between 0 and 100.');
+  }
+  const mode = dto.ebcCommissionMode ?? 'all';
+  if (!EBC_COMMISSION_MODES.includes(mode)) {
+    throw new BadRequestException('Choose all collections, or only cash, card, or UPI.');
+  }
+  doc.ebcCommissionPercent = percent;
+  doc.ebcCommissionMode = mode;
+}
+
 function presentCustomer<T extends { annexures?: StoredCustomerAnnexures | null }>(doc: T) {
   const rest = { ...doc };
   delete rest.annexures;
@@ -232,6 +266,7 @@ export class BillingCustomersService {
       existing.vatNumber = dto.vatNumber?.trim().toUpperCase() || undefined;
       existing.intermediaryAccountEnabled = dto.intermediaryAccountEnabled === true;
       existing.intermediaryAccount = cleanIntermediaryAccount(dto.intermediaryAccount);
+      assignEbcCommission(existing, dto);
       const currentLines = Array.isArray(existing.scheduleLines)
         ? [...existing.scheduleLines]
         : [];
@@ -264,10 +299,21 @@ export class BillingCustomersService {
       return successResponse(presentCustomer(existing.toObject()));
     }
 
+    const ebcFields: {
+      ebcCommissionEnabled?: boolean;
+      ebcCommissionPercent?: number;
+      ebcCommissionMode?: 'all' | 'cash' | 'card' | 'upi';
+    } = {};
+    assignEbcCommission(ebcFields, dto);
+    const customerDto = { ...dto };
+    delete customerDto.ebcCommissionEnabled;
+    delete customerDto.ebcCommissionPercent;
+    delete customerDto.ebcCommissionMode;
     const created = await this.customerModel.create(
       StationScope.stampCreate(
         {
-          ...dto,
+          ...customerDto,
+          ...ebcFields,
           customerCode,
           airlineInvoiceName: dto.airlineInvoiceName?.trim() || undefined,
           secondaryAddressEnabled: dto.secondaryAddressEnabled === true,
@@ -352,9 +398,15 @@ export class BillingCustomersService {
       stationCode?: string;
       invoiceTerms?: string;
       annexures?: unknown;
+      ebcCommissionEnabled?: boolean;
+      ebcCommissionPercent?: number;
+      ebcCommissionMode?: 'all' | 'cash' | 'card' | 'upi';
     };
     delete customerFields.stationCode;
     delete customerFields.annexures;
+    delete customerFields.ebcCommissionEnabled;
+    delete customerFields.ebcCommissionPercent;
+    delete customerFields.ebcCommissionMode;
     if (dto.invoiceTerms !== undefined) {
       doc.invoiceTerms = dto.invoiceTerms.trim() || undefined;
       delete customerFields.invoiceTerms;
@@ -401,6 +453,7 @@ export class BillingCustomersService {
     if (dto.intermediaryAccountEnabled !== undefined) {
       doc.intermediaryAccountEnabled = dto.intermediaryAccountEnabled === true;
     }
+    assignEbcCommission(doc, dto);
     if (dto.airlineInvoiceName !== undefined) {
       doc.airlineInvoiceName = dto.airlineInvoiceName.trim() || undefined;
     }

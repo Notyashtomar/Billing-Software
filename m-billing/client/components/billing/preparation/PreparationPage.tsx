@@ -28,7 +28,6 @@ import {
   Trash2,
 } from 'lucide-react';
 import { SetDefaultBillingMonthButton } from '../SetDefaultBillingMonthButton';
-import { BillingPageHeader } from '../BillingLayout';
 import { billingUi } from '../billingUi';
 import { StatusBadge } from '../StatusBadge';
 import { MatchIndicator, ValidationIndicator } from '../sources/ValidationIndicator';
@@ -842,18 +841,109 @@ export function PreparationPage({ api }: Props) {
   return (
     <div className="preparation-workspace flex min-h-0 flex-1 flex-col">
       <div className="shrink-0">
-      <BillingPageHeader
-        title="Preparation workspace"
-        description="Bridge operational data to invoice drafts — review eligibility, fix validation errors, mark ready."
-        actions={
+      <div className={`${billingUi.card} -mt-1 mb-3 p-3 sm:px-4 sm:py-3`}>
+        <div className="flex flex-col gap-2.5 xl:flex-row xl:items-center xl:justify-between">
+          <div className="min-w-0">
+            <h1 className="text-lg font-semibold tracking-tight text-[color:var(--billing-heading)] sm:text-xl">
+              Preparation workspace
+            </h1>
+            <p className="mt-0.5 text-xs text-[color:var(--billing-text-muted)] sm:text-sm">
+              Bridge operational data to invoice drafts — review eligibility, fix validation errors, mark ready.
+            </p>
+          </div>
+
           <div className="flex flex-wrap items-center gap-2">
+            {!isCustomTab ? (
+              <form
+                className="flex flex-wrap items-center gap-2"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  syncPeriodToUrl();
+                  void load();
+                }}
+                aria-label="Preparation period filter"
+              >
+                <label className="inline-flex items-center gap-1.5 text-xs font-medium text-[color:var(--billing-text-secondary)]">
+                  <span className="whitespace-nowrap">From</span>
+                  <input
+                    type="date"
+                    value={from}
+                    onChange={(e) => setFrom(e.target.value)}
+                    onBlur={syncPeriodToUrl}
+                    className={`${billingUi.input} h-9 w-[9.25rem] px-2.5 py-1 text-xs sm:text-sm`}
+                  />
+                </label>
+                <label className="inline-flex items-center gap-1.5 text-xs font-medium text-[color:var(--billing-text-secondary)]">
+                  <span className="whitespace-nowrap">To</span>
+                  <input
+                    type="date"
+                    value={to}
+                    onChange={(e) => setTo(e.target.value)}
+                    onBlur={syncPeriodToUrl}
+                    className={`${billingUi.input} h-9 w-[9.25rem] px-2.5 py-1 text-xs sm:text-sm`}
+                  />
+                </label>
+                <label className="inline-flex items-center gap-1.5 text-xs font-medium text-[color:var(--billing-text-secondary)]">
+                  <span className="whitespace-nowrap">Customer</span>
+                  <input
+                    type="text"
+                    value={customerCode}
+                    onChange={(e) => setCustomerCode(e.target.value.toUpperCase())}
+                    placeholder="All"
+                    className={`${billingUi.input} h-9 w-[6.5rem] px-2.5 py-1 text-xs uppercase placeholder:normal-case sm:text-sm`}
+                  />
+                </label>
+                {resolvedTab === 'validation_error' && validationKindCounts ? (
+                  <label className="inline-flex items-center gap-1.5 text-xs font-medium text-[color:var(--billing-text-secondary)]">
+                  <span className="whitespace-nowrap">Kind</span>
+                  <select
+                    value={flightKind}
+                    onChange={(e) => {
+                      setFlightKind(e.target.value as PreparationFlightKindFilter);
+                      setSelected(new Set());
+                      setSelectAllMatching(false);
+                    }}
+                    className={`${billingUi.select} h-9 !w-[11rem] shrink-0 px-2.5 py-1 text-xs sm:text-sm`}
+                    aria-label="Filter validation errors by flight kind"
+                  >
+                    <option value="all">All flights ({validationKindCounts.all})</option>
+                    <option value="cancelled">
+                      Cancelled ({validationKindCounts.cancelled})
+                    </option>
+                    <option value="scheduled">
+                      Scheduled ({validationKindCounts.scheduled})
+                    </option>
+                    <option value="additional">
+                      Additional ({validationKindCounts.additional})
+                    </option>
+                  </select>
+                  </label>
+                ) : null}
+                <button
+                  type="submit"
+                  className={`${billingUi.btnPrimary} h-9 px-3 py-1.5 text-xs sm:text-sm`}
+                >
+                  <Search className="h-4 w-4" aria-hidden />
+                  Search
+                </button>
+              </form>
+            ) : null}
+
+            {!isCustomTab ? (
+              <span
+                className="hidden h-6 w-px bg-[color:var(--billing-border-strong)] sm:inline-block"
+                aria-hidden
+              />
+            ) : null}
+
+            <div className="flex flex-wrap items-center gap-2">
             {!isCustomTab ? (
             <button
               type="button"
               disabled={refreshing || loading}
               onClick={() => void refreshAll()}
               title="Re-apply latest contracts, rate cards, and validation rules for rows on this tab"
-              className={billingUi.btnSecondary}
+              className={`${billingUi.btnSecondary} h-9 px-3 py-1.5 text-xs sm:text-sm`}
             >
               <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} aria-hidden />
               {refreshing ? 'Refreshing…' : 'Refresh'}
@@ -864,7 +954,7 @@ export function PreparationPage({ api }: Props) {
                 type="button"
                 disabled={selectedCount === 0 || deleting || markingReady}
                 onClick={() => void deleteSelected()}
-                className={billingUi.btnDangerOutline}
+                className={`${billingUi.btnDangerOutline} h-9 px-3 py-1.5 text-xs sm:text-sm`}
               >
                 {deleting ? (
                   <>
@@ -874,7 +964,7 @@ export function PreparationPage({ api }: Props) {
                 ) : (
                   <>
                     <Trash2 className="h-4 w-4" aria-hidden />
-                    {`Delete selected (${selectedCount})`}
+                    {selectedCount > 0 ? `Delete (${selectedCount})` : 'Delete'}
                   </>
                 )}
               </button>
@@ -884,7 +974,7 @@ export function PreparationPage({ api }: Props) {
                 type="button"
                 disabled={selectedCount === 0 || markingReady || deleting || refreshing}
                 onClick={() => void markReadySelected()}
-                className={billingUi.btnPrimary}
+                className={`${billingUi.btnPrimary} h-9 px-3 py-1.5 text-xs sm:text-sm`}
               >
                 {markingReady ? (
                   <>
@@ -894,7 +984,7 @@ export function PreparationPage({ api }: Props) {
                 ) : (
                   <>
                     <CheckCheck className="h-4 w-4" aria-hidden />
-                    {`Mark ready (${selectedCount})`}
+                    {selectedCount > 0 ? `Mark ready (${selectedCount})` : 'Mark ready'}
                   </>
                 )}
               </button>
@@ -1018,7 +1108,7 @@ export function PreparationPage({ api }: Props) {
                     }
                   })()
                 }
-                className={billingUi.btnOutline}
+                className={`${billingUi.btnOutline} h-9 px-3 py-1.5 text-xs sm:text-sm`}
               >
                 {creatingDrafts ? (
                   <>
@@ -1028,25 +1118,27 @@ export function PreparationPage({ api }: Props) {
                 ) : (
                   <>
                     <FilePlus2 className="h-4 w-4" aria-hidden />
-                    {`Create invoice (${readyInPeriod} flights)`}
+                    {`Create invoice (${readyInPeriod} flight${readyInPeriod === 1 ? '' : 's'})`}
                   </>
                 )}
               </button>
             ) : null}
             <SetDefaultBillingMonthButton
+              buttonClassName="h-9 whitespace-nowrap px-3 py-1.5 text-xs sm:text-sm"
               monthValue={defaultFlightMonthValue}
               onApplied={applySavedDefaultMonth}
             />
+            </div>
           </div>
-        }
-      />
+        </div>
+      </div>
 
       <div
         role="tablist"
         aria-label="Preparation status"
-        className="z-20 -mx-4 mb-4 flex flex-wrap gap-1 border-b border-[color:var(--billing-border)] bg-[color:var(--billing-bg)]/95 px-4 py-2 backdrop-blur-sm sm:-mx-6 sm:px-6 supports-[backdrop-filter]:bg-[color:var(--billing-bg)]/90"
+        className="mb-3 flex flex-col gap-2 rounded-[var(--billing-radius-xl)] border border-[color:var(--billing-border)] bg-[color:var(--billing-surface)] px-3 py-2 shadow-[var(--billing-shadow-sm)] lg:flex-row lg:items-center lg:justify-between"
       >
-        <div className="flex w-full gap-1 overflow-x-auto rounded-[var(--billing-radius-xl)] border border-[color:var(--billing-border)] bg-[color:var(--billing-surface)] p-1 shadow-[var(--billing-shadow-sm)]">
+        <div className="flex min-w-0 gap-1 overflow-x-auto">
         {TABS.map((t) => {
           const active = resolvedTab === t.id;
           const count = tabBadgeCount(t.id);
@@ -1057,10 +1149,12 @@ export function PreparationPage({ api }: Props) {
             role="tab"
             aria-selected={active}
             onClick={() => setTab(t.id)}
-            className={`inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-[var(--billing-radius-lg)] px-3.5 py-2 text-sm font-medium transition-[background-color,color,box-shadow] duration-150 ${prepFocusRing} ${
+            className={`inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-[var(--billing-radius-lg)] px-3 py-1.5 text-sm font-medium transition-[background-color,color,box-shadow] duration-150 ${prepFocusRing} ${
               active
                 ? 'bg-[color:var(--billing-primary)] text-[color:var(--billing-text-inverse)] shadow-[var(--billing-shadow-sm)]'
-                : 'text-[color:var(--billing-text-secondary)] hover:bg-[color:var(--billing-primary-soft)] hover:text-[color:var(--billing-primary)]'
+                : count > 0
+                  ? 'text-[color:var(--billing-heading)] hover:bg-[color:var(--billing-primary-soft)]'
+                  : 'text-[color:var(--billing-text-muted)] hover:bg-[color:var(--billing-primary-soft)] hover:text-[color:var(--billing-primary)]'
             }`}
           >
             {t.label}
@@ -1069,7 +1163,11 @@ export function PreparationPage({ api }: Props) {
                 active
                   ? 'bg-white/20 text-[color:var(--billing-text-inverse)]'
                   : count > 0
-                    ? 'bg-[color:var(--billing-info-soft)] text-[color:var(--billing-info)]'
+                    ? t.id === 'validation_error' || t.id === 'rejected'
+                      ? 'bg-[color:var(--billing-danger-soft)] text-[color:var(--billing-danger)]'
+                      : t.id === 'ready_for_invoice'
+                        ? 'bg-[color:var(--billing-success-soft)] text-[color:var(--billing-success)]'
+                        : 'bg-[color:var(--billing-info-soft)] text-[color:var(--billing-info)]'
                     : 'bg-[color:var(--billing-surface-muted)] text-[color:var(--billing-text-muted)]'
               }`}
             >
@@ -1084,7 +1182,7 @@ export function PreparationPage({ api }: Props) {
           role="tab"
           aria-selected={isCustomTab}
           onClick={() => setTab('custom')}
-          className={`inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-[var(--billing-radius-lg)] px-3.5 py-2 text-sm font-medium transition-[background-color,color,box-shadow] duration-150 ${prepFocusRing} ${
+          className={`inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-[var(--billing-radius-lg)] px-3 py-1.5 text-sm font-medium transition-[background-color,color,box-shadow] duration-150 ${prepFocusRing} ${
             isCustomTab
               ? 'bg-[color:var(--billing-warning)] text-[color:var(--billing-text-inverse)] shadow-[var(--billing-shadow-sm)]'
               : 'text-[color:var(--billing-text-secondary)] hover:bg-[color:var(--billing-warning-soft)] hover:text-[color:var(--billing-warning)]'
@@ -1104,18 +1202,23 @@ export function PreparationPage({ api }: Props) {
           </span>
         </button>
         </div>
+
+        {!loading && scopedTotal > 0 ? (
+          <p className="flex shrink-0 items-center gap-1.5 px-1 text-xs text-[color:var(--billing-text-muted)] lg:text-right">
+            <Info className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            <span>
+              <strong className="font-semibold tabular-nums text-[color:var(--billing-heading)]">{scopedTotal}</strong>{' '}
+              flight{scopedTotal === 1 ? '' : 's'} in {formatBillingDateRange(from, to)}
+              {periodStatusSummary ? ` — ${periodStatusSummary}` : ''}
+            </span>
+          </p>
+        ) : null}
       </div>
 
-      {!loading && scopedTotal > 0 ? (
+      {!loading && scopedTotal > 0 && resolvedTab === 'pending' ? (
         <p className="mb-3 flex items-start gap-2 text-sm text-[color:var(--billing-text-secondary)]">
           <Info className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--billing-text-muted)]" aria-hidden />
           <span>
-          <strong className="font-semibold text-[color:var(--billing-heading)]">{scopedTotal}</strong>{' '}
-          flight{scopedTotal === 1 ? '' : 's'} in this period
-          {periodStatusSummary ? ` — ${periodStatusSummary}` : ''}.
-          {resolvedTab === 'pending' ? (
-            <>
-              {' '}
               Pending means validation passed and contract/rate are matched — check{' '}
               <button
                 type="button"
@@ -1140,8 +1243,6 @@ export function PreparationPage({ api }: Props) {
                 Invoice drafts
               </Link>
               .
-            </>
-          ) : null}
           </span>
         </p>
       ) : null}
@@ -1160,78 +1261,6 @@ export function PreparationPage({ api }: Props) {
           .
           </span>
         </p>
-      ) : null}
-
-      {!isCustomTab ? (
-      <div className={`${billingUi.filterBar} mb-4`}>
-        <label className={`${billingUi.filterField} sm:max-w-[11rem]`}>
-          Period from
-          <input
-            type="date"
-            value={from}
-            onChange={(e) => setFrom(e.target.value)}
-            onBlur={syncPeriodToUrl}
-            className={`${billingUi.input} min-h-10`}
-          />
-        </label>
-        <label className={`${billingUi.filterField} sm:max-w-[11rem]`}>
-          Period to
-          <input
-            type="date"
-            value={to}
-            onChange={(e) => setTo(e.target.value)}
-            onBlur={syncPeriodToUrl}
-            className={`${billingUi.input} min-h-10`}
-          />
-        </label>
-        <label className={`${billingUi.filterField} sm:max-w-[9rem]`}>
-          Customer
-          <input
-            type="text"
-            value={customerCode}
-            onChange={(e) => setCustomerCode(e.target.value.toUpperCase())}
-            placeholder="Optional"
-            className={`${billingUi.input} min-h-10 uppercase placeholder:normal-case`}
-          />
-        </label>
-        {resolvedTab === 'validation_error' && validationKindCounts ? (
-          <label className={`${billingUi.filterField} sm:max-w-[14rem]`}>
-            Flight kind
-            <select
-              value={flightKind}
-              onChange={(e) => {
-                setFlightKind(e.target.value as PreparationFlightKindFilter);
-                setSelected(new Set());
-                setSelectAllMatching(false);
-              }}
-              className={`${billingUi.select} min-h-10`}
-              aria-label="Filter validation errors by flight kind"
-            >
-              <option value="all">All flights ({validationKindCounts.all})</option>
-              <option value="cancelled">
-                Cancelled flights ({validationKindCounts.cancelled})
-              </option>
-              <option value="scheduled">
-                Scheduled flights ({validationKindCounts.scheduled})
-              </option>
-              <option value="additional">
-                Additional flights ({validationKindCounts.additional})
-              </option>
-            </select>
-          </label>
-        ) : null}
-        <button
-          type="button"
-          onClick={() => {
-            syncPeriodToUrl();
-            void load();
-          }}
-          className={`${billingUi.btnPrimary} min-h-10 sm:self-end`}
-        >
-          <Search className="h-4 w-4" aria-hidden />
-          Search
-        </button>
-      </div>
       ) : null}
 
       {deleting ? (
@@ -1320,53 +1349,60 @@ export function PreparationPage({ api }: Props) {
           <p className="text-sm text-[color:var(--billing-text-muted)]">Loading preparation records…</p>
         </div>
       ) : flightGroups.length === 0 ? (
-        <div className="flex flex-col items-center rounded-[var(--billing-radius-xl)] border border-dashed border-[color:var(--billing-border-strong)] bg-[color:var(--billing-surface)] px-6 py-14 text-center">
-          <span className="grid h-12 w-12 place-items-center rounded-full bg-[color:var(--billing-primary-soft)] text-[color:var(--billing-primary)]">
-            <Inbox className="h-6 w-6" aria-hidden />
+        <div className="flex flex-col items-center rounded-[var(--billing-radius-xl)] border border-dashed border-[color:var(--billing-border-strong)] bg-[color:var(--billing-surface)] px-6 py-10 text-center">
+          <span className="grid h-11 w-11 place-items-center rounded-full border border-[color:var(--billing-border-strong)] bg-[color:var(--billing-primary-soft)] text-[color:var(--billing-primary)]">
+            <Inbox className="h-5 w-5" aria-hidden />
           </span>
-          <p className="mt-4 max-w-xl text-sm font-semibold text-[color:var(--billing-heading)]">
+          <p className="mt-3 max-w-xl text-sm font-semibold text-[color:var(--billing-heading)]">
             {kindFilterActive
               ? `No ${flightKind} flights in validation errors for this period.`
               : activeTab.empty}
           </p>
           {scopedTotal > 0 ? (
-            <p className="mt-3 max-w-xl text-sm text-[color:var(--billing-text-secondary)]">
-              {scopedTotal} flight{scopedTotal === 1 ? '' : 's'} in this period are in other
-              tabs
-              {periodStatusSummary ? ` (${periodStatusSummary})` : ''}.
-              {(tabCounts.custom ?? 0) > 0 && !isCustomTab ? (
-                <>
-                  {' '}
-                  Custom bills are under{' '}
+            <>
+              <p className="mt-1.5 max-w-xl text-sm text-[color:var(--billing-text-secondary)]">
+                {scopedTotal} flight{scopedTotal === 1 ? '' : 's'} in{' '}
+                {formatBillingDateRange(from, to)} are in other tabs
+                {periodStatusSummary ? ` — ${periodStatusSummary}` : ''}.
+              </p>
+              <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+                {TAB_AUTOSWITCH_ORDER.filter(
+                  (id) => id !== resolvedTab && (tabCounts[id] ?? 0) > 0,
+                ).map((id) => {
+                  const label = TABS.find((t) => t.id === id)?.label ?? id;
+                  const count = tabCounts[id] ?? 0;
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => setTab(id)}
+                      className={`${billingUi.btnSecondary} h-8 gap-1.5 px-3 py-1 text-xs`}
+                    >
+                      {label}
+                      <span className="rounded-full bg-[color:var(--billing-info-soft)] px-1.5 py-px text-[11px] font-semibold tabular-nums text-[color:var(--billing-info)]">
+                        {count}
+                      </span>
+                      <ChevronRight className="h-3.5 w-3.5 opacity-60" aria-hidden />
+                    </button>
+                  );
+                })}
+                {(tabCounts.custom ?? 0) > 0 && !isCustomTab ? (
                   <button
                     type="button"
                     onClick={() => setTab('custom')}
-                    className="mx-1 font-medium text-[color:var(--billing-warning)] underline underline-offset-2 hover:opacity-80"
+                    className={`${billingUi.btnSecondary} h-8 gap-1.5 px-3 py-1 text-xs`}
                   >
-                    Custom ({tabCounts.custom})
+                    Custom
+                    <span className="rounded-full bg-[color:var(--billing-warning-soft)] px-1.5 py-px text-[11px] font-semibold tabular-nums text-[color:var(--billing-warning)]">
+                      {tabCounts.custom}
+                    </span>
+                    <ChevronRight className="h-3.5 w-3.5 opacity-60" aria-hidden />
                   </button>
-                  .
-                </>
-              ) : null}
-              {TAB_AUTOSWITCH_ORDER.filter(
-                (id) => id !== resolvedTab && (tabCounts[id] ?? 0) > 0,
-              ).map((id) => {
-                const label = TABS.find((t) => t.id === id)?.label ?? id;
-                const count = tabCounts[id] ?? 0;
-                return (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => setTab(id)}
-                    className={`mx-1 ${prepInlineLink}`}
-                  >
-                    {label} ({count})
-                  </button>
-                );
-              })}
-            </p>
+                ) : null}
+              </div>
+            </>
           ) : (
-            <p className="mt-3 max-w-xl text-xs text-[color:var(--billing-text-muted)]">
+            <p className="mt-2 max-w-xl text-xs text-[color:var(--billing-text-muted)]">
               Period filter uses the billing period start from when flights were sent. Match
               Period from/to to the source page dates used for Send to preparation.
               {isCustomTab
