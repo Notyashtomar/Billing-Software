@@ -542,20 +542,25 @@ function SelectionCheckbox({
 const draftFocusRing =
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--billing-info)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--billing-bg)]';
 
-/** Static card shell — surface, border, radius, soft shadow. */
-const draftCardClass =
-  'rounded-[var(--billing-radius-xl)] border border-[color:var(--billing-border)] bg-[color:var(--billing-surface)] shadow-[var(--billing-shadow-sm)] transition-[border-color,box-shadow,transform] duration-150 ease-out hover:border-[color:var(--billing-border-strong)] hover:shadow-[var(--billing-shadow-md)]';
+const draftListShellClass =
+  'overflow-hidden rounded-[var(--billing-radius-xl)] border border-[color:var(--billing-border)] bg-[color:var(--billing-surface)] shadow-[var(--billing-shadow-sm)]';
 
-/** Whole-card button tile (category cards). */
-const draftTileClass = `group relative flex h-full w-full flex-col ${draftCardClass} p-5 text-left hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.995] ${draftFocusRing}`;
+const draftListHeadClass =
+  'hidden border-b border-[color:var(--billing-border-strong)] bg-[color:var(--billing-surface-muted)] px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-[color:var(--billing-heading)] sm:grid';
+
+const draftListFooterClass =
+  'flex flex-wrap items-center justify-between gap-2 border-t border-[color:var(--billing-border-strong)] bg-[color:var(--billing-surface-muted)] px-4 py-2.5 text-xs text-[color:var(--billing-text-muted)]';
 
 const draftIconTileClass =
-  'grid h-11 w-11 shrink-0 place-items-center rounded-[var(--billing-radius-lg)] bg-[color:var(--billing-primary-soft)] text-[color:var(--billing-primary)] transition-colors duration-150 group-hover:bg-[color:var(--billing-primary)] group-hover:text-[color:var(--billing-text-inverse)]';
+  'grid h-10 w-10 shrink-0 place-items-center rounded-[var(--billing-radius-lg)] bg-[color:var(--billing-primary-soft)] text-[color:var(--billing-primary)] transition-colors duration-150 group-hover:bg-[color:var(--billing-primary)] group-hover:text-[color:var(--billing-text-inverse)]';
 
 const draftMonogramClass =
-  'grid h-11 w-11 shrink-0 place-items-center rounded-[var(--billing-radius-lg)] bg-[color:var(--billing-primary)] text-sm font-bold uppercase tracking-wide text-[color:var(--billing-text-inverse)] shadow-[var(--billing-shadow-sm)]';
+  'grid h-10 w-10 shrink-0 place-items-center rounded-full border border-[color:var(--billing-border-strong)] bg-[color:var(--billing-primary-soft)] font-mono text-[13px] font-semibold uppercase tracking-wide text-[color:var(--billing-heading)] transition-[background-color,border-color,color] duration-150 group-hover:border-[color:var(--billing-primary)] group-hover:bg-[color:var(--billing-primary)] group-hover:text-[color:var(--billing-text-inverse)]';
 
 const draftRowActionClass = `inline-flex min-h-8 items-center rounded-[var(--billing-radius)] px-2.5 py-1 text-sm font-medium text-[color:var(--billing-info)] transition-colors hover:bg-[color:var(--billing-primary-soft)] hover:text-[color:var(--billing-primary)] ${draftFocusRing}`;
+
+const draftOpenBadgeClass =
+  'inline-flex shrink-0 items-center gap-1.5 rounded-[var(--billing-radius)] border border-[color:var(--billing-border)] bg-[color:var(--billing-surface)] px-2.5 py-1 text-xs font-medium text-[color:var(--billing-info)] transition-[border-color,background-color,color,transform] duration-150 group-hover:border-[color:var(--billing-primary)] group-hover:bg-[color:var(--billing-primary-soft)] group-hover:text-[color:var(--billing-primary)]';
 
 /** Staggered entrance that reuses the design-system keyframes (max 6 delays). */
 function draftTileEnterClass(index: number): string {
@@ -614,7 +619,7 @@ function DraftSectionHeading({
   aside?: string;
 }) {
   return (
-    <div className="mb-3 flex items-end justify-between gap-4">
+    <div className="mb-2 flex items-end justify-between gap-4">
       <div className="min-w-0">
         <h2 className={billingUi.sectionTitle}>{title}</h2>
         <p className={billingUi.sectionDesc}>{description}</p>
@@ -642,44 +647,9 @@ function DraftCountPill({ count, muted = false }: { count: number; muted?: boole
   );
 }
 
-function DraftTileFooter({
-  label,
-  value,
-  cta,
-  muted = false,
-}: {
-  label: string;
-  value: string;
-  cta: string;
-  muted?: boolean;
-}) {
-  return (
-    <div className="mt-5 flex w-full items-end justify-between gap-3 border-t border-[color:var(--billing-border)] pt-3">
-      <div className="min-w-0">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[color:var(--billing-text-muted)]">
-          {label}
-        </p>
-        <p
-          className={`truncate text-sm font-semibold tabular-nums ${
-            muted ? 'text-[color:var(--billing-text-muted)]' : 'text-[color:var(--billing-heading)]'
-          }`}
-        >
-          {value}
-        </p>
-      </div>
-      <span className="inline-flex shrink-0 items-center gap-1.5 text-sm font-medium text-[color:var(--billing-info)] transition-colors group-hover:text-[color:var(--billing-primary)]">
-        <span className="sr-only sm:not-sr-only">{cta}</span>
-        <span className="grid h-7 w-7 place-items-center rounded-full border border-[color:var(--billing-border)] transition-[transform,border-color,background-color] duration-150 group-hover:translate-x-0.5 group-hover:border-[color:var(--billing-primary)] group-hover:bg-[color:var(--billing-primary-soft)]">
-          <ArrowRight className="h-3.5 w-3.5" aria-hidden />
-        </span>
-      </span>
-    </div>
-  );
-}
-
 function DraftTrail({ items }: { items: Array<{ label: string; onClick?: () => void }> }) {
   return (
-    <nav aria-label="Breadcrumb" className="mb-4 flex flex-wrap items-center gap-0.5 text-sm">
+    <nav aria-label="Breadcrumb" className="mb-2.5 flex flex-wrap items-center gap-0.5 text-sm">
       {items.map((item, index) => {
         const isLast = index === items.length - 1;
         return (
@@ -740,29 +710,36 @@ function DraftEmptyState({
 function DraftSkeletonGrid() {
   return (
     <div
-      className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4"
+      className={draftListShellClass}
       role="status"
       aria-live="polite"
       aria-label="Loading drafts"
     >
-      {Array.from({ length: 4 }).map((_, index) => (
-        <div
-          key={index}
-          className={`${draftCardClass} animate-pulse p-5 hover:translate-y-0 hover:shadow-[var(--billing-shadow-sm)]`}
-        >
-          <div className="flex items-start justify-between">
-            <span className="h-11 w-11 rounded-[var(--billing-radius-lg)] bg-[color:var(--billing-surface-muted)]" />
-            <span className="h-5 w-16 rounded-full bg-[color:var(--billing-surface-muted)]" />
+      <div className="hidden grid-cols-[minmax(0,1.6fr)_8rem_12rem_7rem] gap-4 border-b border-[color:var(--billing-border-strong)] bg-[color:var(--billing-surface-muted)] px-4 py-3 sm:grid">
+        <span className="h-3 w-28 rounded bg-[color:var(--billing-border)]" />
+        <span className="h-3 w-16 rounded bg-[color:var(--billing-border)]" />
+        <span className="ml-auto h-3 w-24 rounded bg-[color:var(--billing-border)]" />
+        <span className="ml-auto h-3 w-12 rounded bg-[color:var(--billing-border)]" />
+      </div>
+      <div className="divide-y divide-[color:var(--billing-border)]">
+        {Array.from({ length: 5 }).map((_, index) => (
+          <div
+            key={index}
+            className="flex animate-pulse items-center justify-between gap-4 px-4 py-3.5"
+          >
+            <div className="flex min-w-0 flex-1 items-center gap-3.5">
+              <span className="h-10 w-10 shrink-0 rounded-[var(--billing-radius-lg)] bg-[color:var(--billing-surface-muted)]" />
+              <div className="min-w-0 flex-1 space-y-2">
+                <span className="block h-4 w-28 rounded bg-[color:var(--billing-surface-muted)]" />
+                <span className="block h-3 w-64 max-w-full rounded bg-[color:var(--billing-surface-muted)]" />
+              </div>
+            </div>
+            <span className="hidden h-5 w-16 rounded-full bg-[color:var(--billing-surface-muted)] sm:block" />
+            <span className="h-4 w-28 rounded bg-[color:var(--billing-surface-muted)]" />
+            <span className="hidden h-7 w-16 rounded-[var(--billing-radius)] bg-[color:var(--billing-surface-muted)] sm:block" />
           </div>
-          <span className="mt-5 block h-4 w-20 rounded bg-[color:var(--billing-surface-muted)]" />
-          <span className="mt-2 block h-3 w-full rounded bg-[color:var(--billing-surface-muted)]" />
-          <span className="mt-1.5 block h-3 w-3/4 rounded bg-[color:var(--billing-surface-muted)]" />
-          <div className="mt-5 flex items-end justify-between border-t border-[color:var(--billing-border)] pt-3">
-            <span className="h-4 w-24 rounded bg-[color:var(--billing-surface-muted)]" />
-            <span className="h-7 w-7 rounded-full bg-[color:var(--billing-surface-muted)]" />
-          </div>
-        </div>
-      ))}
+        ))}
+      </div>
       <span className="sr-only">Loading drafts…</span>
     </div>
   );
@@ -1144,122 +1121,132 @@ export function InvoiceDraftsPage({ api }: Props) {
             ? `${selectedCategory} · ${selectedAirline.name} drafts for ${selectedMonth?.label ?? 'selected month'}`
             : 'Draft invoices composed from preparation records';
 
-  const familiesWithDrafts = categoryGroups.filter((group) => group.invoiceCount > 0).length;
   const periodFiltered = Boolean(periodFrom || periodTo);
   const bulkBusy = deleting || merging || binning || refreshingAll;
 
   return (
     <>
-      <BillingPageHeader
-        title="Invoice drafts"
-        description={pageDescription}
-        actions={
+      <div className={`${billingUi.card} -mt-1 mb-3 p-3 sm:px-4 sm:py-3`}>
+        <div className="flex flex-col gap-2.5 xl:flex-row xl:items-center xl:justify-between">
+          <div className="min-w-0">
+            <h1 className="text-lg font-semibold tracking-tight text-[color:var(--billing-heading)] sm:text-xl">
+              Invoice drafts
+            </h1>
+            <p className="mt-0.5 text-xs text-[color:var(--billing-text-muted)] sm:text-sm">
+              {pageDescription}
+            </p>
+          </div>
+
           <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              disabled={refreshingAll || merging || binning || deleting || loading}
-              onClick={() => setRefreshDialogOpen(true)}
-              className={billingUi.btnSecondary}
-              title="Re-apply customer, contract, and conversion masters to all open drafts. Rebuilds from preparation when linked rows still exist."
+            <form
+              className="flex flex-wrap items-center gap-2"
+              onSubmit={(event) => event.preventDefault()}
+              aria-label="Billing period filter"
             >
-              {refreshingAll ? (
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-              ) : (
-                <RefreshCw className="h-4 w-4" aria-hidden />
-              )}
-              {refreshingAll ? 'Refreshing…' : 'Refresh invoices'}
-            </button>
-            {navLevel === 'invoices' || navLevel === 'airlines' ? (
-              <>
-                {navLevel === 'invoices' ? (
-                  <>
-                    <button
-                      type="button"
-                      disabled={selected.size < 2 || merging || binning || deleting || refreshingAll}
-                      onClick={() => setMergeDialogOpen(true)}
-                      className={billingUi.btnPrimary}
-                    >
-                      {merging
-                        ? 'Merging…'
-                        : `Merge into one${selected.size > 1 ? ` (${selected.size})` : ''}`}
-                    </button>
-                    <button
-                      type="button"
-                      disabled={selected.size === 0 || binning || merging || refreshingAll}
-                      onClick={() => setBinDialogOpen(true)}
-                      className="inline-flex items-center justify-center gap-1.5 rounded-[var(--billing-radius)] border border-[color:var(--billing-warning-border)] bg-[color:var(--billing-surface)] px-4 py-2 text-sm font-medium text-[color:var(--billing-warning)] transition-[background-color,border-color,color,box-shadow,transform] duration-150 ease-out hover:bg-[color:var(--billing-warning-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--billing-info)] focus-visible:ring-offset-2 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      <Archive className="h-4 w-4" aria-hidden />
-                      {binning ? 'Moving…' : `Move to bin${selected.size > 0 ? ` (${selected.size})` : ''}`}
-                    </button>
-                  </>
-                ) : null}
+              <label className="inline-flex items-center gap-1.5 text-xs font-medium text-[color:var(--billing-text-secondary)]">
+                <span className="whitespace-nowrap">From</span>
+                <input
+                  type="date"
+                  value={periodFrom}
+                  onChange={(e) => setPeriodFrom(e.target.value)}
+                  className={`${billingUi.input} h-9 w-[9.25rem] px-2.5 py-1 text-xs sm:text-sm`}
+                />
+              </label>
+              <label className="inline-flex items-center gap-1.5 text-xs font-medium text-[color:var(--billing-text-secondary)]">
+                <span className="whitespace-nowrap">To</span>
+                <input
+                  type="date"
+                  value={periodTo}
+                  onChange={(e) => setPeriodTo(e.target.value)}
+                  className={`${billingUi.input} h-9 w-[9.25rem] px-2.5 py-1 text-xs sm:text-sm`}
+                />
+              </label>
+              <SetDefaultBillingMonthButton
+                buttonClassName="h-9 whitespace-nowrap px-3 py-1.5 text-xs sm:text-sm"
+                monthValue={
+                  /^\d{4}-\d{2}/.test(periodFrom)
+                    ? periodFrom.slice(0, 7)
+                    : (readStoredDefaultBillingMonth() ?? SYSTEM_DEFAULT_BILLING_MONTH)
+                }
+                onApplied={(range) => {
+                  setPeriodFrom(range.from);
+                  setPeriodTo(range.to);
+                }}
+              />
+              {periodFiltered ? (
                 <button
                   type="button"
-                  disabled={selectedRows.length === 0 || deleting || merging || refreshingAll}
-                  onClick={() => setDeleteDialogOpen(true)}
-                  className={billingUi.btnDangerOutline}
+                  onClick={() => {
+                    setPeriodFrom('');
+                    setPeriodTo('');
+                  }}
+                  className={`${billingUi.btnGhost} h-9 whitespace-nowrap px-2.5 py-1.5 text-xs`}
                 >
-                  {deleting
-                    ? 'Deleting…'
-                    : `Delete selected${selectedRows.length > 0 ? ` (${selectedRows.length})` : ''}`}
+                  <X className="h-3.5 w-3.5" aria-hidden />
+                  Show all periods
                 </button>
-              </>
-            ) : null}
-          </div>
-        }
-      />
+              ) : null}
+            </form>
 
-      <div className={`${billingUi.card} mb-5`}>
-        <div className="flex flex-col gap-3 p-3 sm:flex-row sm:items-end sm:justify-between sm:p-4">
-          <form
-            className="flex flex-col gap-2 sm:flex-row sm:items-end"
-            onSubmit={(event) => event.preventDefault()}
-            aria-label="Billing period filter"
-          >
-            <label className="flex min-w-0 flex-col gap-1 text-xs font-medium text-[color:var(--billing-text-secondary)]">
-              Period from
-              <input
-                type="date"
-                value={periodFrom}
-                onChange={(e) => setPeriodFrom(e.target.value)}
-                className={`${billingUi.input} min-h-10 sm:w-40`}
-              />
-            </label>
-            <label className="flex min-w-0 flex-col gap-1 text-xs font-medium text-[color:var(--billing-text-secondary)]">
-              Period to
-              <input
-                type="date"
-                value={periodTo}
-                onChange={(e) => setPeriodTo(e.target.value)}
-                className={`${billingUi.input} min-h-10 sm:w-40`}
-              />
-            </label>
-            <SetDefaultBillingMonthButton
-              monthValue={
-                /^\d{4}-\d{2}/.test(periodFrom)
-                  ? periodFrom.slice(0, 7)
-                  : (readStoredDefaultBillingMonth() ?? SYSTEM_DEFAULT_BILLING_MONTH)
-              }
-              onApplied={(range) => {
-                setPeriodFrom(range.from);
-                setPeriodTo(range.to);
-              }}
+            <span
+              className="hidden h-6 w-px bg-[color:var(--billing-border-strong)] sm:inline-block"
+              aria-hidden
             />
-            {periodFiltered ? (
+
+            <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
-                onClick={() => {
-                  setPeriodFrom('');
-                  setPeriodTo('');
-                }}
-                className={`${billingUi.btnGhost} min-h-10 whitespace-nowrap`}
+                disabled={refreshingAll || merging || binning || deleting || loading}
+                onClick={() => setRefreshDialogOpen(true)}
+                className={`${billingUi.btnSecondary} h-9 px-3 py-1.5 text-xs sm:text-sm`}
+                title="Re-apply customer, contract, and conversion masters to all open drafts. Rebuilds from preparation when linked rows still exist."
               >
-                <X className="h-4 w-4" aria-hidden />
-                Show all periods
+                {refreshingAll ? (
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                ) : (
+                  <RefreshCw className="h-4 w-4" aria-hidden />
+                )}
+                {refreshingAll ? 'Refreshing…' : 'Refresh invoices'}
               </button>
-            ) : null}
-          </form>
+              {navLevel === 'invoices' || navLevel === 'airlines' ? (
+                <>
+                  {navLevel === 'invoices' ? (
+                    <>
+                      <button
+                        type="button"
+                        disabled={selected.size < 2 || merging || binning || deleting || refreshingAll}
+                        onClick={() => setMergeDialogOpen(true)}
+                        className={`${billingUi.btnPrimary} h-9 px-3 py-1.5 text-xs sm:text-sm`}
+                      >
+                        {merging
+                          ? 'Merging…'
+                          : `Merge into one${selected.size > 1 ? ` (${selected.size})` : ''}`}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={selected.size === 0 || binning || merging || refreshingAll}
+                        onClick={() => setBinDialogOpen(true)}
+                        className="inline-flex h-9 items-center justify-center gap-1.5 rounded-[var(--billing-radius)] border border-[color:var(--billing-warning-border)] bg-[color:var(--billing-surface)] px-3 py-1.5 text-xs font-medium text-[color:var(--billing-warning)] transition-[background-color,border-color,color,box-shadow,transform] duration-150 ease-out hover:bg-[color:var(--billing-warning-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--billing-info)] focus-visible:ring-offset-2 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm"
+                      >
+                        <Archive className="h-4 w-4" aria-hidden />
+                        {binning ? 'Moving…' : `Move to bin${selected.size > 0 ? ` (${selected.size})` : ''}`}
+                      </button>
+                    </>
+                  ) : null}
+                  <button
+                    type="button"
+                    disabled={selectedRows.length === 0 || deleting || merging || refreshingAll}
+                    onClick={() => setDeleteDialogOpen(true)}
+                    className={`${billingUi.btnDangerOutline} h-9 px-3 py-1.5 text-xs sm:text-sm`}
+                  >
+                    {deleting
+                      ? 'Deleting…'
+                      : `Delete selected${selectedRows.length > 0 ? ` (${selectedRows.length})` : ''}`}
+                  </button>
+                </>
+              ) : null}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1286,61 +1273,257 @@ export function InvoiceDraftsPage({ api }: Props) {
         />
       ) : navLevel === 'categories' ? (
         <section aria-label="Invoice draft categories">
-          <DraftSectionHeading
-            title="Invoice categories"
-            description={
-              hideMaas
-                ? 'BHS, ADS, RAF, ULD, EBC, and OTH drafts stay separate — open a card to list only that family.'
-                : 'BHS, ADS, RAF, MAAS, ULD, EBC, and OTH drafts stay separate — open a card to list only that family.'
-            }
-            aside={`${familiesWithDrafts} of ${categoryGroups.length} families have drafts`}
-          />
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            {categoryGroups.map((cat, index) => {
-              const Icon =
-                cat.key === 'ADS' || cat.key === 'ULD'
-                  ? Package
-                  : cat.key === 'RAF'
-                    ? Wrench
-                    : cat.key === 'MAAS'
-                      ? UsersRound
-                      : cat.key === 'CUSTOM'
-                        ? Building2
-                        : cat.key === 'EBC'
-                          ? Luggage
-                          : cat.key === 'OTH'
-                            ? Layers
-                            : Plane;
+          {(() => {
+            const grandTotal = categoryGroups.reduce((sum, c) => sum + c.totalInclTax, 0);
+            const grandCount = categoryGroups.reduce((sum, c) => sum + c.invoiceCount, 0);
+            const activeGroups = categoryGroups.filter((c) => c.invoiceCount > 0);
+            const emptyGroups = categoryGroups.filter((c) => c.invoiceCount === 0);
+            const topGroup = activeGroups.reduce<DraftCategoryGroup | null>(
+              (best, c) => (best == null || c.totalInclTax > best.totalInclTax ? c : best),
+              null,
+            );
+            const periodLabel =
+              periodFrom && periodTo
+                ? formatBillingDateRange(periodFrom, periodTo)
+                : 'All periods';
+            const iconFor = (key: DraftInvoiceCategory) =>
+              key === 'ADS' || key === 'ULD'
+                ? Package
+                : key === 'RAF'
+                  ? Wrench
+                  : key === 'MAAS'
+                    ? UsersRound
+                    : key === 'CUSTOM'
+                      ? Building2
+                      : key === 'EBC'
+                        ? Luggage
+                        : key === 'OTH'
+                          ? Layers
+                          : Plane;
+            const renderRow = (cat: DraftCategoryGroup, index: number) => {
+              const Icon = iconFor(cat.key);
               const isEmpty = cat.invoiceCount === 0;
               return (
-                <button
-                  key={cat.key}
-                  type="button"
-                  onClick={() => openCategory(cat.key)}
-                  className={`${draftTileClass} ${draftTileEnterClass(index)}`}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <span className={draftIconTileClass}>
-                      <Icon className="h-5 w-5" aria-hidden />
+                <li key={cat.key} className={draftTileEnterClass(index)}>
+                  <button
+                    type="button"
+                    onClick={() => openCategory(cat.key)}
+                    aria-label={`Open ${cat.label} drafts`}
+                    className={`group relative flex w-full items-center gap-3 px-4 py-3 text-left transition-colors duration-150 hover:bg-[color:var(--billing-primary-soft)] sm:grid sm:grid-cols-[minmax(0,1fr)_6.5rem_minmax(11rem,13rem)_2.25rem] sm:gap-5 ${draftFocusRing} focus-visible:ring-inset`}
+                  >
+                    <span
+                      aria-hidden
+                      className={`absolute inset-y-2 left-0 w-[3px] rounded-r-full transition-opacity duration-150 ${
+                        isEmpty
+                          ? 'bg-[color:var(--billing-border-strong)] opacity-0 group-hover:opacity-100'
+                          : 'bg-[color:var(--billing-primary)] opacity-0 group-hover:opacity-100'
+                      }`}
+                    />
+
+                    <div className="flex min-w-0 flex-1 items-center gap-3">
+                      <span
+                        className={`grid h-9 w-9 shrink-0 place-items-center rounded-[var(--billing-radius-lg)] border transition-colors duration-150 ${
+                          isEmpty
+                            ? 'border-[color:var(--billing-border)] bg-[color:var(--billing-surface)] text-[color:var(--billing-text-muted)] group-hover:border-[color:var(--billing-primary)] group-hover:text-[color:var(--billing-primary)]'
+                            : 'border-transparent bg-[color:var(--billing-primary-soft)] text-[color:var(--billing-primary)] group-hover:bg-[color:var(--billing-primary)] group-hover:text-[color:var(--billing-text-inverse)]'
+                        }`}
+                      >
+                        <Icon className="h-[18px] w-[18px]" aria-hidden />
+                      </span>
+                      <div className="min-w-0">
+                        <div className="flex items-baseline gap-2">
+                          <h3
+                            className={`truncate text-[15px] font-semibold tracking-tight ${
+                              isEmpty
+                                ? 'text-[color:var(--billing-text-secondary)]'
+                                : 'text-[color:var(--billing-heading)]'
+                            }`}
+                          >
+                            {cat.label}
+                          </h3>
+                          {cat.key !== cat.label.toUpperCase() ? (
+                            <span className="hidden font-mono text-[11px] font-medium uppercase tracking-wide text-[color:var(--billing-text-muted)] sm:inline">
+                              {cat.key}
+                            </span>
+                          ) : null}
+                        </div>
+                        <p className="mt-0.5 truncate text-[13px] leading-5 text-[color:var(--billing-text-muted)]">
+                          {cat.description}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="hidden sm:block">
+                      {isEmpty ? (
+                        <span className="text-sm text-[color:var(--billing-text-muted)]">—</span>
+                      ) : (
+                        <span className="inline-flex items-baseline gap-1 tabular-nums">
+                          <span className="text-base font-semibold text-[color:var(--billing-heading)]">
+                            {cat.invoiceCount}
+                          </span>
+                          <span className="text-xs text-[color:var(--billing-text-muted)]">
+                            draft{cat.invoiceCount === 1 ? '' : 's'}
+                          </span>
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex shrink-0 flex-col items-end text-right">
+                      {isEmpty ? (
+                        <span className="text-sm text-[color:var(--billing-text-muted)]">No drafts</span>
+                      ) : (
+                        <span className="text-[15px] font-semibold tabular-nums text-[color:var(--billing-heading)]">
+                          {fmt(cat.totalInclTax)}
+                        </span>
+                      )}
+                      <span className="text-xs tabular-nums text-[color:var(--billing-text-muted)] sm:hidden">
+                        {isEmpty ? '' : `${cat.invoiceCount} draft${cat.invoiceCount === 1 ? '' : 's'}`}
+                      </span>
+                    </div>
+
+                    <span
+                      className={`hidden h-8 w-8 place-items-center rounded-full border transition-[border-color,background-color,color,transform] duration-150 sm:grid ${
+                        isEmpty
+                          ? 'border-[color:var(--billing-border)] text-[color:var(--billing-text-muted)] group-hover:border-[color:var(--billing-primary)] group-hover:text-[color:var(--billing-primary)]'
+                          : 'border-[color:var(--billing-border)] text-[color:var(--billing-info)] group-hover:border-[color:var(--billing-primary)] group-hover:bg-[color:var(--billing-primary)] group-hover:text-[color:var(--billing-text-inverse)]'
+                      }`}
+                      aria-hidden
+                    >
+                      <ChevronRight className="h-4 w-4" />
                     </span>
-                    <DraftCountPill count={cat.invoiceCount} muted={isEmpty} />
-                  </div>
-                  <h3 className="mt-4 text-base font-semibold tracking-tight text-[color:var(--billing-heading)]">
-                    {cat.label}
-                  </h3>
-                  <p className="mt-1 line-clamp-2 text-sm leading-5 text-[color:var(--billing-text-secondary)]">
-                    {cat.description}
-                  </p>
-                  <DraftTileFooter
-                    label="Total receivable"
-                    value={isEmpty ? 'No drafts yet' : fmt(cat.totalInclTax)}
-                    muted={isEmpty}
-                    cta={`View ${cat.key} drafts`}
-                  />
-                </button>
+                    <ChevronRight
+                      className="h-4 w-4 shrink-0 text-[color:var(--billing-text-muted)] sm:hidden"
+                      aria-hidden
+                    />
+                  </button>
+                </li>
               );
-            })}
-          </div>
+            };
+
+            return (
+              <>
+                <div className="mb-3 grid grid-cols-2 gap-2 lg:grid-cols-4">
+                  <div className={`${billingUi.card} px-4 py-3`}>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[color:var(--billing-text-muted)]">
+                      Total receivable
+                    </p>
+                    <p className="mt-1 truncate text-xl font-semibold tabular-nums tracking-tight text-[color:var(--billing-heading)]">
+                      {grandCount > 0 ? fmt(grandTotal) : '—'}
+                    </p>
+                    <p className="mt-0.5 truncate text-xs text-[color:var(--billing-text-muted)]">
+                      {periodLabel}
+                    </p>
+                  </div>
+                  <div className={`${billingUi.card} px-4 py-3`}>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[color:var(--billing-text-muted)]">
+                      Draft invoices
+                    </p>
+                    <p className="mt-1 text-xl font-semibold tabular-nums tracking-tight text-[color:var(--billing-heading)]">
+                      {grandCount}
+                    </p>
+                    <p className="mt-0.5 truncate text-xs text-[color:var(--billing-text-muted)]">
+                      across {activeGroups.length} famil{activeGroups.length === 1 ? 'y' : 'ies'}
+                    </p>
+                  </div>
+                  <div className={`${billingUi.card} px-4 py-3`}>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[color:var(--billing-text-muted)]">
+                      Largest family
+                    </p>
+                    <p className="mt-1 truncate text-xl font-semibold tracking-tight text-[color:var(--billing-heading)]">
+                      {topGroup ? topGroup.label : '—'}
+                    </p>
+                    <p className="mt-0.5 truncate text-xs text-[color:var(--billing-text-muted)]">
+                      {topGroup ? `${topGroup.invoiceCount} draft${topGroup.invoiceCount === 1 ? '' : 's'}` : 'No drafts in this period'}
+                    </p>
+                  </div>
+                  <div className={`${billingUi.card} px-4 py-3`}>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[color:var(--billing-text-muted)]">
+                      Families
+                    </p>
+                    <p className="mt-1 text-xl font-semibold tabular-nums tracking-tight text-[color:var(--billing-heading)]">
+                      {activeGroups.length}
+                      <span className="text-sm font-medium text-[color:var(--billing-text-muted)]">
+                        {' '}
+                        / {categoryGroups.length}
+                      </span>
+                    </p>
+                    <p className="mt-0.5 truncate text-xs text-[color:var(--billing-text-muted)]">
+                      {emptyGroups.length === 0
+                        ? 'every family has drafts'
+                        : `${emptyGroups.length} with no drafts yet`}
+                    </p>
+                  </div>
+                </div>
+
+                <div className={draftListShellClass}>
+                  <div className="flex items-center justify-between gap-3 border-b border-[color:var(--billing-border)] px-4 py-2.5">
+                    <div className="min-w-0">
+                      <h2 className="text-sm font-semibold text-[color:var(--billing-heading)]">
+                        Invoice categories
+                      </h2>
+                      <p className="truncate text-xs text-[color:var(--billing-text-muted)]">
+                        Select a service family to see its billing months and airlines.
+                      </p>
+                    </div>
+                    <span className="hidden shrink-0 text-xs tabular-nums text-[color:var(--billing-text-muted)] sm:inline">
+                      {grandCount} draft{grandCount === 1 ? '' : 's'}
+                    </span>
+                  </div>
+
+                  <div
+                    className="hidden grid-cols-[minmax(0,1fr)_6.5rem_minmax(11rem,13rem)_2.25rem] gap-5 border-b border-[color:var(--billing-border)] bg-[color:var(--billing-surface-muted)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.06em] text-[color:var(--billing-text-muted)] sm:grid"
+                    aria-hidden
+                  >
+                    <span>Service family</span>
+                    <span>Drafts</span>
+                    <span className="text-right">Receivable</span>
+                    <span />
+                  </div>
+
+                  <ul className="divide-y divide-[color:var(--billing-border)]">
+                    {activeGroups.map((cat, index) => renderRow(cat, index))}
+                  </ul>
+
+                  {emptyGroups.length > 0 ? (
+                    <>
+                      <div className="flex items-center gap-3 border-y border-[color:var(--billing-border)] bg-[color:var(--billing-surface-muted)] px-4 py-1.5">
+                        <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[color:var(--billing-text-muted)]">
+                          No drafts in this period
+                        </span>
+                        <span className="h-px flex-1 bg-[color:var(--billing-border)]" aria-hidden />
+                        <span className="text-[11px] tabular-nums text-[color:var(--billing-text-muted)]">
+                          {emptyGroups.length} famil{emptyGroups.length === 1 ? 'y' : 'ies'}
+                        </span>
+                      </div>
+                      <ul className="divide-y divide-[color:var(--billing-border)]">
+                        {emptyGroups.map((cat, index) =>
+                          renderRow(cat, activeGroups.length + index),
+                        )}
+                      </ul>
+                    </>
+                  ) : null}
+
+                  <div className={draftListFooterClass}>
+                    <span>
+                      Totals reflect {periodFiltered ? 'the selected period' : 'all periods'} on this
+                      station
+                    </span>
+                    <span className="inline-flex items-baseline gap-1.5 tabular-nums">
+                      <span className="text-[color:var(--billing-text-muted)]">
+                        {grandCount} draft{grandCount === 1 ? '' : 's'}
+                      </span>
+                      <span className="text-[color:var(--billing-border-strong)]" aria-hidden>
+                        ·
+                      </span>
+                      <span className="text-sm font-semibold text-[color:var(--billing-heading)]">
+                        {grandCount > 0 ? fmt(grandTotal) : '—'}
+                      </span>
+                    </span>
+                  </div>
+                </div>
+              </>
+            );
+          })()}
         </section>
       ) : navLevel === 'months' ? (
         <section aria-label="Draft billing months">
@@ -1352,7 +1535,7 @@ export function InvoiceDraftsPage({ api }: Props) {
           />
           <DraftSectionHeading
             title="Billing months"
-            description={`Open a month to see airlines, or download one combined ${selectedCategory} PDF for every airline in that period.`}
+            description={`Select a month to inspect airlines, or download one combined ${selectedCategory} PDF for every airline in that period.`}
             aside={`${monthGroups.length} month${monthGroups.length === 1 ? '' : 's'}`}
           />
           {monthGroups.length === 0 ? (
@@ -1362,57 +1545,105 @@ export function InvoiceDraftsPage({ api }: Props) {
               body="Create drafts from the preparation workspace and they will be grouped here by billing month."
             />
           ) : (
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {monthGroups.map((month, index) => {
-                const isDownloading = downloadingMonthKey === month.key;
-                const downloadBusy = downloadingMonthKey != null;
-                return (
-                  <article
-                    key={month.key}
-                    className={`${draftCardClass} ${draftTileEnterClass(index)} flex flex-col p-5`}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => openMonth(month.key)}
-                      className="group flex w-full flex-col rounded-[var(--billing-radius)] text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--billing-info)] focus-visible:ring-offset-2"
+            <div className={draftListShellClass}>
+              <div
+                className={`${draftListHeadClass} grid-cols-[minmax(0,1.4fr)_8rem_11rem_auto] items-center gap-4`}
+                aria-hidden
+              >
+                <span>Billing period</span>
+                <span>Drafts</span>
+                <span className="text-right">Total receivable</span>
+                <span className="text-right">Actions</span>
+              </div>
+              <div className="divide-y divide-[color:var(--billing-border)]" role="list">
+                {monthGroups.map((month, index) => {
+                  const isDownloading = downloadingMonthKey === month.key;
+                  const downloadBusy = downloadingMonthKey != null;
+                  return (
+                    <article
+                      key={month.key}
+                      role="listitem"
+                      className={`${draftTileEnterClass(index)} flex flex-col gap-3 px-4 py-3.5 transition-colors duration-150 hover:bg-[color:var(--billing-primary-soft)] sm:grid sm:grid-cols-[minmax(0,1.4fr)_8rem_11rem_auto] sm:items-center sm:gap-4`}
                     >
-                      <div className="flex items-start justify-between gap-3">
+                      <button
+                        type="button"
+                        onClick={() => openMonth(month.key)}
+                        className={`group flex min-w-0 items-center gap-3.5 rounded-[var(--billing-radius)] text-left ${draftFocusRing}`}
+                      >
                         <span className={draftIconTileClass}>
                           <CalendarDays className="h-5 w-5" aria-hidden />
                         </span>
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="truncate text-sm font-semibold tracking-tight text-[color:var(--billing-heading)] sm:text-base">
+                              {month.label}
+                            </h3>
+                            <span className="sm:hidden">
+                              <DraftCountPill count={month.invoiceCount} />
+                            </span>
+                          </div>
+                          <p className="mt-0.5 text-xs text-[color:var(--billing-text-secondary)] sm:text-sm">
+                            {month.airlineCount} airline{month.airlineCount === 1 ? '' : 's'}
+                          </p>
+                        </div>
+                      </button>
+
+                      <div className="hidden sm:block">
                         <DraftCountPill count={month.invoiceCount} />
                       </div>
-                      <h3 className="mt-4 text-base font-semibold tracking-tight text-[color:var(--billing-heading)]">
-                        {month.label}
-                      </h3>
-                      <p className="mt-1 text-sm text-[color:var(--billing-text-secondary)]">
-                        {month.airlineCount} airline{month.airlineCount === 1 ? '' : 's'}
-                      </p>
-                      <DraftTileFooter
-                        label="Total receivable"
-                        value={fmt(month.totalInclTax)}
-                        cta="View airlines"
-                      />
-                    </button>
-                    <button
-                      type="button"
-                      disabled={downloadBusy || month.invoiceCount === 0}
-                      onClick={() => void downloadAllMonthInvoices(month)}
-                      aria-label={`Download combined ${selectedCategory ?? ''} PDF with all ${month.invoiceCount} invoices for ${month.label}`}
-                      className={`${billingUi.btnSecondary} mt-4 w-full`}
-                    >
-                      {isDownloading ? (
-                        <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                      ) : (
-                        <Download className="h-4 w-4" aria-hidden />
-                      )}
-                      {isDownloading
-                        ? 'Building PDF…'
-                        : `Download combined PDF (${month.invoiceCount})`}
-                    </button>
-                  </article>
-                );
-              })}
+
+                      <div className="flex items-center justify-between gap-2 sm:block sm:text-right">
+                        <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[color:var(--billing-text-muted)] sm:hidden">
+                          Total receivable
+                        </span>
+                        <span className="text-sm font-semibold tabular-nums text-[color:var(--billing-heading)] sm:text-base">
+                          {fmt(month.totalInclTax)}
+                        </span>
+                      </div>
+
+                      <div className="flex flex-wrap items-center justify-end gap-2">
+                        <button
+                          type="button"
+                          disabled={downloadBusy || month.invoiceCount === 0}
+                          onClick={() => void downloadAllMonthInvoices(month)}
+                          aria-label={`Download combined ${selectedCategory ?? ''} PDF with all ${month.invoiceCount} invoices for ${month.label}`}
+                          className={`${billingUi.btnSecondary} min-h-9 px-3 py-1.5 text-xs`}
+                        >
+                          {isDownloading ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                          ) : (
+                            <Download className="h-3.5 w-3.5" aria-hidden />
+                          )}
+                          {isDownloading
+                            ? 'Building PDF…'
+                            : `Combined PDF (${month.invoiceCount})`}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openMonth(month.key)}
+                          className={`group ${draftOpenBadgeClass} min-h-9 px-3 py-1.5`}
+                        >
+                          <span>Airlines</span>
+                          <ArrowRight
+                            className="h-3.5 w-3.5 transition-transform duration-150 group-hover:translate-x-0.5"
+                            aria-hidden
+                          />
+                        </button>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+              <div className={draftListFooterClass}>
+                <span>
+                  {monthGroups.length} billing month{monthGroups.length === 1 ? '' : 's'} in{' '}
+                  {selectedCategory}
+                </span>
+                <span className="font-semibold tabular-nums text-[color:var(--billing-heading)]">
+                  {categoryRows.length} draft{categoryRows.length === 1 ? '' : 's'} ·{' '}
+                  {fmt(monthGroups.reduce((sum, m) => sum + m.totalInclTax, 0))}
+                </span>
+              </div>
             </div>
           )}
         </section>
@@ -1432,7 +1663,7 @@ export function InvoiceDraftsPage({ api }: Props) {
                 {airlineSearch.trim()
                   ? filteredAirlineGroups.length === 0
                     ? `No airlines match “${airlineSearch.trim()}”.`
-                    : `Showing ${filteredAirlineGroups.length} of ${airlineGroups.length} airlines for “${airlineSearch.trim()}”. Select cards to delete those drafts.`
+                    : `Showing ${filteredAirlineGroups.length} of ${airlineGroups.length} airlines for “${airlineSearch.trim()}”. Select rows to delete those drafts.`
                   : `Select airlines to delete their ${selectedMonth.label} drafts, or open an airline to review each invoice.`}
               </p>
             </div>
@@ -1487,13 +1718,13 @@ export function InvoiceDraftsPage({ api }: Props) {
               }
             />
           ) : (
-            <>
+            <div className={draftListShellClass}>
               <div
-                className={`${billingUi.card} mb-3 flex flex-col gap-2 px-4 py-2.5 sm:flex-row sm:items-center sm:justify-between ${
-                  selectedRows.length > 0 ? 'border-[color:var(--billing-border-strong)]' : ''
+                className={`flex flex-col gap-2 border-b border-[color:var(--billing-border)] bg-[color:var(--billing-surface)] px-4 py-2.5 sm:flex-row sm:items-center sm:justify-between ${
+                  selectedRows.length > 0 ? 'bg-[color:var(--billing-info-soft)]/40' : ''
                 }`}
               >
-                <label className="inline-flex min-h-10 items-center gap-2.5 text-sm font-medium text-[color:var(--billing-text)]">
+                <label className="inline-flex min-h-9 cursor-pointer items-center gap-2.5 text-sm font-medium text-[color:var(--billing-text)]">
                   <SelectionCheckbox
                     checked={allSelected}
                     indeterminate={selectedRows.length > 0 && !allSelected}
@@ -1545,7 +1776,19 @@ export function InvoiceDraftsPage({ api }: Props) {
                   ) : null}
                 </div>
               </div>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+
+              <div
+                className={`${draftListHeadClass} grid-cols-[2rem_minmax(0,1.6fr)_8.5rem_11.5rem_7.5rem] items-center gap-4`}
+                aria-hidden
+              >
+                <span />
+                <span>Airline</span>
+                <span>Drafts</span>
+                <span className="text-right">Total receivable</span>
+                <span className="text-right">Action</span>
+              </div>
+
+              <div className="divide-y divide-[color:var(--billing-border)]" role="list">
                 {filteredAirlineGroups.map((airline, index) => {
                   const airlineIds = airline.invoices.map(rowId);
                   const selectedCount = airlineIds.filter((id) => selected.has(id)).length;
@@ -1556,20 +1799,15 @@ export function InvoiceDraftsPage({ api }: Props) {
                   return (
                     <article
                       key={airline.key}
-                      className={`${draftCardClass} ${draftTileEnterClass(index)} flex flex-col p-5 ${
+                      role="listitem"
+                      className={`${draftTileEnterClass(index)} flex flex-col gap-3 px-4 py-3.5 transition-colors duration-150 sm:grid sm:grid-cols-[2rem_minmax(0,1.6fr)_8.5rem_11.5rem_7.5rem] sm:items-center sm:gap-4 ${
                         highlighted
-                          ? 'border-[color:var(--billing-info)] ring-1 ring-[color:var(--billing-info)]'
-                          : ''
+                          ? 'bg-[color:var(--billing-info-soft)]'
+                          : 'hover:bg-[color:var(--billing-primary-soft)]'
                       }`}
                     >
-                      <div className="flex items-start justify-between gap-3">
-                        <span className={draftMonogramClass}>{airline.code.slice(0, 2)}</span>
-                        <label className="inline-flex min-h-10 min-w-10 items-center justify-end gap-2">
-                          {highlighted ? (
-                            <span className="text-[11px] font-medium tabular-nums text-[color:var(--billing-info)]">
-                              {selectedCount}/{airlineIds.length}
-                            </span>
-                          ) : null}
+                      <div className="flex items-center justify-between sm:justify-start">
+                        <label className="inline-flex min-h-8 min-w-8 cursor-pointer items-center gap-2">
                           <SelectionCheckbox
                             checked={airlineAllSelected}
                             indeterminate={airlineSomeSelected}
@@ -1577,33 +1815,86 @@ export function InvoiceDraftsPage({ api }: Props) {
                             onChange={() => toggleAirlineSelection(airline)}
                             label={`Select ${airline.invoiceCount} draft${airline.invoiceCount === 1 ? '' : 's'} for ${airline.code}`}
                           />
+                          {highlighted ? (
+                            <span className="text-[11px] font-medium tabular-nums text-[color:var(--billing-info)] sm:hidden">
+                              {selectedCount}/{airlineIds.length} selected
+                            </span>
+                          ) : null}
                         </label>
+                        <span className="sm:hidden">
+                          <DraftCountPill count={airline.invoiceCount} />
+                        </span>
                       </div>
+
                       <button
                         type="button"
                         onClick={() => openAirline(airline.key)}
-                        className="group mt-3 flex w-full flex-col rounded-[var(--billing-radius)] text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--billing-info)] focus-visible:ring-offset-2"
+                        className={`group flex min-w-0 items-center gap-3.5 rounded-[var(--billing-radius)] text-left ${draftFocusRing}`}
                       >
-                        <div className="flex items-center justify-between gap-2">
-                          <h3 className="text-base font-semibold tracking-tight text-[color:var(--billing-heading)]">
-                            {airline.code}
-                          </h3>
-                          <DraftCountPill count={airline.invoiceCount} />
+                        <span className={draftMonogramClass}>{airline.code.slice(0, 2)}</span>
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="truncate text-[15px] font-semibold tracking-tight text-[color:var(--billing-heading)]">
+                              {airline.name && airline.name !== airline.code ? airline.name : airline.code}
+                            </h3>
+                            {highlighted ? (
+                              <span className="hidden text-[11px] font-medium tabular-nums text-[color:var(--billing-info)] sm:inline">
+                                {selectedCount}/{airlineIds.length} selected
+                              </span>
+                            ) : null}
+                          </div>
+                          <p className="mt-0.5 flex items-center gap-1.5 text-xs text-[color:var(--billing-text-muted)]">
+                            <span className="font-mono font-medium uppercase tracking-wide text-[color:var(--billing-text-secondary)]">
+                              {airline.code}
+                            </span>
+                            <span aria-hidden>·</span>
+                            <span>{selectedCategory} drafts</span>
+                          </p>
                         </div>
-                        <p className="mt-0.5 line-clamp-2 text-sm text-[color:var(--billing-text-secondary)]">
-                          {airline.name}
-                        </p>
-                        <DraftTileFooter
-                          label="Total receivable"
-                          value={fmt(airline.totalInclTax)}
-                          cta="View invoices"
-                        />
                       </button>
+
+                      <div className="hidden sm:block">
+                        <DraftCountPill count={airline.invoiceCount} />
+                      </div>
+
+                      <div className="flex items-center justify-between gap-2 sm:block sm:text-right">
+                        <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[color:var(--billing-text-muted)] sm:hidden">
+                          Total receivable
+                        </span>
+                        <span className="text-sm font-semibold tabular-nums text-[color:var(--billing-heading)] sm:text-base">
+                          {fmt(airline.totalInclTax)}
+                        </span>
+                      </div>
+
+                      <div className="flex justify-end">
+                        <button
+                          type="button"
+                          onClick={() => openAirline(airline.key)}
+                          className={`group ${draftOpenBadgeClass}`}
+                        >
+                          <span>Invoices</span>
+                          <ArrowRight
+                            className="h-3.5 w-3.5 transition-transform duration-150 group-hover:translate-x-0.5"
+                            aria-hidden
+                          />
+                        </button>
+                      </div>
                     </article>
                   );
                 })}
               </div>
-            </>
+
+              <div className={draftListFooterClass}>
+                <span>
+                  {filteredAirlineGroups.length} airline{filteredAirlineGroups.length === 1 ? '' : 's'} shown
+                  {airlineSearch.trim() ? ` (of ${airlineGroups.length})` : ''}
+                </span>
+                <span className="font-semibold tabular-nums text-[color:var(--billing-heading)]">
+                  {airlinePageInvoices.length} draft{airlinePageInvoices.length === 1 ? '' : 's'} ·{' '}
+                  {fmt(filteredAirlineGroups.reduce((sum, a) => sum + a.totalInclTax, 0))}
+                </span>
+              </div>
+            </div>
           )}
         </section>
       ) : selectedAirline && selectedMonth ? (

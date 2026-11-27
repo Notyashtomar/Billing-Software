@@ -3,9 +3,12 @@ import {
   IsArray,
   IsBoolean,
   IsEnum,
+  IsIn,
   IsNumber,
   IsOptional,
   IsString,
+  Max,
+  Min,
   ArrayMinSize,
   MaxLength,
   MinLength,
@@ -47,6 +50,9 @@ export class IntermediaryAccountDto {
 
 const PRICE_CARD_HANDLING_TYPES = ['BHS', 'ADS', 'RAF'] as const;
 type PriceCardHandlingType = (typeof PRICE_CARD_HANDLING_TYPES)[number];
+
+const EBC_COMMISSION_MODES = ['all', 'cash', 'card', 'upi'] as const;
+type EbcCommissionMode = (typeof EBC_COMMISSION_MODES)[number];
 
 export class CreateBillingCustomerDto {
   @IsString()
@@ -154,6 +160,22 @@ export class CreateBillingCustomerDto {
   @ValidateNested()
   @Type(() => IntermediaryAccountDto)
   intermediaryAccount?: IntermediaryAccountDto;
+
+  /** When true, charge this percent on excess-baggage collections. */
+  @IsOptional()
+  @IsBoolean()
+  ebcCommissionEnabled?: boolean;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  ebcCommissionPercent?: number;
+
+  /** all = cash, card, and UPI. Otherwise one mode only. */
+  @IsOptional()
+  @IsIn(EBC_COMMISSION_MODES)
+  ebcCommissionMode?: EbcCommissionMode;
 
   @IsOptional()
   @IsNumber()
@@ -272,6 +294,22 @@ export class UpdateBillingCustomerDto {
   @ValidateNested()
   @Type(() => IntermediaryAccountDto)
   intermediaryAccount?: IntermediaryAccountDto;
+
+  /** When true, charge this percent on excess-baggage collections. */
+  @IsOptional()
+  @IsBoolean()
+  ebcCommissionEnabled?: boolean;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  ebcCommissionPercent?: number;
+
+  /** all = cash, card, and UPI. Otherwise one mode only. */
+  @IsOptional()
+  @IsIn(EBC_COMMISSION_MODES)
+  ebcCommissionMode?: EbcCommissionMode;
 
   @IsOptional()
   @IsArray()

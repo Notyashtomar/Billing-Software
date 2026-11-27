@@ -3297,6 +3297,7 @@ export class BillingPreparationService {
               (k === 'commissionPercent' ||
                 k === 'commissionAmount' ||
                 k === 'cashOnlyCommission' ||
+                k === 'commissionMode' ||
                 k === 'collectedAmount' ||
                 k === 'paymentMode')),
         ),

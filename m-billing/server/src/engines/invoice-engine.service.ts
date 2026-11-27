@@ -665,6 +665,7 @@ export class InvoiceEngineService {
       {
         percent: number;
         cashOnly: boolean;
+        mode: string;
         collected: number;
         commission: number;
         records: BillingPreparationRecordDocument[];
@@ -681,10 +682,18 @@ export class InvoiceEngineService {
       const percent = storedPercent > 0 ? storedPercent : (rule?.percent ?? 0);
       const cashOnly =
         snap.cashOnlyCommission === true || (rule?.cashOnly === true && snap.cashOnlyCommission !== false);
-      const key = `${percent}|${cashOnly ? 'cash' : 'all'}`;
+      const storedMode = String(snap.commissionMode ?? '');
+      const mode =
+        storedMode === 'cash' || storedMode === 'card' || storedMode === 'upi' || storedMode === 'all'
+          ? storedMode
+          : cashOnly
+            ? 'cash'
+            : 'all';
+      const key = `${percent}|${mode}`;
       const bucket = groups.get(key) ?? {
         percent,
-        cashOnly,
+        cashOnly: mode === 'cash',
+        mode,
         collected: 0,
         commission: 0,
         records: [],
@@ -700,7 +709,8 @@ export class InvoiceEngineService {
       const lineAmountExclTax = round2(bucket.commission);
       if (!(lineAmountExclTax > 0)) continue;
       const collected = round2(bucket.collected);
-      const scope = bucket.cashOnly ? ' on cash' : '';
+      const scope =
+        bucket.mode === 'cash' ? ' on cash' : bucket.mode === 'card' ? ' on card' : bucket.mode === 'upi' ? ' on UPI' : '';
       const tax = await this.taxEngine.calculateLine(ctx, {
         lineAmountExclTax,
         serviceCode: 'EBC',
@@ -723,6 +733,7 @@ export class InvoiceEngineService {
           collectedAmount: collected,
           commissionPercent: bucket.percent,
           cashOnly: bucket.cashOnly,
+          commissionMode: bucket.mode,
           usedQuantity: bucket.records.length,
           chargedQuantity: 1,
           flights: bucket.records.map(flightLabel).filter(Boolean),

@@ -123,6 +123,11 @@ export interface BillingCustomer {
     swiftCode?: string;
     ifscCode?: string;
   };
+  /** When true, this airline is charged a percent of EBC collections. */
+  ebcCommissionEnabled?: boolean;
+  ebcCommissionPercent?: number;
+  /** all = cash, card, and UPI. Otherwise one mode only. */
+  ebcCommissionMode?: 'all' | 'cash' | 'card' | 'upi';
   /** Saved annexure PDFs. The invoice page opens the file for ADS or BHS. */
   annexures?: {
     ads?: BillingCustomerAnnexureFile;

@@ -4,7 +4,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { BillingPageHeader } from '../BillingLayout';
 import { BillingDataTable } from '../BillingDataTable';
-import { StatusBadge } from '../StatusBadge';
 import { CustomerFormDialog } from './CustomerFormDialog';
 import { CustomerDeleteDialog, type CustomerDeleteMode } from './CustomerDeleteDialog';
 import { TableEditButton } from '../TableEditButton';
@@ -15,8 +14,72 @@ import {
 } from '@/lib/billing-shared/expand-customers-for-display';
 import { downloadCustomerTemplate, parseCustomerWorkbook } from './customerImport';
 import { MasterSectionTabs } from '../MasterSectionTabs';
+import { billingUi } from '../billingUi';
 
 type Props = { api: BillingApi };
+
+function ColumnTitle({ title, hint }: { title: string; hint: string }) {
+  return (
+    <span className="inline-flex flex-col gap-0.5 normal-case tracking-normal">
+      <span>{title}</span>
+      <span className="text-[10px] font-normal normal-case tracking-normal text-[color:var(--billing-text-muted)]">
+        {hint}
+      </span>
+    </span>
+  );
+}
+
+function PrintSettingSwitch({
+  on,
+  busy,
+  onText,
+  offText,
+  title,
+  label,
+  needsDetails = false,
+  onClick,
+}: {
+  on: boolean;
+  busy: boolean;
+  onText: string;
+  offText: string;
+  title: string;
+  label: string;
+  needsDetails?: boolean;
+  onClick: () => void;
+}) {
+  const tone = !on
+    ? 'border-[color:var(--billing-border)] bg-[color:var(--billing-surface)] text-[color:var(--billing-text-muted)]'
+    : needsDetails
+      ? 'border-[color:var(--billing-warning-border)] bg-[color:var(--billing-warning-soft)] text-[color:var(--billing-warning)]'
+      : 'border-[color:var(--billing-success-border)] bg-[color:var(--billing-success-soft)] text-[color:var(--billing-success)]';
+  const track = !on
+    ? 'bg-[color:var(--billing-text-muted)]'
+    : needsDetails
+      ? 'bg-[color:var(--billing-warning)]'
+      : 'bg-[color:var(--billing-success)]';
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      aria-label={label}
+      title={title}
+      disabled={busy}
+      onClick={onClick}
+      className={`inline-flex items-center gap-2 rounded-full border px-2 py-1 text-xs font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--billing-primary)] disabled:opacity-60 ${tone}`}
+    >
+      <span className={`relative h-4 w-7 shrink-0 rounded-full ${track}`} aria-hidden>
+        <span
+          className={`absolute top-0.5 h-3 w-3 rounded-full bg-[color:var(--billing-surface)] shadow-sm transition-transform ${
+            on ? 'left-3.5' : 'left-0.5'
+          }`}
+        />
+      </span>
+      {busy ? 'Saving…' : on ? onText : offText}
+    </button>
+  );
+}
 
 type BulkDeleteResult = {
   deleted: number;
@@ -346,7 +409,16 @@ export function CustomersPage({ api }: Props) {
           {success}
         </div>
       ) : null}
+      <p className="mb-3 text-sm text-[color:var(--billing-text-muted)]">
+        One row is one airline. Print PAN, Print VAT, and Extra bank choose what is added to that airline’s invoice. Hidden is the usual setting.
+      </p>
       <BillingDataTable
+        footer={
+          <span>
+            {displayRows.length} airline{displayRows.length === 1 ? '' : 's'}
+            {selected.size > 0 ? ` · ${selected.size} selected` : ''}
+          </span>
+        }
         loading={loading}
         rows={displayRows}
         getRowKey={(r) => r.rowKey}
@@ -375,152 +447,149 @@ export function CustomersPage({ api }: Props) {
               />
             ),
           },
-          { key: 'code', header: 'Code', render: (r) => r.customerCode },
-          { key: 'name', header: 'Airline name', render: (r) => r.name },
-          { key: 'currency', header: 'Currency', render: (r) => r.currencyCode },
+          {
+            key: 'code',
+            header: <ColumnTitle title="Code" hint="Airline" />,
+            className: 'whitespace-nowrap',
+            render: (r) => (
+              <span className="inline-flex rounded-md bg-[color:var(--billing-primary-soft)] px-2 py-0.5 font-mono text-xs font-semibold tracking-wide text-[color:var(--billing-heading)]">
+                {r.customerCode}
+              </span>
+            ),
+          },
+          {
+            key: 'name',
+            header: <ColumnTitle title="Airline" hint="Bill-to name" />,
+            render: (r) => (
+              <span className="font-medium text-[color:var(--billing-text)]">{r.name}</span>
+            ),
+          },
+          {
+            key: 'currency',
+            header: <ColumnTitle title="Currency" hint="Invoice currency" />,
+            className: 'whitespace-nowrap',
+            render: (r) => (
+              <span className={r.currencyCode === 'USD' ? billingUi.badgeInfo : billingUi.badgeSuccess}>
+                {r.currencyCode}
+              </span>
+            ),
+          },
+          {
+            key: 'ebc',
+            header: <ColumnTitle title="EBC %" hint="Collection commission" />,
+            className: 'whitespace-nowrap',
+            render: (r) => {
+              if (r.ebcCommissionEnabled !== true || !(Number(r.ebcCommissionPercent) > 0)) {
+                return <span className="text-sm text-[color:var(--billing-text-muted)]">None</span>;
+              }
+              const mode =
+                r.ebcCommissionMode === 'cash'
+                  ? 'Cash only'
+                  : r.ebcCommissionMode === 'card'
+                    ? 'Card only'
+                    : r.ebcCommissionMode === 'upi'
+                      ? 'UPI only'
+                      : 'All modes';
+              return (
+                <span className="inline-flex flex-col">
+                  <span className="text-sm font-medium text-[color:var(--billing-text)]">
+                    {r.ebcCommissionPercent}%
+                  </span>
+                  <span className="text-xs text-[color:var(--billing-text-muted)]">{mode}</span>
+                </span>
+              );
+            },
+          },
           {
             key: 'showPan',
-            header: 'PAN on invoice',
+            header: <ColumnTitle title="Print PAN" hint="On the invoice" />,
+            className: 'whitespace-nowrap',
             render: (r) => {
               const on = r.showPanOnInvoice === true;
-              const busy = panToggleBusyId === r._id;
               return (
-                <label
-                  className="inline-flex cursor-pointer items-center gap-2"
+                <PrintSettingSwitch
+                  on={on}
+                  busy={panToggleBusyId === r._id}
+                  onText="Prints"
+                  offText="Hidden"
                   title={
                     on
-                      ? 'PAN prints on BHS / ADS / RAF invoices'
-                      : 'PAN hidden on invoices (default)'
+                      ? 'PAN prints on BHS, ADS, and RAF invoices'
+                      : 'PAN stays off the invoice'
                   }
-                >
-                  <span className="sr-only">
-                    {on ? 'Hide' : 'Show'} PAN on invoices for {r.customerCode}
-                  </span>
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={on}
-                    disabled={busy}
-                    onClick={() => void toggleShowPanOnInvoice(r, !on)}
-                    className={`relative h-6 w-11 shrink-0 rounded-full transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--billing-primary)] disabled:opacity-50 ${
-                      on
-                        ? 'bg-[color:var(--billing-primary)]'
-                        : 'bg-gray-300'
-                    }`}
-                  >
-                    <span
-                      className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
-                        on ? 'translate-x-5' : 'translate-x-0'
-                      }`}
-                    />
-                  </button>
-                  <span className="text-xs font-medium text-gray-600">
-                    {busy ? '…' : on ? 'On' : 'Off'}
-                  </span>
-                </label>
+                  label={`${on ? 'Hide' : 'Print'} PAN for ${r.customerCode}`}
+                  onClick={() => void toggleShowPanOnInvoice(r, !on)}
+                />
               );
             },
           },
           {
             key: 'showVat',
-            header: 'VAT on invoice',
+            header: <ColumnTitle title="Print VAT" hint="On the invoice" />,
+            className: 'whitespace-nowrap',
             render: (r) => {
               const on = r.showVatOnInvoice === true;
-              const busy = vatToggleBusyId === r._id;
               return (
-                <label
-                  className="inline-flex cursor-pointer items-center gap-2"
+                <PrintSettingSwitch
+                  on={on}
+                  busy={vatToggleBusyId === r._id}
+                  onText="Prints"
+                  offText="Hidden"
                   title={
                     on
-                      ? 'VAT number prints on BHS / ADS / RAF invoices'
-                      : 'VAT hidden on invoices (default)'
+                      ? 'VAT number prints on BHS, ADS, and RAF invoices'
+                      : 'VAT stays off the invoice'
                   }
-                >
-                  <span className="sr-only">
-                    {on ? 'Hide' : 'Show'} VAT on invoices for {r.customerCode}
-                  </span>
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={on}
-                    disabled={busy}
-                    onClick={() => void toggleShowVatOnInvoice(r, !on)}
-                    className={`relative h-6 w-11 shrink-0 rounded-full transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--billing-primary)] disabled:opacity-50 ${
-                      on ? 'bg-[color:var(--billing-primary)]' : 'bg-gray-300'
-                    }`}
-                  >
-                    <span
-                      className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
-                        on ? 'translate-x-5' : 'translate-x-0'
-                      }`}
-                    />
-                  </button>
-                  <span className="text-xs font-medium text-gray-600">
-                    {busy ? '…' : on ? 'On' : 'Off'}
-                  </span>
-                </label>
+                  label={`${on ? 'Hide' : 'Print'} VAT for ${r.customerCode}`}
+                  onClick={() => void toggleShowVatOnInvoice(r, !on)}
+                />
               );
             },
           },
           {
             key: 'intermediary',
-            header: 'Intermediary account',
+            header: <ColumnTitle title="Extra bank" hint="Besides the station account" />,
+            className: 'whitespace-nowrap',
             render: (r) => {
               const on = r.intermediaryAccountEnabled === true;
-              const busy = intermediaryToggleBusyId === r._id;
               const account = r.intermediaryAccount?.accountNumber?.trim();
               return (
-                <label
-                  className="inline-flex cursor-pointer items-center gap-2"
+                <PrintSettingSwitch
+                  on={on}
+                  needsDetails={on && !account}
+                  busy={intermediaryToggleBusyId === r._id}
+                  onText={account ? 'Prints' : 'Add details'}
+                  offText="Hidden"
                   title={
                     on
-                      ? 'Intermediary account prints under the station bank on invoices'
+                      ? 'This account prints under the station bank on invoices'
                       : 'Invoice shows only the station bank account'
                   }
-                >
-                  <span className="sr-only">
-                    {on ? 'Hide' : 'Show'} intermediary account for {r.customerCode}
-                  </span>
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={on}
-                    disabled={busy}
-                    onClick={() => void toggleIntermediaryAccount(r, !on)}
-                    className={`relative h-6 w-11 shrink-0 rounded-full transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--billing-primary)] disabled:opacity-50 ${
-                      on ? 'bg-[color:var(--billing-primary)]' : 'bg-gray-300'
-                    }`}
-                  >
-                    <span
-                      className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
-                        on ? 'translate-x-5' : 'translate-x-0'
-                      }`}
-                    />
-                  </button>
-                  <span className="text-xs font-medium text-gray-600">
-                    {busy ? '…' : on ? account || 'Add details' : 'Off'}
-                  </span>
-                </label>
+                  label={`${on ? 'Hide' : 'Show'} extra bank account for ${r.customerCode}`}
+                  onClick={() => void toggleIntermediaryAccount(r, !on)}
+                />
               );
             },
           },
           {
             key: 'status',
-            header: 'Status',
+            header: <ColumnTitle title="Status" hint="Can be billed" />,
+            className: 'whitespace-nowrap',
             render: (r) =>
               r.blocked ? (
-                <StatusBadge status="cancelled" />
+                <span className={billingUi.badgeDanger}>Blocked</span>
               ) : r.active ? (
-                <StatusBadge status="active" />
+                <span className={billingUi.badgeSuccess}>Active</span>
               ) : (
-                <StatusBadge status="expired" />
+                <span className={billingUi.badgeNeutral}>Inactive</span>
               ),
           },
           {
             key: 'actions',
-            header: '',
+            header: <span className="normal-case tracking-normal">Actions</span>,
+            className: 'whitespace-nowrap',
             render: (r) => (
-              <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-3">
                 <TableEditButton
                   onClick={() => {
                     setCreateOpen(false);
@@ -530,7 +599,7 @@ export function CustomersPage({ api }: Props) {
                 <button
                   type="button"
                   onClick={() => openDeleteDialog('single', r)}
-                  className="text-sm font-medium text-red-600 hover:text-red-800"
+                  className="text-sm font-medium text-[color:var(--billing-danger)] hover:underline underline-offset-2"
                 >
                   Delete
                 </button>

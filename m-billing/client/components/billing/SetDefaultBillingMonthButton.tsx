@@ -8,10 +8,11 @@ import { billingUi } from './billingUi';
 type Props = {
   monthValue: string;
   onApplied: (range: { from: string; to: string }) => void;
+  buttonClassName?: string;
 };
 
 /** Saves a calendar month as the billing date range on this station. */
-export function SetDefaultBillingMonthButton({ monthValue, onApplied }: Props) {
+export function SetDefaultBillingMonthButton({ monthValue, onApplied, buttonClassName }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const openPicker = () => {
@@ -30,7 +31,7 @@ export function SetDefaultBillingMonthButton({ monthValue, onApplied }: Props) {
       <button
         type="button"
         onClick={openPicker}
-        className={billingUi.btnSecondary}
+        className={`${billingUi.btnSecondary} ${buttonClassName ?? ''}`}
         title="Saves this month as the default date range across the billing system"
       >
         <Calendar className="h-4 w-4" aria-hidden />

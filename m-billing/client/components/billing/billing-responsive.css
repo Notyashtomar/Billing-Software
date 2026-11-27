@@ -3,7 +3,7 @@
  * Scoped to .billing-app; dialogs use body:has(.billing-app) (portals).
  */
 
-.billing-app {
+.billing-app:not([role='dialog']) {
   max-width: 100%;
   overflow-x: clip;
 }

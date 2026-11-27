@@ -42,7 +42,40 @@ const emptyForm = {
   intermediaryAccountNumber: '',
   intermediarySwiftCode: '',
   intermediaryIfscCode: '',
+  ebcCommissionEnabled: false,
+  ebcCommissionPercent: '',
+  ebcCommissionMode: 'all' as 'all' | 'cash' | 'card' | 'upi',
 };
+
+/** Shown until a station saves its own setting. Matches the commission already billed. */
+const KNOWN_EBC_DEFAULTS: Record<string, { percent: string; mode: 'all' | 'cash' | 'card' | 'upi' }> = {
+  QP: { percent: '7', mode: 'all' },
+  VJ: { percent: '7', mode: 'all' },
+  UL: { percent: '5', mode: 'cash' },
+};
+
+function ebcFieldsFromCustomer(record?: { customerCode?: string; ebcCommissionEnabled?: boolean; ebcCommissionPercent?: number; ebcCommissionMode?: string } | null) {
+  if (record?.ebcCommissionEnabled === true) {
+    const mode = record.ebcCommissionMode;
+    return {
+      ebcCommissionEnabled: true,
+      ebcCommissionPercent:
+        record.ebcCommissionPercent != null && Number.isFinite(Number(record.ebcCommissionPercent))
+          ? String(record.ebcCommissionPercent)
+          : '',
+      ebcCommissionMode:
+        mode === 'cash' || mode === 'card' || mode === 'upi' || mode === 'all' ? mode : 'all',
+    };
+  }
+  if (record?.ebcCommissionEnabled === false) {
+    return { ebcCommissionEnabled: false, ebcCommissionPercent: '', ebcCommissionMode: 'all' as const };
+  }
+  const known = KNOWN_EBC_DEFAULTS[String(record?.customerCode ?? '').trim().toUpperCase()];
+  if (known) {
+    return { ebcCommissionEnabled: true, ebcCommissionPercent: known.percent, ebcCommissionMode: known.mode };
+  }
+  return { ebcCommissionEnabled: false, ebcCommissionPercent: '', ebcCommissionMode: 'all' as const };
+}
 
 type Props = {
   api: BillingApi;
@@ -89,6 +122,7 @@ export function CustomerFormDialog({ api, open, onOpenChange, onSaved, record }:
         intermediaryAccountNumber: record.intermediaryAccount?.accountNumber ?? '',
         intermediarySwiftCode: record.intermediaryAccount?.swiftCode ?? '',
         intermediaryIfscCode: record.intermediaryAccount?.ifscCode ?? '',
+        ...ebcFieldsFromCustomer(record),
       });
     } else {
       setForm(emptyForm);
@@ -112,6 +146,18 @@ export function CustomerFormDialog({ api, open, onOpenChange, onSaved, record }:
         setError('Enter the intermediary account number, or turn the intermediary account off.');
         return;
       }
+      const ebcPercent = Number(form.ebcCommissionPercent);
+      if (form.ebcCommissionEnabled && (!Number.isFinite(ebcPercent) || ebcPercent <= 0 || ebcPercent > 100)) {
+        setError('Enter the EBC percentage, or turn EBC commission off.');
+        return;
+      }
+      const ebcCommission = form.ebcCommissionEnabled
+        ? {
+            ebcCommissionEnabled: true,
+            ebcCommissionPercent: ebcPercent,
+            ebcCommissionMode: form.ebcCommissionMode,
+          }
+        : { ebcCommissionEnabled: false };
       const intermediaryAccount = form.intermediaryAccountEnabled
         ? {
             bankName: form.intermediaryBankName.trim() || undefined,
@@ -153,6 +199,7 @@ export function CustomerFormDialog({ api, open, onOpenChange, onSaved, record }:
           vatNumber: form.vatNumber.trim().toUpperCase() || undefined,
           intermediaryAccountEnabled: form.intermediaryAccountEnabled,
           intermediaryAccount,
+          ...ebcCommission,
         });
       } else {
         const code = form.customerCode.trim().toUpperCase();
@@ -184,6 +231,7 @@ export function CustomerFormDialog({ api, open, onOpenChange, onSaved, record }:
           vatNumber: form.vatNumber.trim().toUpperCase() || undefined,
           intermediaryAccountEnabled: form.intermediaryAccountEnabled,
           intermediaryAccount,
+          ...ebcCommission,
         });
       }
 
@@ -198,7 +246,7 @@ export function CustomerFormDialog({ api, open, onOpenChange, onSaved, record }:
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="billing-app flex max-h-[min(90vh,40rem)] flex-col gap-0 overflow-hidden !bg-[color:var(--billing-surface)] p-0 text-[color:var(--billing-text)] sm:max-w-lg">
+      <DialogContent className="billing-app customer-form-dialog flex max-h-[min(90vh,40rem)] w-[min(32rem,calc(100vw-2rem))] !max-w-[32rem] flex-col gap-0 overflow-hidden !bg-[color:var(--billing-surface)] p-0 text-[color:var(--billing-text)]">
         <DialogHeader className="shrink-0 border-b border-[color:var(--billing-border)] px-6 py-4 pr-12 text-left">
           <DialogTitle className="text-[color:var(--billing-heading)]">{isEdit ? 'Edit customer' : 'New customer'}</DialogTitle>
           <DialogDescription className="text-[color:var(--billing-text-muted)]">
@@ -446,6 +494,72 @@ export function CustomerFormDialog({ api, open, onOpenChange, onSaved, record }:
                     autoComplete="off"
                   />
                 </FieldGroup>
+              ) : null}
+            </fieldset>
+
+            <fieldset className="space-y-3 rounded-[var(--billing-radius-lg)] border border-[color:var(--billing-border)] p-3">
+              <legend className="px-1 text-sm font-medium text-[color:var(--billing-text-secondary)]">
+                EBC collection commission
+              </legend>
+              <label className="flex cursor-pointer items-start gap-2 text-sm text-[color:var(--billing-text-secondary)]">
+                <input
+                  id="ebcCommissionEnabled"
+                  type="checkbox"
+                  className={`mt-0.5 ${billingUi.checkbox}`}
+                  checked={form.ebcCommissionEnabled}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, ebcCommissionEnabled: e.target.checked }))
+                  }
+                />
+                <span>
+                  Charge a percentage on excess baggage collections
+                  <span className="mt-0.5 block text-xs font-normal text-[color:var(--billing-text-muted)]">
+                    Off: this airline is not billed a commission on EBC. On: the percentage below is charged on the collections you choose.
+                  </span>
+                </span>
+              </label>
+              {form.ebcCommissionEnabled ? (
+                <div className="space-y-3">
+                  <FieldGroup label="Percentage" htmlFor="ebcCommissionPercent">
+                    <TextInput
+                      id="ebcCommissionPercent"
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={form.ebcCommissionPercent}
+                      onChange={(v) => setForm((f) => ({ ...f, ebcCommissionPercent: v }))}
+                      placeholder="7"
+                    />
+                    <p className={`mt-1 ${billingUi.hint}`}>
+                      For example, 7 charges ₹7 for every ₹100 collected.
+                    </p>
+                  </FieldGroup>
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-[color:var(--billing-text-secondary)]">Applies to</p>
+                    {(
+                      [
+                        ['all', 'All collections — cash, card, and UPI'],
+                        ['cash', 'Cash only'],
+                        ['card', 'Card only'],
+                        ['upi', 'UPI only'],
+                      ] as const
+                    ).map(([mode, label]) => (
+                      <label
+                        key={mode}
+                        className="flex cursor-pointer items-center gap-2 text-sm text-[color:var(--billing-text-secondary)]"
+                      >
+                        <input
+                          type="radio"
+                          name="ebcCommissionMode"
+                          className={billingUi.checkbox}
+                          checked={form.ebcCommissionMode === mode}
+                          onChange={() => setForm((f) => ({ ...f, ebcCommissionMode: mode }))}
+                        />
+                        {label}
+                      </label>
+                    ))}
+                  </div>
+                </div>
               ) : null}
             </fieldset>
 
