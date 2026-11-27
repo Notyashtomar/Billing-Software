@@ -68,6 +68,8 @@ export interface InvoicePdfLineInput {
 export interface InvoicePdfInput {
   title: string;
   irn?: string;
+  /** Customer-specific Terms & Conditions; when set, replaces the station terms template. */
+  termsOverride?: string[];
   company: InvoicePdfCompanyBlock;
   invoiceNumber: string;
   invoiceDate: string;
