@@ -62,6 +62,7 @@ import {
 } from '../utils/invoice-concession.util';
 import { billingSettingsForInvoicing } from '../shared/ignored-billing-masters';
 import { resolveBillingCustomerAddress } from '../utils/customer-address.util';
+import { invoicePdfFileName } from '../utils/invoice-pdf-file-name.util';
 import { formatBillingPeriodLabel } from '../engines/invoice-pdf.mapper';
 import {
   resolveAirportConfig,
@@ -555,7 +556,7 @@ export class BillingInvoicesService {
     await this.exportEngine.track(ctx, {
       exportType: 'invoice_pdf',
       documentId: header._id as Types.ObjectId,
-      fileName: `${header.draftNumber}.pdf`,
+      fileName: invoicePdfFileName(header),
       exportedBy: actor.userName,
     });
     const file = this.pdfEngine.toDownloadBody(
@@ -565,7 +566,7 @@ export class BillingInvoicesService {
       contentType: file.contentType,
       body: file.body,
       encoding: file.encoding,
-      fileName: `${header.invoiceNumber ?? header.draftNumber}.${file.fileNameExt}`,
+      fileName: invoicePdfFileName(header, file.fileNameExt),
     };
   }
 
@@ -696,7 +697,7 @@ export class BillingInvoicesService {
     }
 
     const invoiceLabel = header.invoiceNumber ?? header.draftNumber;
-    const fileName = `${invoiceLabel}.pdf`;
+    const fileName = invoicePdfFileName(header);
     const period =
       formatBillingPeriodLabel(header.billingPeriodStart, header.billingPeriodEnd, {
         fortnight: emailContract?.fortnightBillingEnabled === true,
@@ -948,6 +949,7 @@ export class BillingInvoicesService {
           msmeNumber: customer?.msmeNumber,
           showVatOnInvoice: customer?.showVatOnInvoice === true,
           vatNumber: customer?.vatNumber,
+          invoiceTerms: customer?.invoiceTerms,
         }
       : customer
         ? {

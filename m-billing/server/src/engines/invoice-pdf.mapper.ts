@@ -98,6 +98,8 @@ type SettingsLike = {
 type CustomerLike = {
   name?: string;
   airlineInvoiceName?: string;
+  /** Customer-specific Terms & Conditions (one clause per line) printed instead of the station template. */
+  invoiceTerms?: string;
   address?: string;
   gstRegistrationNo?: string;
   globalDimension1?: string;
@@ -809,10 +811,15 @@ export function buildInvoicePdfInput(params: BuildInvoicePdfInputParams): Invoic
     params.contractCategories,
   );
   const irn = params.irn?.trim() || undefined;
+  const customerTerms = String(params.customer?.invoiceTerms ?? '')
+    .split(/\r?\n/)
+    .map((line) => line.replace(/^\s*\d+[).]\s*/, '').trim())
+    .filter(Boolean);
 
   return {
     title: 'TAX INVOICE',
     irn,
+    ...(customerTerms.length > 0 ? { termsOverride: customerTerms } : {}),
     company: {
       name: companyDefaults.name,
       addressLines: splitAddress(companyDefaults.address),
