@@ -103,6 +103,6 @@ export function checkPriceCardAgainstAera(
   return {
     ...first,
     exceedsAeraCeiling: true,
-    aeraWarning: `Price ${price.toLocaleString('en-IN')} is above the AERA ceiling ${worst.ceiling.toLocaleString('en-IN')} for Code ${code} ${flightClass.replace(/([a-z])([A-Z])/g, '$1 $2')} in FY ${worst.fy} (order ${first.aeraOrderNumber}).`,
+    aeraWarning: `Price ${price.toLocaleString('en-IN', { maximumFractionDigits: 0 })} is above the AERA ceiling ${worst.ceiling.toLocaleString('en-IN', { maximumFractionDigits: 0 })} for Code ${code} ${flightClass.replace(/([a-z])([A-Z])/g, '$1 $2')} in FY ${worst.fy} (order ${first.aeraOrderNumber}).`,
   };
 }

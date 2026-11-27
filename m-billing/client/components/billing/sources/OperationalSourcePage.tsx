@@ -98,6 +98,7 @@ import {
   buildScheduledAirlinesHrefFromBillingSerial,
 } from '@/lib/preparationScheduledAirlinesNav';
 import { domesticInternationalBucketFromCateOfFlight } from '@/utils/dataProcessor';
+import { formatBillingDisplayNumber } from '@/lib/billing-shared/currency-convert';
 
 type ScheduledFlightsDateBasis = 'schedule-date' | 'atd-date' | 'exported-date';
 type ScheduledFlightsDomIntFilter = '' | 'domestic' | 'international';
@@ -326,7 +327,7 @@ function rafUnitPriceLabel(row: BillingSourceRow): string {
   if (typeof price !== 'number' || !Number.isFinite(price)) return '—';
   const currency =
     String(row.rateMatch?.currency ?? row.operationalData.currency ?? 'INR').trim() || 'INR';
-  return `${currency} ${price.toLocaleString('en-IN')}`;
+  return `${currency} ${formatBillingDisplayNumber(price, currency)}`;
 }
 
 function rafRowMatchesColumnFilters(
@@ -2820,7 +2821,7 @@ export function OperationalSourcePage({ api, config }: Props) {
                   className: 'min-w-[6rem] text-right',
                   render: (r: BillingSourceRow) => {
                     const amount = Number(r.operationalData.collectedAmount);
-                    return Number.isFinite(amount) && amount > 0 ? amount.toLocaleString('en-IN') : '—';
+                    return Number.isFinite(amount) && amount > 0 ? formatBillingDisplayNumber(amount, 'INR') : '—';
                   },
                 },
                 {
@@ -2832,7 +2833,7 @@ export function OperationalSourcePage({ api, config }: Props) {
                     const amount = Number(r.rateMatch.unitPrice);
                     if (!(amount > 0)) return '—';
                     const rate = Number.isFinite(percent) && percent > 0 ? `${percent}% · ` : '';
-                    return `${rate}${amount.toLocaleString('en-IN')}`;
+                    return `${rate}${formatBillingDisplayNumber(amount, 'INR')}`;
                   },
                 },
               ]

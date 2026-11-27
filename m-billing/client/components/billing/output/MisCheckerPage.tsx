@@ -11,6 +11,7 @@ import {
   aggregateRbhsBillCheckRows,
   formatInAmount,
   formatInInteger,
+  formatMisMoney,
   sumMisCheckerAggRows,
   type MisCheckerAggRow,
 } from './misCheckerAggregate';
@@ -61,6 +62,8 @@ export function MisCheckerPage({ api }: Props) {
   const [roeToInr, setRoeToInr] = useState(1);
 
   const totals = useMemo(() => sumMisCheckerAggRows(rows), [rows]);
+  // These three totals add billing-currency figures. Paise show only when a USD row is in the mix.
+  const totalsCurrency = rows.some((row) => row.currency === 'USD') ? 'USD' : 'INR';
   const bannerTitle = `${stationCode} - BILL CHECK ANALYSIS - RBHS`;
 
   useEffect(() => {
@@ -377,21 +380,21 @@ export function MisCheckerPage({ api }: Props) {
                       {row.airline}
                     </td>
                     <td className={tdNum}>{formatInInteger(row.flights)}</td>
-                    <td className={tdNum}>{formatInAmount(row.rate)}</td>
-                    <td className={tdNum}>{formatInAmount(row.amount)}</td>
-                    <td className={tdNum}>{formatInAmount(row.consession)}</td>
-                    <td className={tdNum}>{formatInAmount(row.total)}</td>
-                    <td className={tdNum}>{formatInAmount(row.cgst)}</td>
-                    <td className={tdNum}>{formatInAmount(row.sgst)}</td>
+                    <td className={tdNum}>{formatMisMoney(row.rate, row.currency)}</td>
+                    <td className={tdNum}>{formatMisMoney(row.amount, row.currency)}</td>
+                    <td className={tdNum}>{formatMisMoney(row.consession, row.currency)}</td>
+                    <td className={tdNum}>{formatMisMoney(row.total, row.currency)}</td>
+                    <td className={tdNum}>{formatMisMoney(row.cgst, 'INR')}</td>
+                    <td className={tdNum}>{formatMisMoney(row.sgst, 'INR')}</td>
                     <td className={`${tdMoney} bg-blue-50/20`}>
                       {row.usd > 0 ? (
-                        formatInAmount(row.usd)
+                        formatMisMoney(row.usd, 'USD')
                       ) : (
                         <span className="font-normal text-slate-300">—</span>
                       )}
                     </td>
                     <td className={`${tdMoney} bg-amber-50/30`}>
-                      {formatInAmount(row.inr)}
+                      {formatMisMoney(row.inr, 'INR')}
                     </td>
                   </tr>
                 ))}
@@ -404,29 +407,29 @@ export function MisCheckerPage({ api }: Props) {
                   </td>
                   <td className={tdBase} />
                   <td className={`${tdNum} font-semibold text-slate-800`}>
-                    {formatInAmount(totals.amount)}
+                    {formatMisMoney(totals.amount, totalsCurrency)}
                   </td>
                   <td className={`${tdNum} font-semibold text-slate-800`}>
-                    {formatInAmount(totals.consession)}
+                    {formatMisMoney(totals.consession, totalsCurrency)}
                   </td>
                   <td className={`${tdNum} font-semibold text-slate-800`}>
-                    {formatInAmount(totals.total)}
+                    {formatMisMoney(totals.total, totalsCurrency)}
                   </td>
                   <td className={`${tdNum} font-semibold text-slate-800`}>
-                    {formatInAmount(totals.cgst)}
+                    {formatMisMoney(totals.cgst, 'INR')}
                   </td>
                   <td className={`${tdNum} font-semibold text-slate-800`}>
-                    {formatInAmount(totals.sgst)}
+                    {formatMisMoney(totals.sgst, 'INR')}
                   </td>
                   <td className={`${tdMoney} bg-blue-50/40 font-semibold`}>
                     {totals.usd > 0 ? (
-                      formatInAmount(totals.usd)
+                      formatMisMoney(totals.usd, 'USD')
                     ) : (
                       <span className="font-normal text-slate-300">—</span>
                     )}
                   </td>
                   <td className={`${tdMoney} bg-amber-50/50 font-semibold`}>
-                    {formatInAmount(totals.inr)}
+                    {formatMisMoney(totals.inr, 'INR')}
                   </td>
                 </tr>
               </tfoot>

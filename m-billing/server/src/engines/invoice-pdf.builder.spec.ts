@@ -6,6 +6,7 @@ import {
   fitBillToAddressLines,
   layoutInvoiceHeaderGrid,
   buildInvoicePdfBuffer,
+  invoiceMoneyFormat,
 } from './invoice-pdf.builder';
 import { buildSampleInvoicePdfInput } from './invoice-pdf.sample-data';
 import type { InvoicePdfInput } from './invoice-pdf.types';
@@ -174,3 +175,25 @@ describe('layoutInvoiceHeaderGrid', () => {
   });
 });
 
+describe('invoice money formats', () => {
+  it('prints INR in whole rupees with Indian grouping and no paise', () => {
+    expect(invoiceMoneyFormat.inr(107669.33)).toBe('1,07,669');
+    expect(invoiceMoneyFormat.inr(1234567.5)).toBe('12,34,568');
+    expect(invoiceMoneyFormat.inr(100.49)).toBe('100');
+    expect(invoiceMoneyFormat.inr(100.5)).toBe('101');
+    expect(invoiceMoneyFormat.inr(0)).toBe('0');
+    expect(invoiceMoneyFormat.plainInr(19968.3)).toBe('19968');
+    expect(invoiceMoneyFormat.plainInr(1091)).toBe('1091');
+    for (const value of [0.4, 1.005, 99.999, 4222.49, 71782.33, 8850]) {
+      expect(invoiceMoneyFormat.inr(value)).not.toContain('.');
+      expect(invoiceMoneyFormat.plainInr(value)).not.toContain('.');
+    }
+  });
+
+  it('keeps two decimals on USD', () => {
+    expect(invoiceMoneyFormat.usd(107669.33)).toBe('107,669.33');
+    expect(invoiceMoneyFormat.usd(21110)).toBe('21,110.00');
+    expect(invoiceMoneyFormat.plainUsd(4222.49)).toBe('4222.49');
+    expect(invoiceMoneyFormat.plainUsd(4222)).toBe('4222.00');
+  });
+});

@@ -302,6 +302,11 @@ export function formatInAmount(value: number, fractionDigits = 2): string {
   });
 }
 
+/** MIS money cell. INR shows whole rupees. Only USD carries decimals. */
+export function formatMisMoney(value: number, currency: 'INR' | 'USD'): string {
+  return formatInAmount(value, currency === 'USD' ? 2 : 0);
+}
+
 export function formatInInteger(value: number): string {
   return value.toLocaleString('en-IN', {
     maximumFractionDigits: 0,

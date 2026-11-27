@@ -5,6 +5,7 @@ import { Loader2 } from 'lucide-react';
 import type { BillingApi } from '@/lib/billing-api';
 import type { BillingRafAdhocRate } from '@/lib/billing-shared/types';
 import type { InvoiceEditLine } from './InvoiceLinesEditForm';
+import { formatBillingDisplayCurrency } from '@/lib/billing-shared/currency-convert';
 
 type RateSource = 'custom' | 'adhoc';
 
@@ -22,10 +23,7 @@ type Props = {
 };
 
 function formatPreview(amount: number, currencyCode: string) {
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: currencyCode === 'USD' ? 'USD' : 'INR',
-  }).format(amount);
+  return formatBillingDisplayCurrency(amount, currencyCode);
 }
 
 function adhocUnitPrice(row: BillingRafAdhocRate, currencyCode: string): number {

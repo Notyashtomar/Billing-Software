@@ -44,7 +44,8 @@ type EbcPayload = {
   sheet: EbcSheet | null;
 };
 
-const money = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 });
+/** EBC figures are INR: whole rupees, no paise. */
+const money = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 });
 
 function inr(value: number | null | undefined): string {
   return value == null || Number.isNaN(value) ? '' : money.format(value);

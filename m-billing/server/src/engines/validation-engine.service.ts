@@ -35,7 +35,9 @@ export interface InvoiceLineReadinessInput {
 }
 
 function formatMoney(currency: string, amount: number): string {
-  return `${currency} ${amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  // INR shows whole rupees. Only USD carries decimals.
+  const digits = String(currency ?? '').trim().toUpperCase() === 'USD' ? 2 : 0;
+  return `${currency} ${amount.toLocaleString('en-IN', { minimumFractionDigits: digits, maximumFractionDigits: digits })}`;
 }
 
 @Injectable()

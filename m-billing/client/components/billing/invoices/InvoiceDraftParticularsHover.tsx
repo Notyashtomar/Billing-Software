@@ -8,6 +8,10 @@ import {
   HoverCardTrigger,
 } from '@/components/ui/hover-card';
 import type { BillingApi } from '@/lib/billing-api';
+import {
+  formatBillingDisplayCurrency,
+  sortParticularsAlphabetically,
+} from '@/lib/billing-shared/currency-convert';
 
 type LinePreview = {
   lineNo: number;
@@ -15,6 +19,7 @@ type LinePreview = {
   quantity: number;
   uom: string;
   lineAmountInclTax: number;
+  sourceRef?: Record<string, unknown>;
 };
 
 type CacheEntry = {
@@ -25,10 +30,7 @@ type CacheEntry = {
 const particularsCache = new Map<string, CacheEntry>();
 
 function formatAmount(amount: number, currencyCode: string) {
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: currencyCode === 'USD' ? 'USD' : 'INR',
-  }).format(amount);
+  return formatBillingDisplayCurrency(amount, currencyCode);
 }
 
 type Props = {
@@ -80,6 +82,10 @@ export function InvoiceDraftParticularsHover({
           quantity: Number(line.quantity) || 0,
           uom: String(line.uom ?? '').trim(),
           lineAmountInclTax: Number(line.lineAmountInclTax) || 0,
+          sourceRef:
+            line.sourceRef && typeof line.sourceRef === 'object'
+              ? (line.sourceRef as Record<string, unknown>)
+              : undefined,
         })),
       };
       particularsCache.set(draftId, next);
@@ -97,7 +103,7 @@ export function InvoiceDraftParticularsHover({
     if (next) void loadParticulars();
   };
 
-  const lines = entry?.lines ?? [];
+  const lines = sortParticularsAlphabetically(entry?.lines ?? []);
   const currency = entry?.currencyCode ?? currencyCode;
   const label = draftNumber ?? draftId;
 
@@ -153,10 +159,10 @@ export function InvoiceDraftParticularsHover({
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {lines.map((line) => (
+                {lines.map((line, lineIndex) => (
                   <tr key={line.lineNo} className="align-top">
                     <td className="whitespace-nowrap px-3 py-2 text-gray-500 sm:px-4">
-                      {line.lineNo}
+                      {lineIndex + 1}
                     </td>
                     <td className="px-3 py-2 font-medium text-gray-900 sm:px-4">
                       {line.description}

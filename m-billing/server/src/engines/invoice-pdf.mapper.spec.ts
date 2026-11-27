@@ -520,19 +520,17 @@ describe('invoice particulars and receivable words', () => {
 });
 
 describe('buildInvoicePdfInput — invoice date and time', () => {
-  it('prints the creation time in 24-hour form beside a date-only invoice date', () => {
-    const created = new Date('2026-11-05T09:08:00.000Z');
-    const id = `${Math.floor(created.getTime() / 1000).toString(16)}aaaaaaaaaaaaaaaa`;
-    const input = buildInvoicePdfInput({
+  const created = new Date('2026-11-05T09:08:00.000Z');
+  const id = `${Math.floor(created.getTime() / 1000).toString(16)}aaaaaaaaaaaaaaaa`;
+  const adsLine = { ...bhsLine({ chargedQuantity: 1 }), serviceCode: 'GPU-90KV', sourceType: 'ads' };
+  const rafLine = { ...bhsLine({}), serviceCode: 'RAF', sourceType: 'raf', uom: 'Per Kg' };
+
+  it('prints only the date on a BHS invoice, whatever clock data is stored', () => {
+    const fromId = buildInvoicePdfInput({
       header: { ...header, documentDate: new Date('2026-11-05T00:00:00.000Z'), _id: id },
       lines: [bhsLine({ flightCount: 1 })],
     });
-    expect(input.invoiceDate.endsWith(' 14:38')).toBe(true);
-    expect(input.invoiceDate.includes('November 2026')).toBe(true);
-  });
-
-  it('prints the regenerate time beside the invoice date', () => {
-    const input = buildInvoicePdfInput({
+    const regenerated = buildInvoicePdfInput({
       header: {
         ...header,
         documentDate: new Date('2026-11-05T00:00:00.000Z'),
@@ -540,15 +538,112 @@ describe('buildInvoicePdfInput — invoice date and time', () => {
       },
       lines: [bhsLine({ flightCount: 1 })],
     });
-    expect(input.invoiceDate.endsWith(' 16:50')).toBe(true);
-    expect(input.invoiceDate.includes('November 2026')).toBe(true);
-  });
-
-  it('uses a clock time already stored on the invoice date', () => {
-    const input = buildInvoicePdfInput({
+    const storedClock = buildInvoicePdfInput({
       header: { ...header, documentDate: new Date('2026-11-05T04:15:00.000Z') },
       lines: [bhsLine({ flightCount: 1 })],
     });
-    expect(input.invoiceDate.endsWith(' 09:45')).toBe(true);
+    for (const input of [fromId, regenerated, storedClock]) {
+      expect(input.serviceCode).toBe('BHS');
+      expect(input.invoiceDate).toBe('05 November 2026');
+    }
+  });
+
+  it('prints only the date on an ADS invoice at any station', () => {
+    for (const stationCode of ['MAA', 'DEL', 'HYD', 'TRV', 'COK', 'IXC']) {
+      const input = buildInvoicePdfInput({
+        header: {
+          ...header,
+          stationCode,
+          invoiceCategory: 'ADS',
+          documentDate: new Date('2026-11-05T00:00:00.000Z'),
+          generatedAt: new Date('2026-11-10T11:20:00.000Z'),
+          _id: id,
+        },
+        lines: [adsLine],
+      });
+      expect(input.serviceCode).toBe('ADS');
+      expect(input.invoiceDate).toBe('05 November 2026');
+    }
+  });
+
+  it('keeps the 24-hour clock on services other than BHS and ADS', () => {
+    const input = buildInvoicePdfInput({
+      header: {
+        ...header,
+        invoiceCategory: 'RAF',
+        documentDate: new Date('2026-11-05T00:00:00.000Z'),
+        generatedAt: new Date('2026-11-10T11:20:00.000Z'),
+      },
+      lines: [rafLine],
+    });
+    expect(input.serviceCode).toBe('RAF');
+    expect(input.invoiceDate).toBe('05 November 2026 16:50');
+  });
+});
+
+describe('buildInvoicePdfInput — particulars in alphabetical order', () => {
+  const line = (lineNo: number, description: string, aircraftType: string, amount: number) => ({
+    ...bhsLine({ aircraftType, flightCount: 1 }),
+    lineNo,
+    description,
+    quantity: 1,
+    unitPrice: amount,
+    lineAmountExclTax: amount,
+    lineAmountInclTax: amount,
+  });
+  const stored = [
+    line(1, 'Charges for Turnaround handling', 'B747-400F', 100),
+    line(2, 'Charges for Turnaround handling', 'B777F', 200),
+    line(3, 'Charges for Technical handling', 'B777-200F', 300),
+    line(4, 'Charges for Technical handling', 'B777F', 400),
+    line(5, 'Charges for Turnaround handling [ground time 2-4 hrs]', 'B777-200F', 500),
+    line(6, 'charges for Diverted Flight handling', 'A320', 600),
+  ];
+
+  it('sorts particulars A to Z for every station and renumbers Sr. No.', () => {
+    for (const stationCode of ['MAA', 'DEL', 'HYD', 'TRV', 'COK', 'GOI', 'IXC', 'CJB']) {
+      const input = buildInvoicePdfInput({ header: { ...header, stationCode }, lines: stored });
+      expect(input.lines.map((l) => `${l.lineNo}|${l.description}|${l.aircraftType}|${l.amount}`)).toEqual([
+        '1|charges for Diverted Flight handling|A320|600',
+        '2|Charges for Technical handling|B777-200F|300',
+        '3|Charges for Technical handling|B777F|400',
+        '4|Charges for Turnaround handling|B747-400F|100',
+        '5|Charges for Turnaround handling|B777F|200',
+        '6|Charges for Turnaround handling [ground time 2-4 hrs]|B777-200F|500',
+      ]);
+    }
+  });
+
+  it('sorts ADS particulars and leaves the totals untouched', () => {
+    const ads = (lineNo: number, description: string, amount: number) => ({
+      ...line(lineNo, description, 'A320', amount),
+      serviceCode: description,
+      sourceType: 'ads',
+      sourceRef: { chargedQuantity: 1, aircraftType: 'A320' },
+    });
+    const lines = [ads(1, 'Wheel Chair - WCHC', 10), ads(2, 'GPU-90KV', 20), ads(3, 'Air Starter Unit', 30)];
+    const unsortedTotal = buildInvoicePdfInput({
+      header: { ...header, invoiceCategory: 'ADS', subtotalExclTax: 60 },
+      lines: [...lines].reverse(),
+    });
+    const input = buildInvoicePdfInput({
+      header: { ...header, invoiceCategory: 'ADS', subtotalExclTax: 60 },
+      lines,
+    });
+    expect(input.lines.map((l) => l.description)).toEqual([
+      'Air Starter Unit',
+      'GPU-90KV',
+      'Wheel Chair - WCHC',
+    ]);
+    expect(input.lines.map((l) => l.lineNo)).toEqual([1, 2, 3]);
+    expect(input.totalInclTax).toBe(unsortedTotal.totalInclTax);
+    expect(input.subtotalExclTax).toBe(60);
+  });
+
+  it('does not reorder or renumber the saved lines it was given', () => {
+    const copy = stored.map((l) => ({ ...l }));
+    buildInvoicePdfInput({ header, lines: copy });
+    expect(copy.map((l) => l.lineNo)).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(copy[0].description).toBe('Charges for Turnaround handling');
   });
 });

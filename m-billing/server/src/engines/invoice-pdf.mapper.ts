@@ -166,14 +166,22 @@ function formatInvoiceClock(value: Date): string {
   return `${hour === '24' ? '00' : hour}:${minute}`;
 }
 
+/** BHS and ADS invoices print the invoice date alone. Other services keep the clock. */
+function invoiceDateShowsClock(serviceCode: string | undefined): boolean {
+  const code = String(serviceCode ?? '').trim().toUpperCase();
+  return code !== 'BHS' && code !== 'ADS';
+}
+
 function formatInvoiceDate(
   value: Date | string,
   invoiceId?: unknown,
   generatedAt?: Date | string,
+  showClock = true,
 ): string {
   const d = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(d.getTime())) return '';
   const date = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
+  if (!showClock) return date;
   const generated = generatedAt ? new Date(generatedAt) : null;
   const clockSource =
     generated && !Number.isNaN(generated.getTime())
@@ -462,6 +470,30 @@ function mapLine(
   return base;
 }
 
+const PARTICULAR_COLLATOR = new Intl.Collator('en', { sensitivity: 'base', numeric: true });
+
+/**
+ * Particulars print A to Z on every invoice. Rows with the same particular are
+ * ordered by aircraft type, then by their saved position. Sr. No. is renumbered
+ * 1..n in the printed order.
+ */
+export function sortParticularsAlphabetically(
+  lines: InvoicePdfLineInput[],
+): InvoicePdfLineInput[] {
+  return lines
+    .map((line, index) => ({ line, index }))
+    .sort(
+      (a, b) =>
+        PARTICULAR_COLLATOR.compare(a.line.description.trim(), b.line.description.trim()) ||
+        PARTICULAR_COLLATOR.compare(
+          (a.line.aircraftType ?? '').trim(),
+          (b.line.aircraftType ?? '').trim(),
+        ) ||
+        a.index - b.index,
+    )
+    .map(({ line }, index) => ({ ...line, lineNo: index + 1 }));
+}
+
 function normalizeInvoiceCategoryCode(value?: string): 'BHS' | 'ADS' | 'RAF' | 'MAAS' | null {
   const raw = String(value ?? '').trim().toUpperCase();
   if (!raw) return null;
@@ -575,9 +607,11 @@ export function buildInvoicePdfInput(params: BuildInvoicePdfInputParams): Invoic
   const isUsd = header.currencyCode === 'USD';
   const usdReceivable = isUsd && Boolean(header.totalReceivableInUsd);
   const roe = positiveNumber(header.currencyFactor);
-  const mappedLines = lines
+  const mappedInStoredOrder = lines
     .filter((line) => !isCeilingParticularLine(line))
     .map((l) => mapLine(l, sacByService, roe && (isUsd || roe > 1) ? roe : undefined, isUsd));
+  // Every station prints particulars A to Z. Stored line numbers are untouched.
+  const mappedLines = sortParticularsAlphabetically(mappedInStoredOrder);
   const subtotalExclTax =
     header.subtotalExclTax > 0
       ? header.subtotalExclTax
@@ -621,7 +655,7 @@ export function buildInvoicePdfInput(params: BuildInvoicePdfInputParams): Invoic
     bankDetails.intermediaryIfscCode = extra.ifscCode?.trim() || undefined;
   }
   const airport = resolveAirportConfig(header.stationCode);
-  const catalogSac = mappedLines.find((l) => l.sacCode)?.sacCode;
+  const catalogSac = mappedInStoredOrder.find((l) => l.sacCode)?.sacCode;
   const headerCategory = normalizeInvoiceCategoryCode(header.invoiceCategory);
   const headerCatRaw = String(header.invoiceCategory ?? '').trim().toUpperCase();
   const lineServiceCode =
@@ -823,7 +857,12 @@ export function buildInvoicePdfInput(params: BuildInvoicePdfInputParams): Invoic
       msme: companyDefaults.msme,
     },
     invoiceNumber: header.invoiceNumber?.trim() || header.draftNumber,
-    invoiceDate: formatInvoiceDate(header.documentDate, header._id, header.generatedAt),
+    invoiceDate: formatInvoiceDate(
+      header.documentDate,
+      header._id,
+      header.generatedAt,
+      invoiceDateShowsClock(serviceCode),
+    ),
     billTo,
     serviceDescription: airport.serviceDescription,
     serviceTableTitle: serviceTableTitleResolved,
