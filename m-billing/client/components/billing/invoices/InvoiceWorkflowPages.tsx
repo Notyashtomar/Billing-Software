@@ -7,6 +7,7 @@ import {
   SYSTEM_DEFAULT_BILLING_MONTH,
   billingPeriodOverlaps,
   isDelhiStation,
+  monthBoundsFromYearMonth,
   readStoredDefaultBillingMonth,
   resolveDefaultBillingPeriod,
   readLoginStationCode,
@@ -1124,6 +1125,13 @@ export function InvoiceDraftsPage({ api }: Props) {
             : 'Draft invoices composed from preparation records';
 
   const periodFiltered = Boolean(periodFrom || periodTo);
+  /** `YYYY-MM` when From/To cover exactly one calendar month, otherwise blank. */
+  const selectedPeriodMonth = (() => {
+    if (!/^\d{4}-\d{2}/.test(periodFrom)) return '';
+    const month = periodFrom.slice(0, 7);
+    const bounds = monthBoundsFromYearMonth(month);
+    return bounds && bounds.from === periodFrom && bounds.to === periodTo ? month : '';
+  })();
   const bulkBusy = deleting || merging || binning || refreshingAll;
 
   return (
@@ -1145,6 +1153,24 @@ export function InvoiceDraftsPage({ api }: Props) {
               onSubmit={(event) => event.preventDefault()}
               aria-label="Billing period filter"
             >
+              <label className="inline-flex items-center gap-1.5 text-xs font-medium text-[color:var(--billing-text-secondary)]">
+                <span className="whitespace-nowrap">Month</span>
+                <input
+                  type="month"
+                  min="2000-01"
+                  max="2100-12"
+                  value={selectedPeriodMonth}
+                  onChange={(e) => {
+                    const range = monthBoundsFromYearMonth(e.target.value);
+                    if (!range) return;
+                    setPeriodFrom(range.from);
+                    setPeriodTo(range.to);
+                  }}
+                  title="Show invoices for this billing month (does not change the saved default month)"
+                  aria-label="Billing month to show"
+                  className={`${billingUi.input} h-9 w-[10.5rem] px-2.5 py-1 text-xs sm:text-sm`}
+                />
+              </label>
               <label className="inline-flex items-center gap-1.5 text-xs font-medium text-[color:var(--billing-text-secondary)]">
                 <span className="whitespace-nowrap">From</span>
                 <input

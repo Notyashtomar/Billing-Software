@@ -199,6 +199,23 @@ function sameStringSet(left: string[], right: string[]): boolean {
   );
 }
 
+/**
+ * Per-flight charged units of two ADS lines being joined. Dropped when either
+ * line has none, so the annexure recounts instead of printing half the flights.
+ */
+function mergeChargedByFlight(left: unknown, right: unknown): Record<string, number> | undefined {
+  const isMap = (value: unknown): value is Record<string, unknown> =>
+    Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+  if (!isMap(left) || !isMap(right)) return undefined;
+  const merged: Record<string, number> = {};
+  for (const source of [left, right]) {
+    for (const [serial, charged] of Object.entries(source)) {
+      merged[serial] = (merged[serial] ?? 0) + (Number(charged) || 0);
+    }
+  }
+  return merged;
+}
+
 type ContractLikeWithFortnight = {
   fortnightBillingEnabled?: boolean;
   fortnightBillingPartCount?: number;
@@ -1244,7 +1261,11 @@ export class BillingInvoiceDraftsService {
         ...((line.sourceRef ?? {}) as Record<string, unknown>),
       };
       if (dto.usedQuantity != null) ref.usedQuantity = dto.usedQuantity;
-      if (dto.quantity != null) ref.chargedQuantity = dto.quantity;
+      if (dto.quantity != null) {
+        ref.chargedQuantity = dto.quantity;
+        // A hand-edited quantity no longer matches the per-flight breakdown.
+        delete ref.chargedByFlight;
+      }
       if (dto.pricingBasis != null) {
         const basis = String(dto.pricingBasis).trim();
         if (basis) ref.pricingBasis = basis;
@@ -3050,6 +3071,10 @@ export class BillingInvoiceDraftsService {
         usedQuantity:
           Number(existingRef.usedQuantity ?? 0) + Number(incomingRef.usedQuantity ?? 0),
         chargedQuantity: existingCharged + incomingCharged,
+        chargedByFlight: mergeChargedByFlight(
+          existingRef.chargedByFlight,
+          incomingRef.chargedByFlight,
+        ),
       };
       existing.preparationIds = mergedPreparationIds;
       await existing.line.save({ session: options?.session });

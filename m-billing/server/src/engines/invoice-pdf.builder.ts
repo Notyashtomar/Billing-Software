@@ -149,6 +149,15 @@ function concessionAmountRows(
 }
 
 /** INR without digit grouping and without paise (reference unit rate: 1091). */
+/**
+ * "Total Amount" prints only when a concession row sits between it and the gross.
+ * A contract that already includes the concession has no such row, so the invoice
+ * shows the Gross Amount alone instead of the same figure twice.
+ */
+function showsTotalAmountRow(concessionRows: unknown[]): boolean {
+  return concessionRows.length > 0;
+}
+
 function fmtPlainInr(n: number): string {
   return String(wholeRupees(n));
 }
@@ -1094,12 +1103,14 @@ function renderInrUsdLineItemsTable(
     putCellText(doc, x + labelW + usdW + roeW, y, inrW, rowH, inr, { bold, size: 6.5, align: 'right' });
     y += rowH;
   };
-  addRow('Total Amount', fmtUsd(input.subtotalUsd ?? input.subtotalExclTax), fmtInr(input.subtotalInr ?? 0), true);
   const concession = concessionAmountRows(
     input.subtotalExclTax,
     input.concessionFeePercent,
     input.concessionFeeUsd ?? input.concessionFeeAmount,
   );
+  if (showsTotalAmountRow(concession)) {
+    addRow('Total Amount', fmtUsd(input.subtotalUsd ?? input.subtotalExclTax), fmtInr(input.subtotalInr ?? 0), true);
+  }
   for (const row of concession) {
     const label =
       input.concessionFeePercent && input.concessionFeePercent > 0
@@ -1125,8 +1136,13 @@ function renderInrUsdLineItemsTable(
 function estimateTotalsHeight(doc: PDFKit.PDFDocument, input: InvoicePdfInput): number {
   const isUsd = input.currencyCode === 'USD';
   const rowH = Math.max(invDim(15), measureCellHeight(doc, 'X', 100, { size: 7 }));
-  let rows = 2; // Total Amount + Gross Amount
-  rows += concessionAmountRows(input.subtotalExclTax, input.concessionFeePercent, input.concessionFeeAmount).length;
+  const concessionRows = concessionAmountRows(
+    input.subtotalExclTax,
+    input.concessionFeePercent,
+    input.concessionFeeAmount,
+  );
+  // Gross Amount always prints. Total Amount joins it only beside a concession row.
+  let rows = 1 + (showsTotalAmountRow(concessionRows) ? 1 : 0) + concessionRows.length;
   if (isUsd) {
     if (input.totalReceivableUsd != null) {
       rows += (input.cgstUsd ?? 0) > 0 ? 1 : 0;
@@ -1329,12 +1345,15 @@ function renderLineItemsTable(doc: PDFKit.PDFDocument, input: InvoicePdfInput, s
   };
 
   if (isUsd) {
-    addAmountRow('Total Amount in USD', fmtUsd(input.subtotalExclTax), true);
-    for (const row of concessionAmountRows(
+    const concessionRows = concessionAmountRows(
       input.subtotalExclTax,
       input.concessionFeePercent,
       input.concessionFeeAmount,
-    )) {
+    );
+    if (showsTotalAmountRow(concessionRows)) {
+      addAmountRow('Total Amount in USD', fmtUsd(input.subtotalExclTax), true);
+    }
+    for (const row of concessionRows) {
       addAmountRow(row.label, fmtUsd(row.amount));
     }
     addAmountRow('Gross Amount in USD', fmtUsd(input.grossAmount), true);
@@ -1442,12 +1461,15 @@ function renderLineItemsTable(doc: PDFKit.PDFDocument, input: InvoicePdfInput, s
       y += inrWordsH;
     }
   } else {
-    addAmountRow('Total Amount in INR', fmtInr(input.subtotalExclTax), true);
-    for (const row of concessionAmountRows(
+    const concessionRows = concessionAmountRows(
       input.subtotalExclTax,
       input.concessionFeePercent,
       input.concessionFeeAmount,
-    )) {
+    );
+    if (showsTotalAmountRow(concessionRows)) {
+      addAmountRow('Total Amount in INR', fmtInr(input.subtotalExclTax), true);
+    }
+    for (const row of concessionRows) {
       addAmountRow(row.label, fmtInr(row.amount));
     }
     addAmountRow('Gross Amount in INR', fmtInr(input.grossAmount), true);

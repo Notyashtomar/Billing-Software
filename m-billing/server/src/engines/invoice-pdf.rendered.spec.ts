@@ -264,3 +264,110 @@ describe('rendered tax invoice PDF', () => {
     expect(cells).toContain('05 November 2026 16:50');
   });
 });
+
+describe('rendered tax invoice PDF — Total Amount and Gross Amount rows', () => {
+  const usdLines = [
+    bhsLine(1, 'Charges for Turnaround handling', 'B747-400F', 3, 4222.49),
+    bhsLine(2, 'Charges for Technical handling', 'B777-200F', 1, 2111.25),
+  ];
+  const usdHeader = (stationCode: string) =>
+    header({
+      stationCode,
+      invoiceCategory: 'BHS',
+      currencyCode: 'USD',
+      currencyFactor: 88.4567,
+      subtotalExclTax: subtotal(usdLines),
+    });
+  const hasConcessionRow = (cells: string[]) => cells.some((cell) => cell.startsWith('Concession Fee'));
+
+  it.each(STATIONS)('%s INR, no concession: only Gross Amount prints', async (stationCode) => {
+    for (const [invoiceCategory, lines] of [
+      ['BHS', bhsLines],
+      ['ADS', adsLines],
+    ] as const) {
+      const { input, cells } = await render({
+        header: header({ stationCode, invoiceCategory, subtotalExclTax: subtotal(lines) }),
+        lines,
+        concessionFeePercent: 0,
+      });
+      expect(input.concessionFeeAmount).toBe(0);
+      expect(hasConcessionRow(cells)).toBe(false);
+      expect(cells).not.toContain('Total Amount in INR');
+      expect(cells.filter((cell) => cell === 'Gross Amount in INR')).toHaveLength(1);
+      // The gross figure is still printed, and the receivable words row is untouched.
+      expect(cells).toContain(new Intl.NumberFormat('en-IN').format(Math.round(input.grossAmount)));
+      expect(cells.some((cell) => cell.startsWith('Total Amount Receivable In Words-'))).toBe(true);
+    }
+  });
+
+  it.each(STATIONS)('%s INR, with concession: Total, Concession and Gross all print', async (stationCode) => {
+    const { input, cells } = await render({
+      header: header({ stationCode, invoiceCategory: 'BHS', subtotalExclTax: subtotal(bhsLines) }),
+      lines: bhsLines,
+      concessionFeePercent: 13,
+    });
+    expect(input.concessionFeeAmount).toBeGreaterThan(0);
+    expect(cells.filter((cell) => cell === 'Total Amount in INR')).toHaveLength(1);
+    expect(cells).toContain('Concession Fee @ 13.00% of "Total Gross Revenue"');
+    expect(cells.filter((cell) => cell === 'Gross Amount in INR')).toHaveLength(1);
+    const order = ['Total Amount in INR', 'Concession Fee @ 13.00% of "Total Gross Revenue"', 'Gross Amount in INR'].map(
+      (label) => cells.indexOf(label),
+    );
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
+  });
+
+  it('USD invoice follows the same rule, with INR receivable and with USD receivable', async () => {
+    for (const totalReceivableInUsd of [false, true]) {
+      const without = await render({
+        header: { ...usdHeader('DEL'), totalReceivableInUsd },
+        lines: usdLines,
+        concessionFeePercent: 0,
+      });
+      expect(without.cells).not.toContain('Total Amount in USD');
+      expect(hasConcessionRow(without.cells)).toBe(false);
+      expect(without.cells.filter((cell) => cell === 'Gross Amount in USD')).toHaveLength(1);
+
+      const withFee = await render({
+        header: { ...usdHeader('DEL'), totalReceivableInUsd },
+        lines: usdLines,
+        concessionFeePercent: 13,
+      });
+      expect(withFee.cells.filter((cell) => cell === 'Total Amount in USD')).toHaveLength(1);
+      expect(hasConcessionRow(withFee.cells)).toBe(true);
+      expect(withFee.cells.filter((cell) => cell === 'Gross Amount in USD')).toHaveLength(1);
+    }
+  });
+
+  it('USD and INR side by side follows the same rule', async () => {
+    const without = await render({
+      header: usdHeader('HYD'),
+      lines: usdLines,
+      inrUsdInvoiceCategories: ['BHS'],
+      concessionFeePercent: 0,
+    });
+    expect(without.input.dualCurrencyLayout).toBe(true);
+    expect(without.cells).not.toContain('Total Amount');
+    expect(without.cells.filter((cell) => cell === 'Gross Amount in')).toHaveLength(1);
+
+    const withFee = await render({
+      header: usdHeader('HYD'),
+      lines: usdLines,
+      inrUsdInvoiceCategories: ['BHS'],
+      concessionFeePercent: 13,
+    });
+    expect(withFee.cells.filter((cell) => cell === 'Total Amount')).toHaveLength(1);
+    expect(hasConcessionRow(withFee.cells)).toBe(true);
+    expect(withFee.cells.filter((cell) => cell === 'Gross Amount in')).toHaveLength(1);
+  });
+
+  it('removing the row changes no amount on the invoice', async () => {
+    const params = {
+      header: header({ invoiceCategory: 'BHS', subtotalExclTax: subtotal(bhsLines) }),
+      lines: bhsLines,
+      concessionFeePercent: 0,
+    };
+    const { input } = await render(params);
+    expect(input.grossAmount).toBe(input.subtotalExclTax);
+    expect(input.totalInclTax).toBeCloseTo(input.grossAmount + input.cgstAmount + input.sgstAmount, 2);
+  });
+});

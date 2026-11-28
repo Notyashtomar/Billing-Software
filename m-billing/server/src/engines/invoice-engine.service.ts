@@ -56,6 +56,7 @@ import {
   cumulativeMonthlyFreeUnits,
   isBmeAdsEquipmentLabel,
   isWchrSCombinedAdsService,
+  isWheelchairAdsServiceCode,
   resolveAdsPricingFromContractRule,
   type AdsEquipmentInclusionContract,
   type AdsEquipmentInclusionRule,
@@ -76,7 +77,20 @@ import {
   parseAdsRemarksQuantity,
   toWholeAdsUnits,
 } from '../shared/fhr-equipment-to-ads-row';
-import { adsTimeBasedUnits, isAdsHourlyUom } from '../shared/rate-card-billing-scope';
+import {
+  adsTimeBasedUnits,
+  isAdsHourlyUom,
+  isAdsTimeBasedUom,
+} from '../shared/rate-card-billing-scope';
+import {
+  adsFlightContextFromFhr,
+  adsRulesNeedFlightContext,
+  adsStandbyChargePercent,
+  isAdsStandbyRemark,
+  isPerTurnaroundEquipmentUom,
+  parseAdsRuleConditions,
+  type AdsFlightContext,
+} from '../shared/ads-rule-conditions';
 import {
   categoriesOfFlightFromSnapshots,
   pickCategoryOfFlight,
@@ -912,9 +926,16 @@ export class InvoiceEngineService {
       concessionAppliedToUnitPrice: boolean;
       cumulativeMonthly: boolean;
       cumulativeRule: CumulativeMonthlyRule | null;
+      /** Contract standby percent when these units were on standby. */
+      standbyPercent: number | null;
+      /** Flight serial → charged units, for the annexure. */
+      chargedByFlight: Record<string, number>;
       records: BillingPreparationRecordDocument[];
     };
 
+    const standbyPercent = adsStandbyChargePercent(contract);
+    const flightContexts = await this.adsFlightContexts(ctx, records, contract);
+    const poolOnlyUses: MonthlyPoolUse[] = [];
     const map = new Map<string, AdsBucket>();
     const pricingCache = new Map<string, ReturnType<typeof resolveAdsPricingFromContractRule>>();
     type PendingAdsUse = {
@@ -934,6 +955,19 @@ export class InvoiceEngineService {
       wheelchairKind: AdsWheelchairSubtype | null;
       cumulativeMonthly: boolean;
       cumulativeRule: CumulativeMonthlyRule | null;
+      standbyPercent: number | null;
+      /** Contract says free at this kind of bay, and the flight used it. */
+      bayFree: boolean;
+      /** Scheduled ground time that is free for this time-based equipment. */
+      sgtFreeMinutes: number | null;
+      usageMinutes: number;
+      /** Equipment on a per-turnaround rate: one charge per flight. */
+      oncePerFlight: boolean;
+      /** Monthly free pool this use draws from. Empty when the rule has none. */
+      poolKey: string;
+      poolSize: number;
+      poolFree: number;
+      dateKey: string;
     };
     const pending: PendingAdsUse[] = [];
 
@@ -1027,9 +1061,25 @@ export class InvoiceEngineService {
       }
       const contractRules = contract?.adsEquipmentRules ?? [];
       const contractDrivesAds = contractRules.length > 0;
+      const conditions = parseAdsRuleConditions(liveAds.matched ? liveAds.remarks : '');
+      // Rate kept for one-off requests. Routine use on the flight is not billed.
+      if (conditions.onRequestOnly) continue;
+      const flightKey = adsInvoiceFlightKey(rec, snap);
+      const dateKey = adsUseDateKey(rec, snap);
+      // Wheelchairs of every category draw from one monthly pool.
+      const poolKey =
+        conditions.monthlyFreePool == null
+          ? ''
+          : isWheelchairAdsServiceCode(liveAds.serviceCode, particular, equipmentName)
+            ? 'wheelchair'
+            : String(liveAds.serviceCode ?? particular).trim().toLowerCase();
+      // A rule with no price still uses up the monthly free pool.
+      let poolOnly = false;
       if (contractDrivesAds) {
-        if (!liveAds.matched || liveAds.excluded || !(liveAds.unitPrice != null && liveAds.unitPrice > 0)) {
-          continue;
+        if (!liveAds.matched || liveAds.excluded) continue;
+        if (!(liveAds.unitPrice != null && liveAds.unitPrice > 0)) {
+          if (!poolKey) continue;
+          poolOnly = true;
         }
       } else if (contract && liveAds.matched && liveAds.excluded) {
         continue;
@@ -1091,6 +1141,20 @@ export class InvoiceEngineService {
         ? usedFromContractUom
         : capTurnaroundCrewCoachUsedUnits(usedFromContractUom, snap, particular);
 
+      if (poolOnly) {
+        if (used > 0) {
+          poolOnlyUses.push({
+            poolKey,
+            poolSize: conditions.monthlyFreePool ?? 0,
+            dateKey,
+            flightKey,
+            used,
+            poolFree: 0,
+          });
+        }
+        continue;
+      }
+
       const livePriced =
         liveAds.matched &&
         !liveAds.excluded &&
@@ -1116,9 +1180,16 @@ export class InvoiceEngineService {
             freePerFlightWb: liveAds.ruleFreePerFlightWb,
           }
         : null;
+      // Standby equipment is billed at the contract standby percent of its rate.
+      const rowStandbyPercent =
+        standbyPercent != null &&
+        !manpowerLine &&
+        isAdsStandbyRemark(snap.remarks ?? snap.Remarks)
+          ? standbyPercent
+          : null;
       const effectiveFree = manpowerLine
         ? 0
-        : cumulativeMonthly
+        : cumulativeMonthly || rowStandbyPercent != null
           ? 0
           : liveAds.matched
             ? toWholeAdsUnits(
@@ -1127,10 +1198,14 @@ export class InvoiceEngineService {
                   : 0,
               )
             : freeAllowance;
-      const billedUnitPrice =
+      const listedUnitPrice =
         liveAds.matched && liveAds.unitPrice != null && liveAds.unitPrice > 0
           ? liveAds.unitPrice
           : unitPrice;
+      const billedUnitPrice =
+        rowStandbyPercent != null
+          ? round2((listedUnitPrice * rowStandbyPercent) / 100)
+          : listedUnitPrice;
       if (!(billedUnitPrice > 0) || !(used > 0)) continue;
 
       const combinedWheelchair = isWchrSCombinedAdsService(
@@ -1143,11 +1218,15 @@ export class InvoiceEngineService {
         ? (adsWheelchairSubtype(equipmentName, particular, rateMatch.serviceCode) ?? 'BOTH')
         : null;
       const liveRuleName = String(liveAds.serviceCode ?? '').trim();
-      const billedParticular = combinedWheelchair
+      const baseParticular = combinedWheelchair
         ? ADS_WCHR_S_PARTICULAR
         : liveAds.matched && liveRuleName
           ? liveRuleName
           : particular;
+      const billedParticular =
+        rowStandbyPercent != null
+          ? `${baseParticular} [${rowStandbyPercent}% stand by charged]`
+          : baseParticular;
       const equipmentServiceCode = combinedWheelchair
         ? ADS_WCHR_S_PARTICULAR
         : String(liveAds.serviceCode || rateMatch.serviceCode || particular).trim() || particular;
@@ -1165,7 +1244,11 @@ export class InvoiceEngineService {
         { sourceRef },
         recordLevelContract,
       );
-      const flightKey = adsInvoiceFlightKey(rec, snap);
+      const flightContext = flightContexts.get(flightKey);
+      const sgtFreeMinutes =
+        conditions.sgtFree && !manpowerLine && isAdsTimeBasedUom(uom)
+          ? (flightContext?.sgtMinutes ?? null)
+          : null;
       pending.push({
         rec,
         particular: billedParticular,
@@ -1181,7 +1264,7 @@ export class InvoiceEngineService {
           ? `wchr/s|${uom.toLowerCase()}`
           : `${equipmentServiceCode.toLowerCase()}|${uom.toLowerCase()}|${billedUnitPrice}|${
               isBmeAdsEquipmentLabel(particular, equipmentName) ? 'bme' : ''
-            }`,
+            }${rowStandbyPercent != null ? '|standby' : ''}`,
         turnaroundCrew:
           isCrewCoachEquipmentLabel(particular) &&
           isTurnaroundFlightContext(snap, snap.flightNo ?? snap.flightNoEquipmentNo),
@@ -1189,8 +1272,21 @@ export class InvoiceEngineService {
         wheelchairKind,
         cumulativeMonthly,
         cumulativeRule,
+        standbyPercent: rowStandbyPercent,
+        bayFree:
+          conditions.focBay != null && flightContext?.bayType === conditions.focBay,
+        sgtFreeMinutes,
+        usageMinutes: usageHours != null ? usageHours * 60 : 0,
+        oncePerFlight: !manpowerLine && isPerTurnaroundEquipmentUom(uom),
+        poolKey,
+        poolSize: conditions.monthlyFreePool ?? 0,
+        poolFree: 0,
+        dateKey,
       });
     }
+
+    // Earliest flights of the month take the monthly free pool first.
+    applyMonthlyFreePools([...pending, ...poolOnlyUses]);
 
     // One free-of-charge allowance per flight per equipment. Extra units on that
     // flight (after the contract UOM) are chargeable at the rule's unit price.
@@ -1207,9 +1303,22 @@ export class InvoiceEngineService {
       if (!head) continue;
       const usedSum = rows.reduce((sum, row) => sum + row.used, 0);
       if (usedSum <= 0) continue;
-      const groupFree = rows.reduce((max, row) => Math.max(max, row.effectiveFree), 0);
+      let groupFree = head.poolKey
+        ? rows.reduce((sum, row) => sum + row.poolFree, 0)
+        : rows.reduce((max, row) => Math.max(max, row.effectiveFree), 0);
       let charged = toWholeAdsUnits(Math.max(0, usedSum - groupFree));
-      if (rows.some((row) => row.turnaroundCrew)) {
+      if (rows.every((row) => row.bayFree)) {
+        // Contract makes this equipment free at the bay the flight used.
+        charged = 0;
+        groupFree = usedSum;
+      } else if (head.sgtFreeMinutes != null) {
+        // Free for the scheduled ground time; only the time beyond it is billed.
+        const minutes = rows.reduce((sum, row) => sum + row.usageMinutes, 0);
+        const beyond = minutes - head.sgtFreeMinutes;
+        charged = beyond > 0 ? toWholeAdsUnits(adsTimeBasedUnits(head.uom, beyond) ?? 0) : 0;
+        groupFree = Math.max(0, usedSum - charged);
+      }
+      if (rows.some((row) => row.turnaroundCrew || row.oncePerFlight)) {
         charged = Math.min(charged, 1);
       }
       let chargedWchr = false;
@@ -1254,12 +1363,22 @@ export class InvoiceEngineService {
           concessionAppliedToUnitPrice,
           cumulativeMonthly: Boolean(head.cumulativeMonthly),
           cumulativeRule: head.cumulativeRule,
+          standbyPercent: head.standbyPercent,
+          chargedByFlight: {},
           records: [],
         } satisfies AdsBucket);
 
       bucket.used += usedSum;
       bucket.charged += charged;
-      bucket.freeAllowance = Math.max(bucket.freeAllowance, groupFree);
+      // A monthly pool reports the units it covered; a per-flight count reports the count.
+      bucket.freeAllowance = head.poolKey
+        ? bucket.freeAllowance + groupFree
+        : Math.max(bucket.freeAllowance, head.bayFree || head.sgtFreeMinutes != null ? 0 : groupFree);
+      const flightSerial = head.flightKey.startsWith('s:') ? head.flightKey.slice(2) : '';
+      if (charged > 0) {
+        bucket.chargedByFlight[flightSerial] =
+          (bucket.chargedByFlight[flightSerial] ?? 0) + charged;
+      }
       if (wheelCooling && head.aircraftType) {
         const types = new Set(
           [bucket.aircraftType, head.aircraftType]
@@ -1344,6 +1463,13 @@ export class InvoiceEngineService {
           concessionPercent: bucket.chargePercent,
           concessionFeePercent: bucket.feeConcessionPercent || undefined,
           concessionAppliedToUnitPrice: bucket.concessionAppliedToUnitPrice || undefined,
+          standbyChargePercent: bucket.standbyPercent ?? undefined,
+          // The annexure prints these per-flight counts. Left out when a pooled
+          // monthly count or a flight with no serial makes them unknown.
+          chargedByFlight:
+            bucket.cumulativeMonthly || '' in bucket.chargedByFlight
+              ? undefined
+              : bucket.chargedByFlight,
           ...rateOriginFromRecord(bucket.records[0]),
         },
         preparationRecordIds,
@@ -1352,6 +1478,44 @@ export class InvoiceEngineService {
     }
 
     return lines;
+  }
+
+  /**
+   * Bay and scheduled ground time of each flight, read from the flight report.
+   * Only fetched when a contract rule depends on them.
+   */
+  private async adsFlightContexts(
+    ctx: StationScopeContext,
+    records: BillingPreparationRecordDocument[],
+    contract: InvoiceChargeContractLike | undefined,
+  ): Promise<Map<string, AdsFlightContext>> {
+    const out = new Map<string, AdsFlightContext>();
+    const stationCode = String(ctx?.stationCode ?? '').trim();
+    if (!stationCode || !adsRulesNeedFlightContext(contract?.adsEquipmentRules)) return out;
+    const serials = new Set<number>();
+    for (const rec of records) {
+      const key = adsInvoiceFlightKey(rec, (rec.operationalSnapshot ?? {}) as Record<string, unknown>);
+      const serial = key.startsWith('s:') ? Number(key.slice(2)) : NaN;
+      if (Number.isFinite(serial) && serial > 0) serials.add(serial);
+    }
+    if (serials.size === 0) return out;
+    // A failed read is not swallowed: billing these flights without their bay
+    // and ground time would charge equipment the contract makes free.
+    const docs = await this.fhrModel
+      .find(StationScope.filter({ SerialNo: { $in: [...serials] } }, ctx))
+      .select('SerialNo stationCode mainDetails rampDetails1.BayFinal rampDetails1.BayPlanned')
+      .lean();
+    for (const doc of docs) {
+      const fhr = doc as {
+        SerialNo?: unknown;
+        stationCode?: unknown;
+        mainDetails?: Record<string, unknown> | null;
+        rampDetails1?: Record<string, unknown> | null;
+      };
+      const serial = String(fhr.SerialNo ?? '').trim();
+      if (serial) out.set(`s:${serial}`, adsFlightContextFromFhr(fhr, stationCode));
+    }
+    return out;
   }
 
   /**
@@ -2178,6 +2342,58 @@ function applyCumulativeMonthlyPools(
       bucket.freeAllowance = bucket === carrier ? free : 0;
     }
   }
+}
+
+type MonthlyPoolUse = {
+  poolKey: string;
+  poolSize: number;
+  dateKey: string;
+  flightKey: string;
+  used: number;
+  poolFree: number;
+};
+
+/**
+ * A fixed number of free units per billing month, taken in flight-date order.
+ * Sets `poolFree` on each use; whatever is left over on a use is chargeable.
+ */
+function applyMonthlyFreePools(uses: MonthlyPoolUse[]): void {
+  const pools = new Map<string, MonthlyPoolUse[]>();
+  for (const use of uses) {
+    if (!use.poolKey) continue;
+    const list = pools.get(use.poolKey);
+    if (list) list.push(use);
+    else pools.set(use.poolKey, [use]);
+  }
+  for (const pool of pools.values()) {
+    let remaining = pool.reduce((max, use) => Math.max(max, use.poolSize), 0);
+    const ordered = [...pool].sort(
+      (a, b) =>
+        a.dateKey.localeCompare(b.dateKey) ||
+        a.flightKey.localeCompare(b.flightKey, undefined, { numeric: true }),
+    );
+    for (const use of ordered) {
+      use.poolFree = Math.min(remaining, use.used);
+      remaining -= use.poolFree;
+    }
+  }
+}
+
+/** Flight date of an ADS use as YYYY-MM-DD, for ordering within the month. */
+function adsUseDateKey(
+  rec: BillingPreparationRecordDocument,
+  snap: Record<string, unknown>,
+): string {
+  for (const raw of [snap.billingDateYmd, snap.atdDate, snap.ATDDate, snap.staDate, snap.STADate]) {
+    const text = String(raw ?? '').trim();
+    const iso = text.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
+    const dmy = text.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);
+    if (dmy) return `${dmy[3]}-${dmy[2].padStart(2, '0')}-${dmy[1].padStart(2, '0')}`;
+  }
+  const billed = (rec as { billingDate?: unknown }).billingDate;
+  const date = billed instanceof Date ? billed : billed ? new Date(String(billed)) : null;
+  return date && !Number.isNaN(date.getTime()) ? date.toISOString().slice(0, 10) : '';
 }
 
 function censusFromAdsFlights(
