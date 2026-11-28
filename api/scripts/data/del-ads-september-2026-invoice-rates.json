@@ -1,0 +1,1651 @@
+[
+  {
+    "customerCode": "AX",
+    "serviceCode": "Wheel Chair - WCHR/S",
+    "invoiceName": "Wheel Chair -WCHR",
+    "uom": "Per Service",
+    "currency": "USD",
+    "price": 18.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002017"
+    ]
+  },
+  {
+    "customerCode": "AX",
+    "serviceCode": "Ground Power Unit-140 KV",
+    "invoiceName": "Ground Power Unit-140 KV",
+    "uom": "Per Hour",
+    "currency": "USD",
+    "price": 87.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002017"
+    ]
+  },
+  {
+    "customerCode": "AX",
+    "serviceCode": "Air Start Unit-Wide Body",
+    "invoiceName": "Air Start Unit-Wide Body",
+    "uom": "Per Start-Up",
+    "currency": "USD",
+    "price": 129.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002017"
+    ]
+  },
+  {
+    "customerCode": "AF",
+    "serviceCode": "Marshaller",
+    "invoiceName": "Marshallar",
+    "uom": "Per Service",
+    "currency": "INR",
+    "price": 3743.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002018"
+    ]
+  },
+  {
+    "customerCode": "AF",
+    "serviceCode": "Diesel Tractor",
+    "invoiceName": "DIESEL TRACTOR (TUG)",
+    "uom": "Per Hour",
+    "currency": "INR",
+    "price": 4415.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002018"
+    ]
+  },
+  {
+    "customerCode": "AF",
+    "serviceCode": "Push Back-Wide Body",
+    "invoiceName": "Push Back-Wide Body",
+    "uom": "Per Push",
+    "currency": "INR",
+    "price": 8577.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002018"
+    ]
+  },
+  {
+    "customerCode": "SZ",
+    "serviceCode": "Head Set",
+    "invoiceName": "Head Set",
+    "uom": "Per Flight",
+    "currency": "USD",
+    "price": 77.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002019"
+    ]
+  },
+  {
+    "customerCode": "SZ",
+    "serviceCode": "Ambulift",
+    "invoiceName": "AMBULIFT",
+    "uom": "Per Usage",
+    "currency": "USD",
+    "price": 140.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002019"
+    ]
+  },
+  {
+    "customerCode": "CX",
+    "serviceCode": "Wheel Chair - WCHR/S",
+    "invoiceName": "Wheel Chair -WCHR",
+    "uom": "Per Service",
+    "currency": "INR",
+    "price": 600.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002020"
+    ]
+  },
+  {
+    "customerCode": "CX",
+    "serviceCode": "Ground Power Unit-140 KV",
+    "invoiceName": "Ground Power Unit-140 KV",
+    "uom": "Per Hour",
+    "currency": "INR",
+    "price": 6600.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002020"
+    ]
+  },
+  {
+    "customerCode": "CIF",
+    "serviceCode": "Air Start Unit-Wide Body",
+    "invoiceName": "Air Start Unit-Wide Body",
+    "uom": "Per Start-Up",
+    "currency": "USD",
+    "price": 197.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002021"
+    ]
+  },
+  {
+    "customerCode": "CIF",
+    "serviceCode": "Air Conditioner Unit",
+    "invoiceName": "AIR CONDITIONING UNIT",
+    "uom": "Per Hour",
+    "currency": "USD",
+    "price": 197.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002021"
+    ]
+  },
+  {
+    "customerCode": "CIF",
+    "serviceCode": "Ground Power Unit-140 KV",
+    "invoiceName": "Ground Power Unit-140 KV",
+    "uom": "Per Turnaround",
+    "currency": "USD",
+    "price": 180.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002021"
+    ]
+  },
+  {
+    "customerCode": "AY",
+    "serviceCode": "Wheel Chair - WCHR/S",
+    "invoiceName": "Wheel Chair -WCHR",
+    "uom": "Per Usage",
+    "currency": "INR",
+    "price": 819.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002022"
+    ]
+  },
+  {
+    "customerCode": "AY",
+    "serviceCode": "Tow Inter Stand - Wide Body",
+    "invoiceName": "Tow Inter Stand - Wide Body",
+    "uom": "Per Tow",
+    "currency": "INR",
+    "price": 31117.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002022"
+    ]
+  },
+  {
+    "customerCode": "GF",
+    "serviceCode": "Wheel Chair - WCHR/S",
+    "invoiceName": "Wheel Chair -WCHR",
+    "uom": "Per Service",
+    "currency": "USD",
+    "price": 22.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002023"
+    ]
+  },
+  {
+    "customerCode": "GF",
+    "serviceCode": "Wheel Chair-WCHC",
+    "invoiceName": "Wheel Chair-WCHC",
+    "uom": "Per Service",
+    "currency": "USD",
+    "price": 27.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002023"
+    ]
+  },
+  {
+    "customerCode": "LH",
+    "serviceCode": "Air Conditioner Unit",
+    "invoiceName": "AIR CONDITIONING UNIT",
+    "uom": "Per Hour",
+    "currency": "INR",
+    "price": 7838.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002024"
+    ]
+  },
+  {
+    "customerCode": "8M",
+    "serviceCode": "Wheel Chair-WCHC",
+    "invoiceName": "Wheel Chair-WCHC",
+    "uom": "Per Flight",
+    "currency": "USD",
+    "price": 16.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002025"
+    ]
+  },
+  {
+    "customerCode": "8M",
+    "serviceCode": "Wheel Chair - WCHR/S",
+    "invoiceName": "Wheel Chair -WCHR",
+    "uom": "Per Usage",
+    "currency": "USD",
+    "price": 16.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002025"
+    ]
+  },
+  {
+    "customerCode": "8M",
+    "serviceCode": "Passenger Coach",
+    "invoiceName": "Passenger Coach",
+    "uom": "Per Flight",
+    "currency": "USD",
+    "price": 131.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002025"
+    ]
+  },
+  {
+    "customerCode": "WY",
+    "serviceCode": "Wheel Chair - WCHR/S",
+    "invoiceName": "Wheel Chair -WCHR",
+    "uom": "Per Service",
+    "currency": "USD",
+    "price": 12.5,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002026"
+    ]
+  },
+  {
+    "customerCode": "WY",
+    "serviceCode": "Ambulift",
+    "invoiceName": "AMBULIFT",
+    "uom": "Per Usage",
+    "currency": "USD",
+    "price": 208.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002026"
+    ]
+  },
+  {
+    "customerCode": "WY",
+    "serviceCode": "Wheel Chair-WCHC",
+    "invoiceName": "Wheel Chair-WCHC",
+    "uom": "Per Service",
+    "currency": "USD",
+    "price": 20.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002026"
+    ]
+  },
+  {
+    "customerCode": "UA",
+    "serviceCode": "Wheel Chair - WCHR/S",
+    "invoiceName": "Wheel Chair -WCHR",
+    "uom": "Per Usage",
+    "currency": "INR",
+    "price": 624.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002027"
+    ]
+  },
+  {
+    "customerCode": "UA",
+    "serviceCode": "Wheel Chair-WCHC",
+    "invoiceName": "Wheel Chair-WCHC",
+    "uom": "Per Usage",
+    "currency": "INR",
+    "price": 1092.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002027"
+    ]
+  },
+  {
+    "customerCode": "VJ",
+    "serviceCode": "Wheel Chair - WCHR/S",
+    "invoiceName": "Wheel Chair -WCHR",
+    "uom": "Per Service",
+    "currency": "USD",
+    "price": 24.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002028"
+    ]
+  },
+  {
+    "customerCode": "G9",
+    "serviceCode": "Ground Power Unit-140 KV",
+    "invoiceName": "Ground Power Unit-140 KV",
+    "uom": "Per Turnaround",
+    "currency": "USD",
+    "price": 78.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002029"
+    ]
+  },
+  {
+    "customerCode": "G9",
+    "serviceCode": "Air Start Unit-Narrow Body",
+    "invoiceName": "Air Start Unit-Narrow Body",
+    "uom": "Per Start-Up",
+    "currency": "USD",
+    "price": 124.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002029"
+    ]
+  },
+  {
+    "customerCode": "G9",
+    "serviceCode": "Passenger Coach",
+    "invoiceName": "Passenger Coach",
+    "uom": "Per Turnaround",
+    "currency": "USD",
+    "price": 96.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002029"
+    ]
+  },
+  {
+    "customerCode": "G9",
+    "serviceCode": "Tow Inter Stand - Narrow Body",
+    "invoiceName": "Tow Inter Stand - Narrow Body",
+    "uom": "Per Tow",
+    "currency": "USD",
+    "price": 237.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002029"
+    ]
+  },
+  {
+    "customerCode": "G9",
+    "serviceCode": "Crew Coach",
+    "invoiceName": "Crew Coach",
+    "uom": "Per Turnaround",
+    "currency": "USD",
+    "price": 86.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002029"
+    ]
+  },
+  {
+    "customerCode": "KB",
+    "serviceCode": "Wheel Chair - WCHR/S",
+    "invoiceName": "Wheel Chair -WCHR",
+    "uom": "Per Service",
+    "currency": "USD",
+    "price": 20.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002030"
+    ]
+  },
+  {
+    "customerCode": "KB",
+    "serviceCode": "Wheel Chair-WCHC",
+    "invoiceName": "Wheel Chair-WCHC",
+    "uom": "Per Service",
+    "currency": "USD",
+    "price": 27.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002030"
+    ]
+  },
+  {
+    "customerCode": "KB",
+    "serviceCode": "Tow Inter Stand - Narrow Body",
+    "invoiceName": "Tow Inter Stand - Narrow Body",
+    "uom": "Per Tow",
+    "currency": "USD",
+    "price": 438.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002030"
+    ]
+  },
+  {
+    "customerCode": "KB",
+    "serviceCode": "Ground Power Unit-140 KV",
+    "invoiceName": "Ground Power Unit-140 KV",
+    "uom": "Per Hour",
+    "currency": "USD",
+    "price": 228.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002030"
+    ]
+  },
+  {
+    "customerCode": "KB",
+    "serviceCode": "Air Start Unit-Narrow Body",
+    "invoiceName": "Air Start Unit-Narrow Body",
+    "uom": "Per Start-Up",
+    "currency": "USD",
+    "price": 304.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002030"
+    ]
+  },
+  {
+    "customerCode": "KU",
+    "serviceCode": "Wheel Chair - WCHR/S",
+    "invoiceName": "Wheel Chair -WCHR",
+    "uom": "Per Service",
+    "currency": "USD",
+    "price": 14.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002031"
+    ]
+  },
+  {
+    "customerCode": "KU",
+    "serviceCode": "Tow Inter Stand - Narrow Body",
+    "invoiceName": "Tow Inter Stand - Narrow Body",
+    "uom": "Per Tow",
+    "currency": "USD",
+    "price": 255.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002031"
+    ]
+  },
+  {
+    "customerCode": "KU",
+    "serviceCode": "Crew Coach",
+    "invoiceName": "Crew Coach",
+    "uom": "Per Trip",
+    "currency": "USD",
+    "price": 54.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002031"
+    ]
+  },
+  {
+    "customerCode": "KU",
+    "serviceCode": "Passenger Coach",
+    "invoiceName": "Passenger Coach",
+    "uom": "Per Turnaround",
+    "currency": "USD",
+    "price": 190.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002031"
+    ]
+  },
+  {
+    "customerCode": "KU",
+    "serviceCode": "Ground Power Unit-140 KV",
+    "invoiceName": "Ground Power Unit-140 KV",
+    "uom": "Per Hour",
+    "currency": "USD",
+    "price": 140.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002031"
+    ]
+  },
+  {
+    "customerCode": "KU",
+    "serviceCode": "Push Back-Narrow Body",
+    "invoiceName": "Push Back-Narrow Body",
+    "uom": "Per Push",
+    "currency": "USD",
+    "price": 140.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002031"
+    ]
+  },
+  {
+    "customerCode": "KU",
+    "serviceCode": "Pax Step Ladder (remote bay) Motorized - Narrow Body",
+    "invoiceName": "Pax Step Ladder (remote bay) Motorized - Narrow Bo dy",
+    "uom": "Per Flight",
+    "currency": "USD",
+    "price": 120.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002031"
+    ]
+  },
+  {
+    "customerCode": "RA",
+    "serviceCode": "Wheel Chair - WCHR/S",
+    "invoiceName": "Wheel Chair -WCHR",
+    "uom": "Per Service",
+    "currency": "USD",
+    "price": 19.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002032"
+    ]
+  },
+  {
+    "customerCode": "RA",
+    "serviceCode": "Ambulift",
+    "invoiceName": "AMBULIFT",
+    "uom": "Per Usage",
+    "currency": "USD",
+    "price": 239.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002032"
+    ]
+  },
+  {
+    "customerCode": "RA",
+    "serviceCode": "Wheel Chair-WCHC",
+    "invoiceName": "Wheel Chair-WCHC",
+    "uom": "Per Service",
+    "currency": "USD",
+    "price": 24.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002032"
+    ]
+  },
+  {
+    "customerCode": "LX",
+    "serviceCode": "Air Conditioner Unit",
+    "invoiceName": "AIR CONDITIONING UNIT",
+    "uom": "Per Hour",
+    "currency": "INR",
+    "price": 7838.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002033"
+    ]
+  },
+  {
+    "customerCode": "LX",
+    "serviceCode": "Air Start Unit-Wide Body",
+    "invoiceName": "Air Start Unit-Wide Body",
+    "uom": "Per Start-Up",
+    "currency": "INR",
+    "price": 11289.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002033"
+    ]
+  },
+  {
+    "customerCode": "LX",
+    "serviceCode": "Push Back-Wide Body",
+    "invoiceName": "Push Back-Wide Body",
+    "uom": "Per Push",
+    "currency": "INR",
+    "price": 12108.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002033"
+    ]
+  },
+  {
+    "customerCode": "LX",
+    "serviceCode": "Head Set",
+    "invoiceName": "Head Set",
+    "uom": "Per Turnaround",
+    "currency": "INR",
+    "price": 14046.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002033"
+    ]
+  },
+  {
+    "customerCode": "LX",
+    "serviceCode": "Marshaller",
+    "invoiceName": "Marshallar",
+    "uom": "Per Service",
+    "currency": "INR",
+    "price": 4565.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002033"
+    ]
+  },
+  {
+    "customerCode": "LX",
+    "serviceCode": "Pax Step Ladder (remote bay) Motorized - Wide Body",
+    "invoiceName": "Pax Step Ladder (remote bay) Motorized - Wide Body",
+    "uom": "Per Hour",
+    "currency": "INR",
+    "price": 14163.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002033"
+    ]
+  },
+  {
+    "customerCode": "LX",
+    "serviceCode": "Ground Power Unit-140 KV",
+    "invoiceName": "Ground Power Unit-140 KV",
+    "uom": "Per Hour",
+    "currency": "INR",
+    "price": 7429.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002033"
+    ]
+  },
+  {
+    "customerCode": "LX",
+    "serviceCode": "Ramp Car",
+    "invoiceName": "Ramp Car",
+    "uom": "Per Hour",
+    "currency": "INR",
+    "price": 2575.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002033"
+    ]
+  },
+  {
+    "customerCode": "LX",
+    "serviceCode": "Crew Coach",
+    "invoiceName": "Crew Coach",
+    "uom": "Per Turnaround",
+    "currency": "INR",
+    "price": 21057.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002033"
+    ]
+  },
+  {
+    "customerCode": "TG",
+    "serviceCode": "Wheel Chair - WCHR/S",
+    "invoiceName": "Wheel Chair -WCHR",
+    "uom": "Per Usage",
+    "currency": "INR",
+    "price": 1050.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002034"
+    ]
+  },
+  {
+    "customerCode": "TG",
+    "serviceCode": "Blue collar",
+    "invoiceName": "Blue collar",
+    "uom": "Per Hour",
+    "currency": "INR",
+    "price": 1200.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002034"
+    ]
+  },
+  {
+    "customerCode": "TG",
+    "serviceCode": "Wheel Brake Cooling",
+    "invoiceName": "Wheel Brake Cooling",
+    "uom": "Per Flight",
+    "currency": "INR",
+    "price": 14397.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002034"
+    ]
+  },
+  {
+    "customerCode": "TG",
+    "serviceCode": "Wheel Chair-WCHC",
+    "invoiceName": "Wheel Chair-WCHC",
+    "uom": "Per Usage",
+    "currency": "INR",
+    "price": 1500.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002034"
+    ]
+  },
+  {
+    "customerCode": "TG",
+    "serviceCode": "Additional Utility Hand",
+    "invoiceName": "Additional Utility Hand",
+    "uom": "Per Hour",
+    "currency": "INR",
+    "price": 1200.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002034"
+    ]
+  },
+  {
+    "customerCode": "TG",
+    "serviceCode": "Ground Power Unit-140 KV",
+    "invoiceName": "Ground Power Unit-140 KV",
+    "uom": "Per Hour",
+    "currency": "INR",
+    "price": 9500.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002034"
+    ]
+  },
+  {
+    "customerCode": "TG",
+    "serviceCode": "Air Start Unit-Narrow Body",
+    "invoiceName": "Air Start Unit-Narrow Body",
+    "uom": "Per Start-Up",
+    "currency": "INR",
+    "price": 18800.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002034"
+    ]
+  },
+  {
+    "customerCode": "VS",
+    "serviceCode": "Wheel Chair - WCHR/S",
+    "invoiceName": "Wheel Chair -WCHR",
+    "uom": "Per Service",
+    "currency": "INR",
+    "price": 1091.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002035"
+    ]
+  },
+  {
+    "customerCode": "VS",
+    "serviceCode": "Wheel Chair-WCHC",
+    "invoiceName": "Wheel Chair-WCHC",
+    "uom": "Per Service",
+    "currency": "INR",
+    "price": 1091.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002035"
+    ]
+  },
+  {
+    "customerCode": "VS",
+    "serviceCode": "Ground Power Unit-180KV",
+    "invoiceName": "Ground Power Unit-180KV",
+    "uom": "Per 15 Min",
+    "currency": "INR",
+    "price": 3176.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002035"
+    ]
+  },
+  {
+    "customerCode": "VS",
+    "serviceCode": "Ground Power Unit-140 KV",
+    "invoiceName": "Ground Power Unit-140 KV",
+    "uom": "Per 15 Min",
+    "currency": "INR",
+    "price": 3176.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002035"
+    ]
+  },
+  {
+    "customerCode": "QY",
+    "serviceCode": "Crew Coach",
+    "invoiceName": "Crew Coach",
+    "uom": "Per Trip",
+    "currency": "USD",
+    "price": 54.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002036"
+    ]
+  },
+  {
+    "customerCode": "DAL",
+    "serviceCode": "Crew Coach",
+    "invoiceName": "Crew Coach",
+    "uom": "Per Trip",
+    "currency": "USD",
+    "price": 54.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002037"
+    ]
+  },
+  {
+    "customerCode": "DAL",
+    "serviceCode": "Ground Power Unit-140 KV",
+    "invoiceName": "Ground Power Unit-140 KV",
+    "uom": "Per Hour",
+    "currency": "USD",
+    "price": 150.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002037"
+    ]
+  },
+  {
+    "customerCode": "DAL",
+    "serviceCode": "Air Conditioner Unit",
+    "invoiceName": "AIR CONDITIONING UNIT",
+    "uom": "Per Hour",
+    "currency": "USD",
+    "price": 245.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002037"
+    ]
+  },
+  {
+    "customerCode": "MK",
+    "serviceCode": "Wheel Chair - WCHR/S",
+    "invoiceName": "Wheel Chair -WCHR",
+    "uom": "Per Service",
+    "currency": "USD",
+    "price": 19.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002038"
+    ]
+  },
+  {
+    "customerCode": "MK",
+    "serviceCode": "Wheel Chair-WCHC",
+    "invoiceName": "Wheel Chair-WCHC",
+    "uom": "Per Service",
+    "currency": "USD",
+    "price": 39.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002038"
+    ]
+  },
+  {
+    "customerCode": "MK",
+    "serviceCode": "Ambulift",
+    "invoiceName": "AMBULIFT",
+    "uom": "Per Usage",
+    "currency": "USD",
+    "price": 199.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002038"
+    ]
+  },
+  {
+    "customerCode": "FG",
+    "serviceCode": "Wheel Chair - WCHR/S",
+    "invoiceName": "Wheel Chair -WCHR",
+    "uom": "Per Service",
+    "currency": "INR",
+    "price": 1050.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002039"
+    ]
+  },
+  {
+    "customerCode": "FG",
+    "serviceCode": "Ground Power Unit-140 KV",
+    "invoiceName": "Ground Power Unit-140 KV",
+    "uom": "Per Hour",
+    "currency": "INR",
+    "price": 6487.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002039"
+    ]
+  },
+  {
+    "customerCode": "FG",
+    "serviceCode": "Air Conditioner Unit",
+    "invoiceName": "AIR CONDITIONING UNIT",
+    "uom": "Per Hour",
+    "currency": "INR",
+    "price": 6487.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002039"
+    ]
+  },
+  {
+    "customerCode": "FG",
+    "serviceCode": "Head Set",
+    "invoiceName": "Head Set",
+    "uom": "Per Turnaround",
+    "currency": "INR",
+    "price": 6719.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002039"
+    ]
+  },
+  {
+    "customerCode": "XJ",
+    "serviceCode": "Wheel Chair - WCHR/S",
+    "invoiceName": "Wheel Chair -WCHR",
+    "uom": "Per Service",
+    "currency": "USD",
+    "price": 16.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002040"
+    ]
+  },
+  {
+    "customerCode": "XJ",
+    "serviceCode": "Wheel Chair-WCHC",
+    "invoiceName": "Wheel Chair-WCHC",
+    "uom": "Per Service",
+    "currency": "USD",
+    "price": 27.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002040"
+    ]
+  },
+  {
+    "customerCode": "XJ",
+    "serviceCode": "Air Start Unit-Wide Body",
+    "invoiceName": "Air Start Unit-Wide Body",
+    "uom": "Per Start-Up",
+    "currency": "USD",
+    "price": 118.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002040"
+    ]
+  },
+  {
+    "customerCode": "XJ",
+    "serviceCode": "Ground Power Unit-140 KV",
+    "invoiceName": "Ground Power Unit-140 KV",
+    "uom": "Per Hour",
+    "currency": "USD",
+    "price": 118.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002040"
+    ]
+  },
+  {
+    "customerCode": "UL",
+    "serviceCode": "Wheel Chair - WCHR/S",
+    "invoiceName": "Wheel Chair -WCHR",
+    "uom": "Per Service",
+    "currency": "INR",
+    "price": 1003.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002041"
+    ]
+  },
+  {
+    "customerCode": "UL",
+    "serviceCode": "Air Start Unit-Narrow Body",
+    "invoiceName": "Air Start Unit-Narrow Body",
+    "uom": "Per Start-Up",
+    "currency": "INR",
+    "price": 14212.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002041"
+    ]
+  },
+  {
+    "customerCode": "UL",
+    "serviceCode": "Ground Power Unit-140 KV",
+    "invoiceName": "Ground Power Unit-140 KV",
+    "uom": "Per Hour",
+    "currency": "INR",
+    "price": 9196.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002041"
+    ]
+  },
+  {
+    "customerCode": "UL",
+    "serviceCode": "Ambulift",
+    "invoiceName": "AMBULIFT",
+    "uom": "Per Usage",
+    "currency": "INR",
+    "price": 9196.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002041"
+    ]
+  },
+  {
+    "customerCode": "UL",
+    "serviceCode": "Air Conditioner Unit",
+    "invoiceName": "AIR CONDITIONING UNIT",
+    "uom": "Per Hour",
+    "currency": "INR",
+    "price": 14212.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002041"
+    ]
+  },
+  {
+    "customerCode": "MS",
+    "serviceCode": "Wheel Chair - WCHR/S",
+    "invoiceName": "Wheel Chair -WCHR",
+    "uom": "Per Service",
+    "currency": "USD",
+    "price": 17.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002042"
+    ]
+  },
+  {
+    "customerCode": "MS",
+    "serviceCode": "Head Set",
+    "invoiceName": "Head Set",
+    "uom": "Per Usage",
+    "currency": "USD",
+    "price": 56.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002042",
+      "SI/DL/327/002049"
+    ]
+  },
+  {
+    "customerCode": "MS",
+    "serviceCode": "Wheel Chair-WCHC",
+    "invoiceName": "Wheel Chair-WCHC",
+    "uom": "Per Service",
+    "currency": "USD",
+    "price": 17.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002042"
+    ]
+  },
+  {
+    "customerCode": "AZ",
+    "serviceCode": "Air Start Unit-Wide Body",
+    "invoiceName": "Air Start Unit-Wide Body",
+    "uom": "Per Service",
+    "currency": "INR",
+    "price": 11289.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002043"
+    ]
+  },
+  {
+    "customerCode": "AZ",
+    "serviceCode": "Ground Power Unit-140 KV",
+    "invoiceName": "Ground Power Unit-140 KV",
+    "uom": "Per Hour",
+    "currency": "INR",
+    "price": 7429.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002043"
+    ]
+  },
+  {
+    "customerCode": "HY",
+    "serviceCode": "Wheel Chair-WCHC",
+    "invoiceName": "Wheel Chair-WCHC",
+    "uom": "Per Service",
+    "currency": "USD",
+    "price": 22.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002044"
+    ]
+  },
+  {
+    "customerCode": "HY",
+    "serviceCode": "Wheel Chair - WCHR/S",
+    "invoiceName": "Wheel Chair -WCHR",
+    "uom": "Per Service",
+    "currency": "USD",
+    "price": 13.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002044"
+    ]
+  },
+  {
+    "customerCode": "HY",
+    "serviceCode": "Ground Power Unit-140 KV",
+    "invoiceName": "Ground Power Unit-140 KV",
+    "uom": "Per Hour",
+    "currency": "USD",
+    "price": 135.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002044"
+    ]
+  },
+  {
+    "customerCode": "HY",
+    "serviceCode": "Air Conditioner Unit",
+    "invoiceName": "AIR CONDITIONING UNIT",
+    "uom": "Per Hour",
+    "currency": "USD",
+    "price": 265.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002044"
+    ]
+  },
+  {
+    "customerCode": "HY",
+    "serviceCode": "Air Start Unit-Wide Body",
+    "invoiceName": "Air Start Unit-Wide Body",
+    "uom": "Per Start-Up",
+    "currency": "USD",
+    "price": 180.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002044"
+    ]
+  },
+  {
+    "customerCode": "HY",
+    "serviceCode": "Ambulift",
+    "invoiceName": "AMBULIFT",
+    "uom": "Per Usage",
+    "currency": "USD",
+    "price": 160.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002044"
+    ]
+  },
+  {
+    "customerCode": "BG",
+    "serviceCode": "Wheel Chair - WCHR/S",
+    "invoiceName": "Wheel Chair -WCHR",
+    "uom": "Per Flight",
+    "currency": "USD",
+    "price": 23.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002045"
+    ]
+  },
+  {
+    "customerCode": "C6",
+    "serviceCode": "Wheel Chair-WCHC",
+    "invoiceName": "Wheel Chair-WCHC",
+    "uom": "Per Service",
+    "currency": "USD",
+    "price": 23.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002046"
+    ]
+  },
+  {
+    "customerCode": "C6",
+    "serviceCode": "Wheel Chair - WCHR/S",
+    "invoiceName": "Wheel Chair -WCHR",
+    "uom": "Per Service",
+    "currency": "USD",
+    "price": 17.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002046"
+    ]
+  },
+  {
+    "customerCode": "C6",
+    "serviceCode": "Baggage Tag Rolls",
+    "invoiceName": "Baggage Tag rolls",
+    "uom": "Per Flight",
+    "currency": "USD",
+    "price": 20.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002046"
+    ]
+  },
+  {
+    "customerCode": "MU",
+    "serviceCode": "Wheel Chair - WCHR/S",
+    "invoiceName": "Wheel Chair -WCHR",
+    "uom": "Per Service",
+    "currency": "USD",
+    "price": 19.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002047"
+    ]
+  },
+  {
+    "customerCode": "MU",
+    "serviceCode": "Blue collar",
+    "invoiceName": "Blue collar",
+    "uom": "Per Person",
+    "currency": "USD",
+    "price": 13.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002047"
+    ]
+  },
+  {
+    "customerCode": "MU",
+    "serviceCode": "Wheel Brake Cooling",
+    "invoiceName": "Wheel Brake Cooling",
+    "uom": "Per Hour",
+    "currency": "USD",
+    "price": 55.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002047"
+    ]
+  },
+  {
+    "customerCode": "CA",
+    "serviceCode": "Wheel Chair - WCHR/S",
+    "invoiceName": "Wheel Chair -WCHR",
+    "uom": "Per Service",
+    "currency": "USD",
+    "price": 12.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002048"
+    ]
+  },
+  {
+    "customerCode": "MS",
+    "serviceCode": "Ground Power Unit-140 KV",
+    "invoiceName": "Ground Power Unit-140 KV",
+    "uom": "Per Hour",
+    "currency": "USD",
+    "price": 117.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002049"
+    ]
+  },
+  {
+    "customerCode": "B3",
+    "serviceCode": "Wheel Chair - WCHR/S",
+    "invoiceName": "Wheel Chair -WCHR",
+    "uom": "Per Service",
+    "currency": "USD",
+    "price": 38.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002050"
+    ],
+    "fixedInrRate": 89
+  },
+  {
+    "customerCode": "B3",
+    "serviceCode": "Potable Water",
+    "invoiceName": "Potable Water",
+    "uom": "Per Service",
+    "currency": "USD",
+    "price": 53.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002050"
+    ],
+    "fixedInrRate": 89
+  },
+  {
+    "customerCode": "B3",
+    "serviceCode": "Toilet service",
+    "invoiceName": "Toilet service",
+    "uom": "Per Service",
+    "currency": "USD",
+    "price": 53.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002050"
+    ],
+    "fixedInrRate": 89
+  },
+  {
+    "customerCode": "B3",
+    "serviceCode": "Water service",
+    "invoiceName": "Water service",
+    "uom": "Per Service",
+    "currency": "USD",
+    "price": 53.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002050"
+    ],
+    "fixedInrRate": 89
+  },
+  {
+    "customerCode": "CZ",
+    "serviceCode": "Wheel Chair - WCHR/S",
+    "invoiceName": "Wheel Chair -WCHR",
+    "uom": "Per Service",
+    "currency": "USD",
+    "price": 16.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002051"
+    ]
+  },
+  {
+    "customerCode": "KB",
+    "serviceCode": "Ramp Car",
+    "invoiceName": "Ramp Car",
+    "uom": "Per Hour",
+    "currency": "USD",
+    "price": 27.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002052"
+    ]
+  },
+  {
+    "customerCode": "KB",
+    "serviceCode": "Pax Step Ladder (remote bay) Motorized - Narrow Body",
+    "invoiceName": "Pax Step Ladder (remote bay) Motorized - Narrow Bo",
+    "uom": "Per Hour",
+    "currency": "USD",
+    "price": 115.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002052"
+    ]
+  },
+  {
+    "customerCode": "KB",
+    "serviceCode": "Push Back-Narrow Body",
+    "invoiceName": "Push Back-Narrow Body",
+    "uom": "Per Push",
+    "currency": "USD",
+    "price": 278.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002052"
+    ]
+  },
+  {
+    "customerCode": "KB",
+    "serviceCode": "Head Set",
+    "invoiceName": "Head Set",
+    "uom": "Per Turnaround",
+    "currency": "USD",
+    "price": 85.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002052"
+    ]
+  },
+  {
+    "customerCode": "KB",
+    "serviceCode": "Baggage Freight Loader",
+    "invoiceName": "BAGGAGE CONVEYOR BELT (FREIGHT LOADER)",
+    "uom": "Per Hour",
+    "currency": "USD",
+    "price": 161.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002052"
+    ]
+  },
+  {
+    "customerCode": "6E",
+    "serviceCode": "Push Back-Wide Body",
+    "invoiceName": "Push Back-Wide Body",
+    "uom": "Per Push",
+    "currency": "INR",
+    "price": 7384.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002057"
+    ]
+  },
+  {
+    "customerCode": "6E",
+    "serviceCode": "Wheel Chair - WCHR/S",
+    "invoiceName": "Wheel Chair -WCHR",
+    "uom": "Per Service",
+    "currency": "INR",
+    "price": 566.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002057"
+    ]
+  },
+  {
+    "customerCode": "6E",
+    "serviceCode": "Tow Inter Stand - Wide Body",
+    "invoiceName": "Tow Inter Stand - Wide Body",
+    "uom": "Per Tow",
+    "currency": "INR",
+    "price": 14840.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002057"
+    ]
+  },
+  {
+    "customerCode": "6E",
+    "serviceCode": "Towing (Long Tow to a different Apron)",
+    "invoiceName": "Tow Inter Stand - Wide Body",
+    "uom": "Per Tow",
+    "currency": "INR",
+    "price": 28620.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002057"
+    ]
+  },
+  {
+    "customerCode": "6E",
+    "serviceCode": "Wheel Chair-WCHC",
+    "invoiceName": "Wheel Chair-WCHC",
+    "uom": "Per Service",
+    "currency": "INR",
+    "price": 655.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002057"
+    ]
+  },
+  {
+    "customerCode": "SG",
+    "serviceCode": "Scheduled - Equipment - EBT",
+    "invoiceName": "ELECTRIC BAGGAGE TRACTOR",
+    "uom": "Per Flight",
+    "currency": "INR",
+    "price": 1707.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002098"
+    ]
+  },
+  {
+    "customerCode": "SG",
+    "serviceCode": "Passenger Coach",
+    "invoiceName": "Passenger Coach",
+    "uom": "Per Trip",
+    "currency": "INR",
+    "price": 579.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002098"
+    ]
+  },
+  {
+    "customerCode": "QP",
+    "serviceCode": "Wheel Chair - WCHR/S",
+    "invoiceName": "Wheel Chair -WCHR",
+    "uom": "Per Service",
+    "currency": "INR",
+    "price": 377.0,
+    "sector": "Dom",
+    "invoices": [
+      "SI/DL/327/002099"
+    ]
+  },
+  {
+    "customerCode": "QP",
+    "serviceCode": "Wheel Chair-WCHC",
+    "invoiceName": "Wheel Chair-WCHC",
+    "uom": "Per Service",
+    "currency": "INR",
+    "price": 443.0,
+    "sector": "Dom",
+    "invoices": [
+      "SI/DL/327/002099"
+    ]
+  },
+  {
+    "customerCode": "QP",
+    "serviceCode": "Crew Coach",
+    "invoiceName": "Crew Coach",
+    "uom": "Per Trip",
+    "currency": "INR",
+    "price": 742.0,
+    "sector": "Dom",
+    "invoices": [
+      "SI/DL/327/002102"
+    ]
+  },
+  {
+    "customerCode": "QP",
+    "serviceCode": "Extended Cleaning",
+    "invoiceName": "Extended Cleaning",
+    "uom": "Per Service",
+    "currency": "INR",
+    "price": 4882.0,
+    "sector": "Dom",
+    "invoices": [
+      "SI/DL/327/002104"
+    ]
+  },
+  {
+    "customerCode": "QP",
+    "serviceCode": "Deep Cleaning - Narrow Body",
+    "invoiceName": "Deep Cleaning - Narrow Body",
+    "uom": "Per Service",
+    "currency": "INR",
+    "price": 10811.0,
+    "sector": "Dom",
+    "invoices": [
+      "SI/DL/327/002104"
+    ]
+  },
+  {
+    "customerCode": "QP",
+    "serviceCode": "Passenger Coach",
+    "invoiceName": "Passenger Coach",
+    "uom": "Per Trip",
+    "currency": "INR",
+    "price": 1536.0,
+    "sector": "Dom",
+    "invoices": [
+      "SI/DL/327/002105"
+    ]
+  },
+  {
+    "customerCode": "QP",
+    "serviceCode": "Scheduled - Equipment - EBT",
+    "invoiceName": "ELECTRIC BAGGAGE TRACTOR",
+    "uom": "Per Hour",
+    "currency": "INR",
+    "price": 3496.0,
+    "sector": "Dom",
+    "invoices": [
+      "SI/DL/327/002106"
+    ]
+  },
+  {
+    "customerCode": "QP",
+    "serviceCode": "Ambulift",
+    "invoiceName": "AMBULIFT",
+    "uom": "Per Usage",
+    "currency": "INR",
+    "price": 4606.0,
+    "sector": "Dom",
+    "invoices": [
+      "SI/DL/327/002106"
+    ]
+  },
+  {
+    "customerCode": "QP",
+    "serviceCode": "Ground Power Unit-140 KV",
+    "invoiceName": "Ground Power Unit-140 KV",
+    "uom": "Per Hour",
+    "currency": "INR",
+    "price": 2613.0,
+    "sector": "Dom",
+    "invoices": [
+      "SI/DL/327/002106"
+    ]
+  },
+  {
+    "customerCode": "QP",
+    "serviceCode": "Air Start Unit-Narrow Body",
+    "invoiceName": "Air Start Unit-Narrow Body",
+    "uom": "Per Start-Up",
+    "currency": "INR",
+    "price": 5498.0,
+    "sector": "Dom",
+    "invoices": [
+      "SI/DL/327/002106"
+    ]
+  },
+  {
+    "customerCode": "G9",
+    "serviceCode": "Pax Step Ladder (remote bay) Motorized - Narrow Body",
+    "invoiceName": "Pax Step Ladder (remote bay) Motorized - Narrow Bo dy",
+    "uom": "Per Hour",
+    "currency": "USD",
+    "price": 94.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002116"
+    ]
+  },
+  {
+    "customerCode": "G9",
+    "serviceCode": "Baggage Freight Loader",
+    "invoiceName": "BAGGAGE CONVEYOR BELT (FREIGHT LOADER)",
+    "uom": "Per Hour",
+    "currency": "USD",
+    "price": 132.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002116"
+    ]
+  },
+  {
+    "customerCode": "G9",
+    "serviceCode": "Ramp Car",
+    "invoiceName": "Ramp Car",
+    "uom": "Per Hour",
+    "currency": "USD",
+    "price": 22.0,
+    "sector": "Int",
+    "invoices": [
+      "SI/DL/327/002116"
+    ]
+  }
+]

@@ -316,7 +316,23 @@ type AnnexureEquipment = {
   texts: string[];
   invoiceUsed: number | null;
   invoiceCharged: number | null;
+  /**
+   * Flight serial → charged units as billed on the invoice. Present when the
+   * invoice recorded them; the annexure then prints these instead of recounting.
+   */
+  flightCharges: Record<string, number> | null;
 };
+
+function flightChargesFromLine(line: AdsAnnexureInvoiceLine): Record<string, number> | null {
+  const raw = line.sourceRef?.chargedByFlight;
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const out: Record<string, number> = {};
+  for (const [serial, value] of Object.entries(raw as Record<string, unknown>)) {
+    const charged = Number(value);
+    if (serial && Number.isFinite(charged) && charged > 0) out[serial] = charged;
+  }
+  return out;
+}
 
 function equipmentTexts(line: AdsAnnexureInvoiceLine): string[] {
   const ref = line.sourceRef ?? {};
@@ -344,6 +360,7 @@ function annexureEquipmentFromLine(line: AdsAnnexureInvoiceLine): AnnexureEquipm
     texts,
     invoiceUsed: Number.isFinite(usedRaw) && usedRaw >= 0 ? toWholeAdsUnits(usedRaw) : null,
     invoiceCharged: Number.isFinite(chargedRaw) && chargedRaw >= 0 ? toWholeAdsUnits(chargedRaw) : null,
+    flightCharges: flightChargesFromLine(line),
   };
 }
 
@@ -354,6 +371,7 @@ function annexureEquipmentFromUsage(key: string, serviceCode: string): AnnexureE
     texts: [serviceCode],
     invoiceUsed: null,
     invoiceCharged: null,
+    flightCharges: null,
   };
 }
 
@@ -461,6 +479,14 @@ export function buildAdsAnnexureTable(
     }
     if (equipment.invoiceCharged != null) {
       existing.invoiceCharged = (existing.invoiceCharged ?? 0) + equipment.invoiceCharged;
+    }
+    // Several invoice lines of one equipment (other aircraft, standby) share a column.
+    if (existing.flightCharges && equipment.flightCharges) {
+      for (const [serial, charged] of Object.entries(equipment.flightCharges)) {
+        existing.flightCharges[serial] = (existing.flightCharges[serial] ?? 0) + charged;
+      }
+    } else {
+      existing.flightCharges = null;
     }
   }
   const lockToInvoice = invoiceEquipments.length > 0;
@@ -582,6 +608,22 @@ export function buildAdsAnnexureTable(
       chargedTotals[key] = (chargedTotals[key] ?? 0) + billed;
     }
     chargedByFlight.set(`${row.serialNo}|${row.flightNo}|${row.atdDate}|${row.sortKey}`, charged);
+  }
+
+  // The invoice already decided what each flight was charged (bay, ground time,
+  // standby and monthly-pool rules). Print that so the annexure adds up to it.
+  for (const equipment of equipments) {
+    if (!equipment.flightCharges) continue;
+    chargedTotals[equipment.key] = 0;
+    for (const row of flights.values()) {
+      const charged = chargedByFlight.get(
+        `${row.serialNo}|${row.flightNo}|${row.atdDate}|${row.sortKey}`,
+      );
+      if (!charged) continue;
+      const billed = toWholeAdsUnits(equipment.flightCharges[row.serialNo] ?? 0);
+      charged[equipment.key] = billed;
+      chargedTotals[equipment.key] += billed;
+    }
   }
 
   for (const equipment of equipments) {

@@ -396,6 +396,23 @@ Same draft → review → generate → post path as BHS
 - Quantity of equipment is ignored for time-based UOM — block count only.  
 Implementation: `shared/rate-card-billing-scope.ts` (`adsTimeBasedUnits`) + `computeAdsUsedUnits` in `fhr-equipment-to-ads-row.ts`.
 
+**Contract conditions (ADS compose):**
+
+Applied in `composeAdsLines` only. The ADS source page still shows the plain used / free hint.
+
+| Condition | Where it is set | Effect |
+|---|---|---|
+| Standby | Contract `conditionalCharges.standbyChargesPercent` (above 0, below 100) and the word standby / stby in the FHR equipment remark | Those units go on their own line, `<equipment> [50% stand by charged]`, at that percent of the rate. No free count is taken from them |
+| Equipment per turnaround | Rule UOM contains "turnaround" and is not per person / staff | At most one charge per flight, after the free count |
+| On request only | Rule remark is exactly `Charged on request only` | Never billed from the flight report. The rate stays on the contract for a line added by hand |
+| Free at a bay type | Rule remark is exactly `FOC for Remote Bay` or `FOC for Contact bay` | Free when the flight's bay (`rampDetails1.BayFinal`, else `BayPlanned`) is that type. A blank bay or one outside the table is charged |
+| Free for scheduled ground time | Rule remark is exactly `FOC for SGT time`, time-based UOM | Usage on the flight minus STD − STA is billed. No scheduled times means the whole use is billed |
+| Monthly free pool | Rule remark starts with `<n> Per month` (any text after it is ignored) | `n` units free per invoice period, taken in flight-date order. WCHR, WCHS and WCHC share one pool. An unpriced rule still uses the pool up |
+
+Bay types come from the operations Bay Details workbook, kept in `shared/station-bay-types.ts` (DEL, IMF, IXA, TRZ). Remark parsing is in `shared/ads-rule-conditions.ts`.
+
+Each ADS line stores `sourceRef.chargedByFlight` (flight serial → charged units). The annexure prints those counts, so it always adds up to the invoice.
+
 ---
 
 ## 10. Other billing pages (same shell, not BHS/ADS core)
